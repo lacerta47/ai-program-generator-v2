@@ -1,0 +1,85 @@
+[AI 프로그램 생성기 - 코드 리뷰 및 권장 개선 사항]
+
+이 문서는 프로젝트(ai-program-generator)의 보안성 강화, 에러 예방(Robustness), 그리고 사용자(초등 저학년) 친화적인 UX 향상을 위한 리뷰 리포트입니다.
+
+======================================================================
+1. 보안 (Security) 및 프로세스 격리 검토
+======================================================================
+■ [취약점] 미리보기 페이지의 직접 접근(Direct Navigation)을 통한 XSS 공격 가능성
+- 상태: 생성된 코드는 FullscreenFrame 내에서 iframe의 sandbox="allow-scripts" 및 교차 사이트 스왑(localhost ↔ 127.0.0.1)으로 안전하게 프로세스가 격리됩니다.
+- 문제점: 악의적인 사용자가 브라우저 주소창에 직접 미리보기 URL(예: http://localhost:3000/api/preview/[id])을 치고 들어가면, 탑레벨(iframe 외부)로 띄워집니다. 이 경우 메인 서비스 오리진에서 스크립트가 실행되어 localStorage의 인증 정보나 토큰 등이 털릴 수 있습니다.
+- 권장 해결안: Sec-Fetch-Dest 헤더를 검사하여 iframe 목적지의 요청이 아닐 경우 접근을 거부합니다.
+
+■ 적용할 코드 가이드 (/app/api/preview/[id]/route.ts)
+--------------------------------------------------
+export async function GET(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  // 브라우저가 직접 URL을 탐색하여 메인 도메인에서 스크립트가 실행되는 것 차단
+  const dest = req.headers.get('sec-fetch-dest');
+  if (dest && dest !== 'iframe') {
+    return new Response(
+      '<p style="font-family:sans-serif;color:#888;text-align:center;margin-top:3em">보안을 위해 미리보기는 화면 안에서만 열 수 있습니다.</p>',
+      { status: 403, headers: { 'Content-Type': 'text/html; charset=utf-8' } },
+    );
+  }
+
+  const { id } = await params;
+  const doc = await getPreview(id);
+  // ... (이하 동일)
+}
+--------------------------------------------------
+
+
+======================================================================
+2. 에러 핸들링 및 예외 처리 (Robustness)
+======================================================================
+■ [문제점] 관리자 화면 및 게시글 수정 비동기 예외 누락
+- 상태: CategoryBar.tsx 와 PostList.tsx 에서 Firestore를 업데이트하는 비동기 함수(추가, 이름 변경, 순서 교체, 삭제)들이 호출되고 있으나 try/catch가 누락되었습니다.
+- 결과: 네트워크 오프라인 상태이거나 보안 규칙(firestore.rules)에 막힐 경우, 에러가 공중에 뜨며(unhandled promise rejection) UI가 실패를 반영하지 못하고 얼어버립니다.
+- 권장 해결안: useToast 훅을 추가하여 예외가 발생했을 때 예쁜 에러 토스트 배너를 사용자에게 보여주고 UI 원복/초기화를 보장해야 합니다.
+
+■ 적용할 코드 가이드 (components/board/PostList.tsx)
+--------------------------------------------------
+import { useToast } from '@/components/ui/Toast';
+
+export default function PostList({ ... }) {
+  const [editing, setEditing] = useState<{ id: string; title: string } | null>(null);
+  const { toast } = useToast();
+
+  async function saveTitle() {
+    if (editing && editing.title.trim()) {
+      try {
+        await updatePostTitle(editing.id, editing.title);
+        onTitleSaved(editing.id, editing.title.trim());
+      } catch (e) {
+        toast('제목을 바꾸는 데 실패했어요. 네트워크가 오프라인이거나 권한이 없는지 확인해 보세요.');
+      }
+    }
+    setEditing(null);
+  }
+  // ...
+}
+--------------------------------------------------
+
+
+======================================================================
+3. UX/UI 및 타깃 고객 피드백 (Target Audience UX)
+======================================================================
+■ [개선안 A] 새로 시작하기 (Reset) 버튼 추가
+- 문제점: 계획을 쓰고 프로그램을 만든 후, 다음 프로그램을 만들려면 입력 필드를 직접 백스페이스로 지우거나 새로고침(F5)을 해야 해 번거롭습니다.
+- 제안: Creator.tsx 왼편 계획서 카드 아래나 입력 폼 내에 "새로 만들기" 또는 "다시 쓰기" 버튼을 제공하여 plan과 code 상태를 간편히 지울 수 있도록 유도합니다.
+
+■ [개선안 B] 작업 완료 성공 피드백(성공 토스트) 강화
+- 제안: AI가 페이지를 다 그리거나 수정했을 때 toast(..., 'success')를 띄워 "성공적으로 만들었어요!", "원하시는 대로 고쳐보았어요!" 같은 문구로 흥미와 성취감을 극대화합니다.
+- 예시:
+  // Creator.tsx 의 handleGenerate 처리부
+  const result = await requestGenerate(promptText, 'generate');
+  setCode(result);
+  setResultTab('preview');
+  setPreviewKey((k) => k + 1);
+  toast('우와! 멋진 프로그램을 완성했어요!', 'success');
+
+■ [개선안 C] 공유 링크 복사 확인 피드백 제공
+- 제안: 게시판의 작품 링크를 클립보드에 복사했을 때 단순히 아이콘이 변하는 것에 더해, "작품 주소를 복사했어요! 친구들에게 자랑해봐요 🎉" 같은 토스트 알림을 결합하여 명확한 확인을 제공합니다.
