@@ -240,7 +240,7 @@ export default function Creator() {
           <TextArea
             value={plan.how}
             onChange={(e) => setField('how', e.target.value)}
-            placeholder="예: 새로고침해도 메모가 사라지지 않아요"
+            placeholder="예: 정답을 맞히면 점수가 1점 올라가요"
           />
         </Label>
         <Label
