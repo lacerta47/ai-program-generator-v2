@@ -52,6 +52,8 @@ export function Label({
 
 export function HelpTip({ children }: { children: React.ReactNode }) {
   const [pinned, setPinned] = useState(false);
+  // 화면 아래 공간이 부족하면 말풍선을 위로 펼침 (페이지 하단의 ?가 잘리는 문제 방지)
+  const [openUp, setOpenUp] = useState(false);
   const wrapRef = useRef<HTMLSpanElement>(null);
 
   // 바깥 클릭/Escape로만 닫기 — blur 기반 닫기는 label의 포커스 위임과 충돌해
@@ -79,7 +81,11 @@ export function HelpTip({ children }: { children: React.ReactNode }) {
         type="button"
         aria-label="작성 도움말 보기"
         aria-expanded={pinned}
-        onClick={() => setPinned((p) => !p)}
+        onClick={() => {
+          const r = wrapRef.current?.getBoundingClientRect();
+          setOpenUp(r ? window.innerHeight - r.bottom < 280 : false);
+          setPinned((p) => !p);
+        }}
         className={`-my-1.5 grid h-9 w-9 shrink-0 place-items-center rounded-full transition-colors ${
           pinned
             ? 'bg-brand text-brand-ink'
@@ -90,9 +96,9 @@ export function HelpTip({ children }: { children: React.ReactNode }) {
       </button>
       <span
         role="tooltip"
-        className={`anim-pop-in absolute left-0 top-full z-20 mt-1.5 w-72 max-w-[78vw] rounded-[var(--r-md)] border-2 border-brand/60 bg-surface p-3.5 text-[13.5px] font-normal leading-relaxed text-ink shadow-[0_10px_30px_oklch(0.2_0.02_285/0.35)] ${
-          pinned ? 'block' : 'hidden'
-        }`}
+        className={`anim-pop-in absolute left-0 z-20 w-72 max-w-[78vw] rounded-[var(--r-md)] border-2 border-brand/60 bg-surface p-3.5 text-[13.5px] font-normal leading-relaxed text-ink shadow-[0_10px_30px_oklch(0.2_0.02_285/0.35)] ${
+          openUp ? 'bottom-full mb-3' : 'top-full mt-2'
+        } ${pinned ? 'block' : 'hidden'}`}
       >
         {children}
       </span>

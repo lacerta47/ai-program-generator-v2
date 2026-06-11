@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import {
   Sparkles,
   Wand2,
@@ -24,6 +24,7 @@ import Card from '@/components/ui/Card';
 import Chip, { CHIP_COLORS } from '@/components/ui/Chip';
 import { TextInput, TextArea, Label, HelpTip } from '@/components/ui/Field';
 import LoadingDots from '@/components/ui/LoadingDots';
+import { useToast } from '@/components/ui/Toast';
 import FloatingShapes from '@/components/ui/FloatingShapes';
 import BuilderBot from '@/components/ui/BuilderBot';
 import FullscreenFrame from '@/components/ui/FullscreenFrame';
@@ -92,7 +93,6 @@ export default function Creator() {
   const [code, setCode] = useState<GeneratedCode>(EMPTY_CODE);
   const [loading, setLoading] = useState<'idle' | 'generating' | 'modifying'>('idle');
   const [loadingMsg, setLoadingMsg] = useState(GENERATE_MESSAGES[0]);
-  const [error, setError] = useState('');
   const [resultTab, setResultTab] = useState<ResultTab>('preview');
   const [codeTab, setCodeTab] = useState<CodeTab>('html');
   const [modifyText, setModifyText] = useState('');
@@ -104,6 +104,9 @@ export default function Creator() {
   const [loginOpen, setLoginOpen] = useState(false);
 
   const { user } = useAuth();
+  const { toast } = useToast();
+  const nameRef = useRef<HTMLInputElement>(null);
+  const modifyRef = useRef<HTMLTextAreaElement>(null);
   const hasCode = Boolean(code.html || code.css || code.javascript);
   const busy = loading !== 'idle';
 
@@ -122,17 +125,18 @@ export default function Creator() {
 
   async function handleGenerate() {
     if (!user) {
+      toast('로그인하면 프로그램을 만들 수 있어요!');
       setLoginOpen(true);
       return;
     }
     if (!plan.name.trim()) {
-      setError('프로그램 이름을 먼저 적어 주세요!');
+      toast('프로그램 이름을 먼저 적어 주세요!');
+      nameRef.current?.focus();
       return;
     }
     const promptText = buildGeneratePrompt(plan);
     setGenPrompt(promptText);
     setLoading('generating');
-    setError('');
     const stop = startLoadingMessages(GENERATE_MESSAGES);
     try {
       const result = await requestGenerate(promptText, 'generate');
@@ -140,7 +144,7 @@ export default function Creator() {
       setResultTab('preview');
       setPreviewKey((k) => k + 1);
     } catch (e) {
-      setError(e instanceof Error ? e.message : '만들다가 문제가 생겼어요. 다시 해볼까요?');
+      toast(e instanceof Error ? e.message : '만들다가 문제가 생겼어요. 다시 해볼까요?');
     } finally {
       stop();
       setLoading('idle');
@@ -149,15 +153,16 @@ export default function Creator() {
 
   async function handleModify() {
     if (!user) {
+      toast('로그인하면 프로그램을 고칠 수 있어요!');
       setLoginOpen(true);
       return;
     }
     if (!modifyText.trim()) {
-      setError('바꾸고 싶은 점을 적어 주세요!');
+      toast('바꾸고 싶은 점을 먼저 적어 주세요!');
+      modifyRef.current?.focus();
       return;
     }
     setLoading('modifying');
-    setError('');
     setGenPrompt((prev) => `${prev}\n\n[수정 요청]: ${modifyText}`);
     const stop = startLoadingMessages(MODIFY_MESSAGES);
     try {
@@ -167,7 +172,7 @@ export default function Creator() {
       setResultTab('preview');
       setPreviewKey((k) => k + 1);
     } catch (e) {
-      setError(e instanceof Error ? e.message : '고치다가 문제가 생겼어요. 다시 해볼까요?');
+      toast(e instanceof Error ? e.message : '고치다가 문제가 생겼어요. 다시 해볼까요?');
     } finally {
       stop();
       setLoading('idle');
@@ -202,6 +207,7 @@ export default function Creator() {
           tip={<Tip lead="무엇을 하는 프로그램인지 한눈에 보이게 짧게 지어요." examples={['구구단 퀴즈 게임', '움직이는 강아지 그림판', '나만의 비밀 일기장']} />}
         >
           <TextInput
+            ref={nameRef}
             value={plan.name}
             onChange={(e) => setField('name', e.target.value)}
             placeholder="예: 간단한 메모장"
@@ -382,6 +388,7 @@ export default function Creator() {
               </div>
               <div className="flex flex-col gap-2 sm:flex-row">
                 <TextArea
+                  ref={modifyRef}
                   value={modifyText}
                   onChange={(e) => setModifyText(e.target.value)}
                   placeholder="예: 버튼을 빨간색으로 바꿔 줘"
@@ -396,12 +403,6 @@ export default function Creator() {
           </>
         )}
       </Card>
-
-      {error && (
-        <div className="anim-pop-in rounded-[var(--r-md)] border-2 border-coral/40 bg-coral-soft px-4 py-3 text-[15px] text-coral-ink lg:col-span-2">
-          {error}
-        </div>
-      )}
 
       <LoginDialog open={loginOpen} onClose={() => setLoginOpen(false)} />
       <UploadDialog
