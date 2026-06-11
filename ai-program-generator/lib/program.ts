@@ -33,6 +33,13 @@ ${code.html}
 </html>`;
 }
 
+/** 타임스탬프(ms)를 "2026년 6월 11일" 형식으로 */
+export function formatDate(ms: number): string {
+  if (!ms) return '';
+  const d = new Date(ms);
+  return `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일`;
+}
+
 /** 파일명에 안전한 슬러그로 변환 */
 export function toSafeFileName(name: string): string {
   const slug = (name || 'program')

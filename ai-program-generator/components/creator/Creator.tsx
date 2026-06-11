@@ -14,6 +14,7 @@ import {
   RotateCcw,
 } from 'lucide-react';
 import type { GeneratedCode } from '@/lib/ai/types';
+import { type PlanFields, EMPTY_PLAN } from '@/lib/firebase/types';
 import { requestGenerate } from '@/lib/client/generate';
 import { downloadProgramZip } from '@/lib/client/downloadZip';
 import { EXAMPLE_PLANS } from '@/lib/examples';
@@ -36,16 +37,6 @@ type CodeTab = 'html' | 'css' | 'javascript';
 type ResultTab = 'preview' | 'code';
 
 const EMPTY_CODE: GeneratedCode = { html: '', css: '', javascript: '' };
-
-interface PlanFields {
-  name: string;
-  look: string;
-  usage: string;
-  how: string;
-  etc: string;
-}
-
-const EMPTY_PLAN: PlanFields = { name: '', look: '', usage: '', how: '', etc: '' };
 
 const GENERATE_MESSAGES = [
   '계획서를 읽고 있어요…',
@@ -425,6 +416,7 @@ export default function Creator() {
         open={uploadOpen}
         onClose={() => setUploadOpen(false)}
         code={code}
+        plan={plan}
         prompt={genPrompt}
         defaultTitle={plan.name}
       />

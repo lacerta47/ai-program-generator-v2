@@ -15,7 +15,7 @@ import {
   type DocumentData,
 } from 'firebase/firestore';
 import { db } from './client';
-import type { Post, NewPost } from './types';
+import type { Post, NewPost, PostEdit } from './types';
 
 const COL = 'posts';
 export const PAGE_SIZE = 20;
@@ -62,6 +62,11 @@ export async function createPost(data: NewPost): Promise<string> {
 
 export async function updatePostTitle(id: string, title: string): Promise<void> {
   await updateDoc(doc(db, COL, id), { title: title.trim() });
+}
+
+/** 작품 전체 편집(덮어쓰기) — 제목·작성자명·계획서·코드. ownerUid/categoryId/createdAt는 불변. */
+export async function updatePostContent(id: string, edit: PostEdit): Promise<void> {
+  await updateDoc(doc(db, COL, id), { ...edit });
 }
 
 export async function deletePost(id: string): Promise<void> {

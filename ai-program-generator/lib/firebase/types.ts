@@ -7,15 +7,45 @@ export interface Category {
   createdAt: number;
 }
 
+/** 계획서 5필드 — 생성기 입력이자 게시물에 개별 저장(편집 시 폼 복원용) */
+export interface PlanFields {
+  name: string;
+  look: string;
+  usage: string;
+  how: string;
+  etc: string;
+}
+
+export const EMPTY_PLAN: PlanFields = { name: '', look: '', usage: '', how: '', etc: '' };
+
 export interface Post {
   id: string;
   title: string;
   categoryId: string;
   ownerUid: string;
+  authorName: string;
   code: GeneratedCode;
+  /** 계획서 개별 필드. 구버전 글에는 없을 수 있음(옵셔널) */
+  plan?: PlanFields;
+  /** 생성에 쓰인 프롬프트 이력(구버전 호환·계획서 폴백 표시용) */
   prompt: string;
   createdAt: number;
+  updatedAt?: number;
 }
 
 /** 새 게시물 생성 시 입력 (id 제외) */
 export type NewPost = Omit<Post, 'id'>;
+
+/** 게시물 편집 시 덮어쓸 수 있는 필드 */
+export interface PostEdit {
+  title: string;
+  authorName: string;
+  plan: PlanFields;
+  code: GeneratedCode;
+  prompt: string;
+  updatedAt: number;
+}
+
+export interface UserProfile {
+  nickname: string;
+}
