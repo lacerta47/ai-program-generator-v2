@@ -11,7 +11,7 @@ export default function ThemeToggle() {
       onClick={toggle}
       aria-label={dark ? '라이트 모드로 바꾸기' : '다크 모드로 바꾸기'}
       title={dark ? '라이트 모드로' : '다크 모드로'}
-      className="press relative grid h-11 w-11 place-items-center overflow-hidden rounded-full border-2 border-line bg-surface text-ink hover:border-brand/50"
+      className="press relative grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-full border-2 border-line bg-surface text-ink hover:border-brand/50"
     >
       <span
         className="absolute transition-all duration-300"

@@ -80,13 +80,13 @@ export function HelpTip({ children }: { children: React.ReactNode }) {
         aria-label="작성 도움말 보기"
         aria-expanded={pinned}
         onClick={() => setPinned((p) => !p)}
-        className={`grid h-6 w-6 place-items-center rounded-full transition-colors ${
+        className={`-my-1.5 grid h-9 w-9 shrink-0 place-items-center rounded-full transition-colors ${
           pinned
             ? 'bg-brand text-brand-ink'
             : 'text-muted/70 hover:bg-brand-soft hover:text-brand-strong dark:hover:text-brand'
         }`}
       >
-        <CircleHelp size={15} />
+        <CircleHelp size={17} />
       </button>
       <span
         role="tooltip"

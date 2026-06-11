@@ -90,6 +90,11 @@ body {
   transition: background-color 0.25s, color 0.25s;
 }
 
+/* 좁은 화면에서 미세한 가로 넘침이 스크롤로 이어지지 않게 차단 */
+html {
+  overflow-x: clip;
+}
+
 h1, h2, h3 {
   font-family: var(--font-jua), var(--font-gowun), sans-serif;
   font-weight: 400;
