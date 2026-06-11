@@ -1,0 +1,17 @@
+# dependencies
+node_modules
+
+# env / secrets — 절대 커밋 금지
+.env
+.env.local
+.env*.local
+*serviceAccount*.json
+
+# next.js (추후)
+.next
+out
+dist
+
+# misc
+.DS_Store
+*.log

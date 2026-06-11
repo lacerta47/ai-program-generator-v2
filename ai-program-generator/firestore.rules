@@ -1,0 +1,75 @@
+rules_version = '2';
+
+// AI 프로그램 생성기 — Firestore 보안 규칙
+// 핵심: 게시물은 공개 읽기, 작성은 로그인 사용자, 수정/삭제는 "작성자 본인 또는 관리자"만.
+// 관리자는 Auth custom claim { admin: true } 로 판별 (scripts/set-admin.mjs 로 부여).
+// usage(생성 한도 카운터)는 서버 Admin SDK 전용 — 클라이언트 접근 규칙 없음(기본 거부).
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    function isAdmin() {
+      return isSignedIn() && request.auth.token.admin == true;
+    }
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    // 게시물 문서 형태/크기 검증 (Firestore 문서 1MiB 한도 보호 포함)
+    function validPost(d) {
+      return d.keys().hasOnly(['title', 'categoryId', 'ownerUid', 'code', 'prompt', 'createdAt'])
+        && d.title is string && d.title.size() > 0 && d.title.size() <= 100
+        && d.categoryId is string && d.categoryId.size() > 0 && d.categoryId.size() <= 128
+        && d.ownerUid is string
+        && d.prompt is string && d.prompt.size() <= 50000
+        && d.createdAt is number
+        && d.code.keys().hasOnly(['html', 'css', 'javascript'])
+        && d.code.html is string && d.code.html.size() <= 150000
+        && d.code.css is string && d.code.css.size() <= 150000
+        && d.code.javascript is string && d.code.javascript.size() <= 150000;
+    }
+
+    // 카테고리(게시판): 누구나 읽기, 관리자만 생성/수정/삭제
+    match /categories/{categoryId} {
+      allow read: if true;
+      allow create: if isAdmin()
+        && request.resource.data.keys().hasOnly(['name', 'order', 'createdAt'])
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.name.size() <= 50
+        && request.resource.data.order is number
+        && request.resource.data.createdAt is number;
+      allow update: if isAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'order'])
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.name.size() <= 50
+        && request.resource.data.order is number;
+      allow delete: if isAdmin();
+    }
+
+    // 게시물: 누구나 읽기 / 로그인 사용자가 본인 소유로 생성(형태 검증) /
+    // 수정은 제목만 가능(소유권·코드 변조 차단), 본인 또는 관리자만 / 삭제는 본인 또는 관리자
+    match /posts/{postId} {
+      allow read: if true;
+      allow create: if isSignedIn()
+        && request.resource.data.ownerUid == request.auth.uid
+        && validPost(request.resource.data);
+      allow update: if (isAdmin() || isOwner(resource.data.ownerUid))
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['title'])
+        && request.resource.data.title is string
+        && request.resource.data.title.size() > 0
+        && request.resource.data.title.size() <= 100;
+      allow delete: if isAdmin() || isOwner(resource.data.ownerUid);
+    }
+
+    // 사용자 프로필(선택): 본인만 작성/수정
+    match /users/{uid} {
+      allow read: if true;
+      allow create, update: if isOwner(uid);
+      allow delete: if isAdmin();
+    }
+  }
+}

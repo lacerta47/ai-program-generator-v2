@@ -1,0 +1,286 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ---------- 디자인 토큰 (DESIGN.md 기준) ---------- */
+:root {
+  --bg: oklch(0.977 0.008 270);
+  --surface: oklch(1 0 0);
+  --surface-2: oklch(0.955 0.012 270);
+  --ink: oklch(0.3 0.02 285);
+  --muted: oklch(0.5 0.02 285);
+  --line: oklch(0.9 0.012 270);
+  --brand: oklch(0.585 0.19 272);
+  --brand-strong: oklch(0.53 0.2 272);
+  --brand-ink: #ffffff;
+  --brand-soft: oklch(0.93 0.045 272);
+  --mint: oklch(0.76 0.13 175);
+  --mint-soft: oklch(0.95 0.04 175);
+  --mint-ink: oklch(0.35 0.09 175);
+  --sunshine: oklch(0.84 0.15 85);
+  --sunshine-soft: oklch(0.96 0.05 85);
+  --sunshine-ink: oklch(0.42 0.11 75);
+  --coral: oklch(0.72 0.16 35);
+  --coral-soft: oklch(0.95 0.04 35);
+  --coral-ink: oklch(0.42 0.14 35);
+  --grape: oklch(0.66 0.15 305);
+  --grape-soft: oklch(0.94 0.04 305);
+  --grape-ink: oklch(0.4 0.12 305);
+  --r-md: 14px;
+  --r-lg: 20px;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.dark {
+  --bg: oklch(0.21 0.018 285);
+  --surface: oklch(0.26 0.02 285);
+  --surface-2: oklch(0.3 0.022 285);
+  --ink: oklch(0.94 0.008 270);
+  --muted: oklch(0.74 0.015 280);
+  --line: oklch(0.36 0.02 285);
+  --brand: oklch(0.68 0.16 272);
+  --brand-strong: oklch(0.74 0.15 272);
+  --brand-ink: oklch(0.18 0.03 272);
+  --brand-soft: oklch(0.34 0.06 272);
+  --mint-soft: oklch(0.33 0.05 175);
+  --mint-ink: oklch(0.85 0.1 175);
+  --sunshine-soft: oklch(0.34 0.05 85);
+  --sunshine-ink: oklch(0.88 0.12 90);
+  --coral-soft: oklch(0.33 0.05 35);
+  --coral-ink: oklch(0.84 0.11 35);
+  --grape-soft: oklch(0.33 0.05 305);
+  --grape-ink: oklch(0.85 0.09 305);
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-brand: var(--brand);
+  --color-brand-strong: var(--brand-strong);
+  --color-brand-ink: var(--brand-ink);
+  --color-brand-soft: var(--brand-soft);
+  --color-mint: var(--mint);
+  --color-mint-soft: var(--mint-soft);
+  --color-mint-ink: var(--mint-ink);
+  --color-sunshine: var(--sunshine);
+  --color-sunshine-soft: var(--sunshine-soft);
+  --color-sunshine-ink: var(--sunshine-ink);
+  --color-coral: var(--coral);
+  --color-coral-soft: var(--coral-soft);
+  --color-coral-ink: var(--coral-ink);
+  --color-grape: var(--grape);
+  --color-grape-soft: var(--grape-soft);
+  --color-grape-ink: var(--grape-ink);
+  --radius-md: var(--r-md);
+  --radius-lg: var(--r-lg);
+  --font-display: var(--font-jua);
+  --font-body: var(--font-gowun);
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-gowun), sans-serif;
+  font-size: 17px;
+  line-height: 1.7;
+  transition: background-color 0.25s, color 0.25s;
+}
+
+h1, h2, h3 {
+  font-family: var(--font-jua), var(--font-gowun), sans-serif;
+  font-weight: 400;
+  text-wrap: balance;
+}
+
+:focus-visible {
+  outline: 3px solid var(--brand);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* 입력 캐럿(깜빡이)을 브랜드색으로 — 양쪽 모드에서 잘 보이게 */
+input, textarea {
+  caret-color: var(--brand);
+}
+
+/* 사용자 환경에서 기본 I-빔 커서가 입력란 위에서 안 보이는 문제 보정:
+   모드와 무관하게 흰 심+검은 테두리 I-빔으로 교체 (어떤 배경에서도 보임) */
+input:not([type='checkbox']):not([type='radio']),
+textarea {
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cg fill='none' stroke='black' stroke-width='3.5' stroke-linecap='round'%3E%3Cpath d='M9 4.5h6M9 19.5h6M12 4.5v15'/%3E%3C/g%3E%3Cg fill='none' stroke='white' stroke-width='1.5' stroke-linecap='round'%3E%3Cpath d='M9 4.5h6M9 19.5h6M12 4.5v15'/%3E%3C/g%3E%3C/svg%3E") 12 12, text;
+}
+
+::selection {
+  background: var(--brand-soft);
+}
+
+/* ---------- 코드 뷰어 (CodeView) ---------- */
+.code-view {
+  counter-reset: line;
+}
+.code-line {
+  display: block;
+}
+.code-line::before {
+  counter-increment: line;
+  content: counter(line);
+  display: inline-block;
+  width: 2.2em;
+  margin-right: 1.1em;
+  text-align: right;
+  color: var(--muted);
+  opacity: 0.55;
+  user-select: none;
+}
+
+/* 구문 강조 토큰 색 — 우리 팔레트로 라이트/다크 자동 전환 */
+.code-view .hljs-comment, .code-view .hljs-quote {
+  color: var(--muted);
+  font-style: italic;
+}
+.code-view .hljs-keyword, .code-view .hljs-selector-tag, .code-view .hljs-meta {
+  color: oklch(0.52 0.18 305);
+}
+.code-view .hljs-string, .code-view .hljs-regexp {
+  color: oklch(0.5 0.12 165);
+}
+.code-view .hljs-number, .code-view .hljs-literal {
+  color: oklch(0.52 0.13 75);
+}
+.code-view .hljs-name, .code-view .hljs-tag {
+  color: oklch(0.5 0.16 272);
+}
+.code-view .hljs-attr, .code-view .hljs-attribute,
+.code-view .hljs-selector-class, .code-view .hljs-selector-id, .code-view .hljs-selector-pseudo {
+  color: oklch(0.55 0.15 35);
+}
+.code-view .hljs-title, .code-view .hljs-built_in, .code-view .hljs-function {
+  color: oklch(0.48 0.15 240);
+}
+.dark .code-view .hljs-keyword, .dark .code-view .hljs-selector-tag, .dark .code-view .hljs-meta {
+  color: oklch(0.78 0.13 305);
+}
+.dark .code-view .hljs-string, .dark .code-view .hljs-regexp {
+  color: oklch(0.8 0.12 165);
+}
+.dark .code-view .hljs-number, .dark .code-view .hljs-literal {
+  color: oklch(0.84 0.13 85);
+}
+.dark .code-view .hljs-name, .dark .code-view .hljs-tag {
+  color: oklch(0.78 0.12 272);
+}
+.dark .code-view .hljs-attr, .dark .code-view .hljs-attribute,
+.dark .code-view .hljs-selector-class, .dark .code-view .hljs-selector-id, .dark .code-view .hljs-selector-pseudo {
+  color: oklch(0.8 0.11 35);
+}
+.dark .code-view .hljs-title, .dark .code-view .hljs-built_in, .dark .code-view .hljs-function {
+  color: oklch(0.78 0.11 240);
+}
+
+/* ---------- 모션 ---------- */
+@keyframes pop-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes pop {
+  0% { transform: scale(0.6); opacity: 0; }
+  70% { transform: scale(1.12); opacity: 1; }
+  100% { transform: scale(1); }
+}
+@keyframes dot-bounce {
+  0%, 80%, 100% { transform: translateY(0); }
+  40% { transform: translateY(-9px); }
+}
+@keyframes float-a {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-14px) rotate(8deg); }
+}
+@keyframes float-b {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-22px) rotate(-10deg); }
+}
+@keyframes wiggle {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-6deg); }
+  75% { transform: rotate(6deg); }
+}
+
+/* --- 로딩용 "코딩하는 로봇" 장면 --- */
+@keyframes bot-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+@keyframes bot-blink {
+  0%, 91%, 100% { transform: scaleY(1); }
+  94%, 97% { transform: scaleY(0.12); }
+}
+@keyframes bot-tap {
+  0%, 100% { transform: rotate(8deg); }
+  50% { transform: rotate(-16deg); }
+}
+@keyframes antenna-pulse {
+  0%, 100% { transform: scale(1); opacity: 0.7; }
+  50% { transform: scale(1.45); opacity: 1; }
+}
+@keyframes code-line-1 {
+  0%, 2% { transform: scaleX(0); opacity: 1; }
+  12% { transform: scaleX(1); }
+  94% { transform: scaleX(1); opacity: 1; }
+  100% { transform: scaleX(1); opacity: 0; }
+}
+@keyframes code-line-2 {
+  0%, 22% { transform: scaleX(0); opacity: 1; }
+  32% { transform: scaleX(1); }
+  94% { transform: scaleX(1); opacity: 1; }
+  100% { transform: scaleX(1); opacity: 0; }
+}
+@keyframes code-line-3 {
+  0%, 42% { transform: scaleX(0); opacity: 1; }
+  52% { transform: scaleX(1); }
+  94% { transform: scaleX(1); opacity: 1; }
+  100% { transform: scaleX(1); opacity: 0; }
+}
+@keyframes code-line-4 {
+  0%, 62% { transform: scaleX(0); opacity: 1; }
+  72% { transform: scaleX(1); }
+  94% { transform: scaleX(1); opacity: 1; }
+  100% { transform: scaleX(1); opacity: 0; }
+}
+
+.anim-pop-in { animation: pop-in 0.22s var(--ease-out) both; }
+.anim-pop { animation: pop 0.25s var(--ease-out) both; }
+.stagger > * { animation: pop-in 0.24s var(--ease-out) both; }
+.stagger > *:nth-child(1) { animation-delay: 0ms; }
+.stagger > *:nth-child(2) { animation-delay: 40ms; }
+.stagger > *:nth-child(3) { animation-delay: 80ms; }
+.stagger > *:nth-child(4) { animation-delay: 120ms; }
+.stagger > *:nth-child(5) { animation-delay: 160ms; }
+.stagger > *:nth-child(6) { animation-delay: 200ms; }
+.stagger > *:nth-child(n + 7) { animation-delay: 240ms; }
+
+/* .group 부모에 호버하면 아이콘이 살짝 흔들림 */
+.group:hover .hover-wiggle {
+  animation: wiggle 0.5s ease-in-out;
+}
+
+.press {
+  transition: transform 0.15s var(--ease-out), background-color 0.15s, border-color 0.15s, color 0.15s, box-shadow 0.18s var(--ease-out);
+}
+.press:active { transform: scale(0.96); }
+
+.lift {
+  transition: transform 0.18s var(--ease-out), border-color 0.18s, box-shadow 0.18s var(--ease-out);
+}
+.lift:hover { transform: translateY(-2px); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
