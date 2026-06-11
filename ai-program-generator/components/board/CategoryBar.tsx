@@ -12,6 +12,7 @@ import {
 import Chip, { CHIP_COLORS } from '@/components/ui/Chip';
 import Button from '@/components/ui/Button';
 import { TextInput } from '@/components/ui/Field';
+import { useToast } from '@/components/ui/Toast';
 
 interface Props {
   categories: Category[];
@@ -20,9 +21,12 @@ interface Props {
   isAdmin: boolean;
 }
 
+const FAIL_MSG = '문제가 생겼어요. 인터넷 연결이나 권한을 확인하고 다시 해볼까요?';
+
 export default function CategoryBar({ categories, selectedId, onSelect, isAdmin }: Props) {
   const [newName, setNewName] = useState('');
   const [editing, setEditing] = useState<{ id: string; name: string } | null>(null);
+  const { toast } = useToast();
 
   const idx = categories.findIndex((c) => c.id === selectedId);
   const current = categories[idx];
@@ -30,25 +34,46 @@ export default function CategoryBar({ categories, selectedId, onSelect, isAdmin 
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault();
     if (!newName.trim()) return;
-    await addCategory(newName, categories.length);
-    setNewName('');
+    try {
+      await addCategory(newName, categories.length);
+      setNewName('');
+    } catch (err) {
+      console.error('게시판 추가 실패:', err);
+      toast(FAIL_MSG);
+    }
   }
 
   async function handleRename() {
-    if (editing && editing.name.trim()) await renameCategory(editing.id, editing.name);
+    const target = editing;
     setEditing(null);
+    if (!target || !target.name.trim()) return;
+    try {
+      await renameCategory(target.id, target.name);
+    } catch (err) {
+      console.error('게시판 이름 변경 실패:', err);
+      toast(FAIL_MSG);
+    }
   }
 
   async function move(dir: 'up' | 'down') {
     const t = idx + (dir === 'up' ? -1 : 1);
     if (idx < 0 || t < 0 || t >= categories.length) return;
-    await swapCategoryOrder(categories[idx], categories[t]);
+    try {
+      await swapCategoryOrder(categories[idx], categories[t]);
+    } catch (err) {
+      console.error('게시판 순서 변경 실패:', err);
+      toast(FAIL_MSG);
+    }
   }
 
   async function handleDelete() {
     if (!current) return;
-    if (confirm(`'${current.name}' 게시판과 그 안의 모든 게시물을 삭제할까요?`)) {
+    if (!confirm(`'${current.name}' 게시판과 그 안의 모든 게시물을 삭제할까요?`)) return;
+    try {
       await deleteCategoryWithPosts(current.id);
+    } catch (err) {
+      console.error('게시판 삭제 실패:', err);
+      toast(FAIL_MSG);
     }
   }
 

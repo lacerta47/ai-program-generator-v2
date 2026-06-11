@@ -5,6 +5,7 @@ import { Link2, Check, Download, Pencil, Trash2, FileQuestion } from 'lucide-rea
 import type { Post } from '@/lib/firebase/types';
 import { updatePostTitle } from '@/lib/firebase/posts';
 import { TextInput } from '@/components/ui/Field';
+import { useToast } from '@/components/ui/Toast';
 
 interface Props {
   posts: Post[];
@@ -35,6 +36,7 @@ export default function PostList({
 }: Props) {
   const [editing, setEditing] = useState<{ id: string; title: string } | null>(null);
   const [copiedId, setCopiedId] = useState('');
+  const { toast } = useToast();
 
   const observer = useRef<IntersectionObserver | null>(null);
   const sentinelRef = useCallback(
@@ -50,19 +52,28 @@ export default function PostList({
   );
 
   async function saveTitle() {
-    if (editing && editing.title.trim()) {
-      await updatePostTitle(editing.id, editing.title);
-      onTitleSaved(editing.id, editing.title.trim());
-    }
+    const target = editing;
     setEditing(null);
+    if (!target || !target.title.trim()) return;
+    try {
+      await updatePostTitle(target.id, target.title);
+      onTitleSaved(target.id, target.title.trim());
+    } catch (e) {
+      console.error('제목 변경 실패:', e);
+      toast('제목을 바꾸지 못했어요. 인터넷 연결이나 권한을 확인해 주세요.');
+    }
   }
 
   function share(post: Post) {
     const url = `${window.location.origin}/board?category=${post.categoryId}&post=${post.id}`;
-    navigator.clipboard.writeText(url).then(() => {
-      setCopiedId(post.id);
-      setTimeout(() => setCopiedId(''), 1500);
-    });
+    navigator.clipboard.writeText(url).then(
+      () => {
+        setCopiedId(post.id);
+        setTimeout(() => setCopiedId(''), 1500);
+        toast('작품 주소를 복사했어요! 친구들에게 자랑해 봐요', 'success');
+      },
+      () => toast('링크 복사에 실패했어요.'),
+    );
   }
 
   if (posts.length === 0) {

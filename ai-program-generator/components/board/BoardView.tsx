@@ -13,9 +13,11 @@ import PostList from './PostList';
 import PostPreview from './PostPreview';
 import LoadingDots from '@/components/ui/LoadingDots';
 import Button from '@/components/ui/Button';
+import { useToast } from '@/components/ui/Toast';
 
 export default function BoardView() {
   const { user, isAdmin } = useAuth();
+  const { toast } = useToast();
   const router = useRouter();
   const params = useSearchParams();
 
@@ -119,9 +121,14 @@ export default function BoardView() {
 
   async function handleDelete(post: Post) {
     if (!confirm(`'${post.title}' 게시물을 삭제할까요?`)) return;
-    await deletePost(post.id);
-    setPosts((prev) => prev.filter((p) => p.id !== post.id));
-    if (selectedPost?.id === post.id) setSelectedPost(null);
+    try {
+      await deletePost(post.id);
+      setPosts((prev) => prev.filter((p) => p.id !== post.id));
+      if (selectedPost?.id === post.id) setSelectedPost(null);
+    } catch (e) {
+      console.error('게시물 삭제 실패:', e);
+      toast('삭제하지 못했어요. 인터넷 연결이나 권한을 확인해 주세요.');
+    }
   }
 
   function handleTitleSaved(id: string, title: string) {

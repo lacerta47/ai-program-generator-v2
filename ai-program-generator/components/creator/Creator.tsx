@@ -11,6 +11,7 @@ import {
   Download,
   Upload,
   Lightbulb,
+  RotateCcw,
 } from 'lucide-react';
 import type { GeneratedCode } from '@/lib/ai/types';
 import { requestGenerate } from '@/lib/client/generate';
@@ -143,6 +144,7 @@ export default function Creator() {
       setCode(result);
       setResultTab('preview');
       setPreviewKey((k) => k + 1);
+      toast('우와! 멋진 프로그램을 완성했어요!', 'success');
     } catch (e) {
       toast(e instanceof Error ? e.message : '만들다가 문제가 생겼어요. 다시 해볼까요?');
     } finally {
@@ -172,6 +174,7 @@ export default function Creator() {
       setModifyText('');
       setResultTab('preview');
       setPreviewKey((k) => k + 1);
+      toast('원하는 대로 고쳐봤어요!', 'success');
     } catch (e) {
       toast(e instanceof Error ? e.message : '고치다가 문제가 생겼어요. 다시 해볼까요?');
     } finally {
@@ -189,6 +192,15 @@ export default function Creator() {
     await navigator.clipboard.writeText(code[codeTab] || '');
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
+  }
+
+  function handleReset() {
+    setPlan(EMPTY_PLAN);
+    setCode(EMPTY_CODE);
+    setModifyText('');
+    setGenPrompt('');
+    setResultTab('preview');
+    nameRef.current?.focus();
   }
 
   return (
@@ -318,12 +330,15 @@ export default function Creator() {
                   <Code2 size={16} aria-hidden /> 코드
                 </TabButton>
               </div>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <Button variant="soft" onClick={() => (user ? setUploadOpen(true) : setLoginOpen(true))}>
                   <Upload size={17} aria-hidden /> 게시판에 올리기
                 </Button>
                 <Button variant="ghost" onClick={() => downloadProgramZip(code, plan.name)}>
                   <Download size={17} aria-hidden /> 저장하기
+                </Button>
+                <Button variant="ghost" onClick={handleReset} title="계획서와 결과를 지우고 처음부터">
+                  <RotateCcw size={17} aria-hidden /> 새로 만들기
                 </Button>
               </div>
             </div>
