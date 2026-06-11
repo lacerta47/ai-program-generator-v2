@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { FileText, Download, MonitorPlay, X } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { FileText, Download, MonitorPlay, Pencil, X } from 'lucide-react';
 import Modal from '@/components/ui/Modal';
 import type { Post } from '@/lib/firebase/types';
 import { formatDate } from '@/lib/program';
@@ -11,8 +12,9 @@ import FloatingShapes from '@/components/ui/FloatingShapes';
 import FullscreenFrame from '@/components/ui/FullscreenFrame';
 import EmptyParticles from '@/components/fx/EmptyParticles';
 
-export default function PostPreview({ post }: { post: Post | null }) {
+export default function PostPreview({ post, canEdit }: { post: Post | null; canEdit?: boolean }) {
   const [planOpen, setPlanOpen] = useState(false);
+  const router = useRouter();
 
   if (!post) {
     return (
@@ -44,7 +46,12 @@ export default function PostPreview({ post }: { post: Post | null }) {
             {post.authorName || '익명'} · {formatDate(post.createdAt)}
           </p>
         </div>
-        <div className="flex shrink-0 gap-2">
+        <div className="flex shrink-0 flex-wrap justify-end gap-2">
+          {canEdit && (
+            <Button variant="soft" onClick={() => router.push(`/?edit=${post.id}`)} className="min-h-10 px-3 text-[14px]">
+              <Pencil size={16} aria-hidden /> 고치기
+            </Button>
+          )}
           {post.prompt && (
             <Button variant="ghost" onClick={() => setPlanOpen(true)} className="min-h-10 px-3 text-[14px]">
               <FileText size={16} aria-hidden /> 계획서

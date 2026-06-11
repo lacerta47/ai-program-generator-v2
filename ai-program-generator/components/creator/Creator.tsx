@@ -1,6 +1,7 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
   Sparkles,
   Wand2,
@@ -12,10 +13,13 @@ import {
   Upload,
   Lightbulb,
   RotateCcw,
+  Save,
+  Pencil,
 } from 'lucide-react';
 import type { GeneratedCode } from '@/lib/ai/types';
 import { type PlanFields, EMPTY_PLAN } from '@/lib/firebase/types';
 import { requestGenerate } from '@/lib/client/generate';
+import { getPost, updatePostContent } from '@/lib/firebase/posts';
 import { downloadProgramZip } from '@/lib/client/downloadZip';
 import { EXAMPLE_PLANS } from '@/lib/examples';
 import { useAuth } from '@/components/auth/AuthProvider';
@@ -94,13 +98,59 @@ export default function Creator() {
   const [genPrompt, setGenPrompt] = useState('');
   const [uploadOpen, setUploadOpen] = useState(false);
   const [loginOpen, setLoginOpen] = useState(false);
+  // 편집 모드(?edit=postId) — 기존 작품을 불러와 덮어쓰기
+  const [editing, setEditing] = useState<{ id: string; title: string; authorName: string } | null>(null);
+  const [saving, setSaving] = useState(false);
 
   const { user } = useAuth();
   const { toast } = useToast();
+  const router = useRouter();
+  const params = useSearchParams();
   const nameRef = useRef<HTMLInputElement>(null);
   const modifyRef = useRef<HTMLTextAreaElement>(null);
   const hasCode = Boolean(code.html || code.css || code.javascript);
   const busy = loading !== 'idle';
+
+  // ?edit=postId 로 들어오면 해당 작품을 폼·결과에 복원
+  useEffect(() => {
+    const editId = params.get('edit');
+    if (!editId) return;
+    getPost(editId).then((p) => {
+      if (!p) {
+        toast('고칠 작품을 찾지 못했어요.');
+        return;
+      }
+      setEditing({ id: p.id, title: p.title, authorName: p.authorName || '' });
+      setPlan(p.plan ?? EMPTY_PLAN);
+      setCode(p.code);
+      setGenPrompt(p.prompt ?? '');
+      setResultTab('preview');
+      setPreviewKey((k) => k + 1);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function handleSaveEdit() {
+    if (!editing) return;
+    setSaving(true);
+    try {
+      await updatePostContent(editing.id, {
+        title: editing.title,
+        authorName: editing.authorName || '익명',
+        plan,
+        code,
+        prompt: genPrompt,
+        updatedAt: Date.now(),
+      });
+      toast('작품을 고쳐서 저장했어요!', 'success');
+      router.push(`/board?post=${editing.id}`);
+    } catch (e) {
+      console.error('작품 수정 저장 실패:', e);
+      toast('저장하지 못했어요. 인터넷 연결이나 권한을 확인해 주세요.');
+    } finally {
+      setSaving(false);
+    }
+  }
 
   const setField = (key: keyof PlanFields, value: string) =>
     setPlan((prev) => ({ ...prev, [key]: value }));
@@ -191,11 +241,23 @@ export default function Creator() {
     setModifyText('');
     setGenPrompt('');
     setResultTab('preview');
+    if (editing) {
+      setEditing(null);
+      router.replace('/');
+    }
     nameRef.current?.focus();
   }
 
   return (
     <div className="mx-auto grid max-w-7xl gap-5 p-4 sm:p-6 lg:grid-cols-[minmax(360px,5fr)_7fr]">
+      {editing && (
+        <div className="anim-pop-in flex items-center gap-2 rounded-[var(--r-md)] border-2 border-brand/40 bg-brand-soft px-4 py-2.5 text-[15px] text-brand-strong lg:col-span-2 dark:text-brand">
+          <Pencil size={16} aria-hidden />
+          <span className="truncate">
+            <strong>{editing.title}</strong> 작품을 고치는 중이에요. 다 고치면 <strong>수정 저장</strong>을 눌러요.
+          </span>
+        </div>
+      )}
       {/* 왼쪽: 계획서 */}
       <Card animate className="flex flex-col gap-4 self-start">
         <div className="flex items-center gap-2.5">
@@ -322,14 +384,20 @@ export default function Creator() {
                 </TabButton>
               </div>
               <div className="flex flex-wrap gap-2">
-                <Button variant="soft" onClick={() => (user ? setUploadOpen(true) : setLoginOpen(true))}>
-                  <Upload size={17} aria-hidden /> 게시판에 올리기
-                </Button>
-                <Button variant="ghost" onClick={() => downloadProgramZip(code, plan.name)}>
+                {editing ? (
+                  <Button variant="primary" onClick={handleSaveEdit} disabled={saving || busy}>
+                    <Save size={17} aria-hidden /> {saving ? '저장 중…' : '수정 저장'}
+                  </Button>
+                ) : (
+                  <Button variant="soft" onClick={() => (user ? setUploadOpen(true) : setLoginOpen(true))}>
+                    <Upload size={17} aria-hidden /> 게시판에 올리기
+                  </Button>
+                )}
+                <Button variant="ghost" onClick={() => downloadProgramZip(code, editing?.title || plan.name)}>
                   <Download size={17} aria-hidden /> 저장하기
                 </Button>
-                <Button variant="ghost" onClick={handleReset} title="계획서와 결과를 지우고 처음부터">
-                  <RotateCcw size={17} aria-hidden /> 새로 만들기
+                <Button variant="ghost" onClick={handleReset} title={editing ? '편집 취소' : '계획서와 결과를 지우고 처음부터'}>
+                  <RotateCcw size={17} aria-hidden /> {editing ? '편집 취소' : '새로 만들기'}
                 </Button>
               </div>
             </div>
