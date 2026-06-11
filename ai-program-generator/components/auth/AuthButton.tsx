@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { signOut } from 'firebase/auth';
 import { LogIn, LogOut, Crown, Pencil } from 'lucide-react';
 import { auth } from '@/lib/firebase/client';
-import { getUserProfile, saveNickname } from '@/lib/firebase/users';
+import { getUserProfile, claimNickname, NicknameError, NICKNAME_COOLDOWN_DAYS } from '@/lib/firebase/users';
 import { useAuth } from './AuthProvider';
 import LoginDialog from './LoginDialog';
 import Button from '@/components/ui/Button';
@@ -31,12 +31,18 @@ export default function AuthButton() {
     if (!user || !draft.trim()) return;
     setBusy(true);
     try {
-      await saveNickname(user.uid, draft);
+      await claimNickname(user.uid, draft);
       setNickname(draft.trim());
       setEditOpen(false);
       toast('별명을 바꿨어요!', 'success');
-    } catch {
-      toast('별명을 바꾸지 못했어요. 잠시 후 다시 해주세요.');
+    } catch (err) {
+      if (err instanceof NicknameError && err.reason === 'taken') {
+        toast('이미 누가 쓰는 별명이에요. 다른 별명으로 해볼까요?');
+      } else if (err instanceof NicknameError && err.reason === 'cooldown') {
+        toast(`별명은 ${NICKNAME_COOLDOWN_DAYS}일에 한 번만 바꿀 수 있어요. ${err.daysLeft}일 뒤에 다시 해주세요.`);
+      } else {
+        toast('별명을 바꾸지 못했어요. 잠시 후 다시 해주세요.');
+      }
     } finally {
       setBusy(false);
     }
@@ -76,7 +82,7 @@ export default function AuthButton() {
               <TextInput value={draft} onChange={(e) => setDraft(e.target.value)} maxLength={20} placeholder="예: 코딩왕" autoFocus />
             </Label>
             <p className="text-[13px] text-muted">
-              이미 올린 작품의 별명은 그대로예요. 다음에 올리는 작품부터 새 별명으로 보여요.
+              별명은 {NICKNAME_COOLDOWN_DAYS}일에 한 번만 바꿀 수 있어요. 이미 올린 작품의 별명은 그대로고, 다음 작품부터 새 별명으로 보여요.
             </p>
             <div className="mt-1 flex justify-end gap-2">
               <Button type="button" variant="ghost" onClick={() => setEditOpen(false)}>취소</Button>

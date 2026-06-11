@@ -88,14 +88,36 @@ service cloud.firestore {
       allow delete: if isAdmin() || isOwner(resource.data.ownerUid);
     }
 
-    // 사용자 프로필: 닉네임 등. 본인만 작성/수정, 닉네임 형식 검증
+    function validNick(n) {
+      return n is string && n.size() > 0 && n.size() <= 20;
+    }
+
+    // 사용자 프로필: 닉네임 + 마지막 변경시각. 본인만. 변경 쿨다운 15일을 서버시계로 강제.
     match /users/{uid} {
       allow read: if true;
-      allow create, update: if isOwner(uid)
-        && request.resource.data.keys().hasOnly(['nickname'])
-        && request.resource.data.nickname is string
-        && request.resource.data.nickname.size() > 0
-        && request.resource.data.nickname.size() <= 20;
+      allow create: if isOwner(uid)
+        && request.resource.data.keys().hasOnly(['nickname', 'nicknameUpdatedAt'])
+        && validNick(request.resource.data.nickname)
+        && request.resource.data.nicknameUpdatedAt is number;
+      allow update: if isOwner(uid)
+        && request.resource.data.keys().hasOnly(['nickname', 'nicknameUpdatedAt'])
+        && validNick(request.resource.data.nickname)
+        && request.resource.data.nicknameUpdatedAt is number
+        && (
+          !('nicknameUpdatedAt' in resource.data)
+          || request.resource.data.nickname == resource.data.nickname
+          || request.time.toMillis() > resource.data.nicknameUpdatedAt + (15 * 24 * 60 * 60 * 1000)
+        );
+      allow delete: if isAdmin();
+    }
+
+    // 닉네임 점유 — 문서ID=소문자별명, 값={uid}. 한 번 점유하면 그 계정 영구 소유(재활용 없음).
+    match /nicknames/{key} {
+      allow read: if true;
+      allow create: if isSignedIn()
+        && request.resource.data.keys().hasOnly(['uid'])
+        && request.resource.data.uid == request.auth.uid;
+      allow update: if false;
       allow delete: if isAdmin();
     }
   }

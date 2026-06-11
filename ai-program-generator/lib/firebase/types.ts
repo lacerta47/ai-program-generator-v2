@@ -48,4 +48,6 @@ export interface PostEdit {
 
 export interface UserProfile {
   nickname: string;
+  /** 마지막 닉네임 변경 시각(ms) — 변경 쿨다운 판정용 */
+  nicknameUpdatedAt?: number;
 }
