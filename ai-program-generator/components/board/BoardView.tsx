@@ -147,7 +147,7 @@ export default function BoardView() {
           onSelect={selectCategory}
           isAdmin={isAdmin}
         />
-        <div className="min-h-0 flex-1 overflow-hidden">
+        <div className="min-h-0 flex-1 overflow-y-auto">
           {loading ? (
             <div className="py-8">
               <LoadingDots label="작품을 불러오는 중…" />

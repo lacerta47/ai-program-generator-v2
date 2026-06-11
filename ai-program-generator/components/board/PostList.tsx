@@ -92,7 +92,7 @@ export default function PostList({
   }
 
   return (
-    <ul className="stagger flex flex-col gap-2 overflow-y-auto pr-1">
+    <ul className="stagger flex flex-col gap-2 pr-1">
       {posts.map((post) => {
         const canManage = isAdmin || post.ownerUid === currentUserUid;
         const active = post.id === selectedPostId;
