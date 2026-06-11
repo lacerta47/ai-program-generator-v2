@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { FileText, Download, MonitorPlay, X } from 'lucide-react';
 import Modal from '@/components/ui/Modal';
 import type { Post } from '@/lib/firebase/types';
+import { formatDate } from '@/lib/program';
 import { downloadProgramZip } from '@/lib/client/downloadZip';
 import Button from '@/components/ui/Button';
 import FloatingShapes from '@/components/ui/FloatingShapes';
@@ -35,9 +36,14 @@ export default function PostPreview({ post }: { post: Post | null }) {
   return (
     <div className="anim-pop-in flex h-full flex-col gap-3" key={post.id}>
       <div className="flex items-center justify-between gap-2">
-        <h3 className="truncate text-[19px]" title={post.title}>
-          {post.title}
-        </h3>
+        <div className="min-w-0">
+          <h3 className="truncate text-[19px]" title={post.title}>
+            {post.title}
+          </h3>
+          <p className="truncate text-[13px] text-muted">
+            {post.authorName || '익명'} · {formatDate(post.createdAt)}
+          </p>
+        </div>
         <div className="flex shrink-0 gap-2">
           {post.prompt && (
             <Button variant="ghost" onClick={() => setPlanOpen(true)} className="min-h-10 px-3 text-[14px]">

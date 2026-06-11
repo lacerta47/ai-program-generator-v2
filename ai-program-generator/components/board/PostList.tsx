@@ -4,6 +4,7 @@ import { useCallback, useRef, useState } from 'react';
 import { Link2, Check, Download, Pencil, Trash2, FileQuestion } from 'lucide-react';
 import type { Post } from '@/lib/firebase/types';
 import { updatePostTitle } from '@/lib/firebase/posts';
+import { formatDate } from '@/lib/program';
 import { TextInput } from '@/components/ui/Field';
 import { useToast } from '@/components/ui/Toast';
 
@@ -115,13 +116,20 @@ export default function PostList({
               />
             ) : (
               <button
-                className={`min-w-0 flex-1 truncate text-left text-[16px] ${
-                  active ? 'font-medium text-brand-strong dark:text-brand' : 'text-ink'
-                }`}
+                className="min-w-0 flex-1 text-left"
                 onClick={() => onSelect(post)}
                 title={post.title}
               >
-                {post.title}
+                <span
+                  className={`block truncate text-[16px] ${
+                    active ? 'font-medium text-brand-strong dark:text-brand' : 'text-ink'
+                  }`}
+                >
+                  {post.title}
+                </span>
+                <span className="block truncate text-[12.5px] text-muted">
+                  {post.authorName || '익명'} · {formatDate(post.createdAt)}
+                </span>
               </button>
             )}
 
