@@ -163,7 +163,8 @@ export default function Creator() {
       return;
     }
     setLoading('modifying');
-    setGenPrompt((prev) => `${prev}\n\n[수정 요청]: ${modifyText}`);
+    // 수정 이력을 누적하되, 게시물 prompt 필드 한도(50,000자, firestore.rules)를 넘지 않게 클램프
+    setGenPrompt((prev) => `${prev}\n\n[수정 요청]: ${modifyText}`.slice(-40000));
     const stop = startLoadingMessages(MODIFY_MESSAGES);
     try {
       const result = await requestGenerate(buildModifyPrompt(plan, code, modifyText), 'modify');

@@ -30,6 +30,11 @@ export default function BoardView() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [loadError, setLoadError] = useState(false);
+  // 공유 링크 ?post= 의 카테고리가 정해지기 전에는 "첫 카테고리 자동선택"을 보류
+  // (categoryId 없이 들어온 딥링크가 엉뚱한 카테고리 목록을 띄우는 레이스 방지)
+  const [deepLinkResolving, setDeepLinkResolving] = useState(
+    Boolean(params.get('post') && !params.get('category')),
+  );
 
   // 카테고리 실시간 구독
   useEffect(
@@ -41,23 +46,25 @@ export default function BoardView() {
     [],
   );
 
-  // 선택된 카테고리가 없으면 첫 번째로
+  // 선택된 카테고리가 없으면 첫 번째로 (딥링크 글 해결 중이면 대기)
   useEffect(() => {
-    if (!selectedCategoryId && categories.length > 0) {
+    if (!selectedCategoryId && !deepLinkResolving && categories.length > 0) {
       setSelectedCategoryId(categories[0].id);
     }
-  }, [categories, selectedCategoryId]);
+  }, [categories, selectedCategoryId, deepLinkResolving]);
 
   // 공유 링크(?post=)로 진입한 경우 해당 게시물 로드
   useEffect(() => {
     const postId = params.get('post');
     if (!postId) return;
-    getPost(postId).then((p) => {
-      if (p) {
-        setSelectedPost(p);
-        setSelectedCategoryId((prev) => prev ?? p.categoryId);
-      }
-    });
+    getPost(postId)
+      .then((p) => {
+        if (p) {
+          setSelectedPost(p);
+          setSelectedCategoryId((prev) => prev ?? p.categoryId);
+        }
+      })
+      .finally(() => setDeepLinkResolving(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

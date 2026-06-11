@@ -21,8 +21,37 @@ function previewOrigin(): string {
   const p = port ? `:${port}` : '';
   if (hostname === 'localhost') return `${protocol}//127.0.0.1${p}`;
   if (hostname === '127.0.0.1') return `${protocol}//localhost${p}`;
-  // 배포 환경: 별도 미리보기 도메인을 두면 격리 유지 (없으면 같은 오리진으로 동작)
-  return process.env.NEXT_PUBLIC_PREVIEW_ORIGIN || '';
+  // 배포 환경: 별도 미리보기 도메인이 있어야 프로세스 격리가 유지된다.
+  const configured = process.env.NEXT_PUBLIC_PREVIEW_ORIGIN;
+  if (!configured) {
+    // 같은 오리진으로 폴백 = 격리 없음. 무한루프 코드가 탭을 얼릴 수 있으므로 경고.
+    console.warn(
+      '[preview] NEXT_PUBLIC_PREVIEW_ORIGIN 미설정 — 미리보기가 같은 오리진에서 실행되어 프로세스 격리가 적용되지 않습니다.',
+    );
+    return '';
+  }
+  return configured;
+}
+
+// code 객체 동일성 기준 미리보기 id 캐시 — 탭 토글로 remount돼도 같은 결과면 재요청하지 않는다.
+// WeakMap이라 code 객체가 GC되면 함께 정리됨(누수 없음).
+const previewIdCache = new WeakMap<GeneratedCode, Promise<string>>();
+
+function requestPreviewId(code: GeneratedCode): Promise<string> {
+  const cached = previewIdCache.get(code);
+  if (cached) return cached;
+  const p = fetch('/api/preview', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(code),
+  }).then((r) => {
+    if (!r.ok) throw new Error(String(r.status));
+    return r.json().then(({ id }) => id as string);
+  });
+  // 실패한 약속은 캐시에서 빼서 다음 시도가 재요청하도록
+  p.catch(() => previewIdCache.delete(code));
+  previewIdCache.set(code, p);
+  return p;
 }
 
 /** 생성된 프로그램 미리보기 iframe(프로세스 격리) + 전체화면 토글 버튼 */
@@ -42,16 +71,8 @@ export default function FullscreenFrame({ code, title, frameKey, className = '' 
     let alive = true;
     setSrc(null);
     setFailed(false);
-    fetch('/api/preview', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(code),
-    })
-      .then((r) => {
-        if (!r.ok) throw new Error(String(r.status));
-        return r.json();
-      })
-      .then(({ id }) => {
+    requestPreviewId(code)
+      .then((id) => {
         if (alive) setSrc(`${previewOrigin()}/api/preview/${id}`);
       })
       .catch(() => alive && setFailed(true));
