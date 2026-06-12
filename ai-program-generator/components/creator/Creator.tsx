@@ -103,22 +103,32 @@ export default function Creator() {
   const [editing, setEditing] = useState<{ id: string; title: string; authorName: string } | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const { user } = useAuth();
+  const { user, isAdmin, loading: authLoading } = useAuth();
   const { toast } = useToast();
   const router = useRouter();
   const params = useSearchParams();
   const nameRef = useRef<HTMLInputElement>(null);
   const modifyRef = useRef<HTMLTextAreaElement>(null);
+  const loadedEditId = useRef<string | null>(null);
   const hasCode = Boolean(code.html || code.css || code.javascript);
   const busy = loading !== 'idle';
 
-  // ?edit=postId 로 들어오면 해당 작품을 폼·결과에 복원
+  // ?edit=postId 로 들어오면 해당 작품을 폼·결과에 복원.
+  // 인증이 풀릴 때까지 기다렸다가(소유권 오판 방지) 본인/관리자만 편집을 열어준다.
   useEffect(() => {
     const editId = params.get('edit');
-    if (!editId) return;
+    if (!editId || authLoading) return; // 로그인 상태 확정 전엔 대기
+    if (loadedEditId.current === editId) return; // 같은 글 중복 로드 방지
+    loadedEditId.current = editId;
     getPost(editId).then((p) => {
       if (!p) {
         toast('고칠 작품을 찾지 못했어요.');
+        router.replace('/');
+        return;
+      }
+      if (!isAdmin && p.ownerUid !== user?.uid) {
+        toast('이 작품은 내 작품이 아니라서 고칠 수 없어요.');
+        router.replace('/');
         return;
       }
       setEditing({ id: p.id, title: p.title, authorName: p.authorName || '' });
@@ -128,8 +138,7 @@ export default function Creator() {
       setResultTab('preview');
       setPreviewKey((k) => k + 1);
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [params, authLoading, user, isAdmin, toast, router]);
 
   async function handleSaveEdit() {
     if (!editing) return;
@@ -171,6 +180,10 @@ export default function Creator() {
   }
 
   async function handleGenerate() {
+    if (authLoading) {
+      toast('잠깐만요, 준비 중이에요…');
+      return;
+    }
     if (!user) {
       toast('로그인하면 프로그램을 만들 수 있어요!');
       setLoginOpen(true);
@@ -200,6 +213,10 @@ export default function Creator() {
   }
 
   async function handleModify() {
+    if (authLoading) {
+      toast('잠깐만요, 준비 중이에요…');
+      return;
+    }
     if (!user) {
       toast('로그인하면 프로그램을 고칠 수 있어요!');
       setLoginOpen(true);
@@ -235,9 +252,22 @@ export default function Creator() {
   }
 
   async function handleCopy() {
-    await navigator.clipboard.writeText(code[codeTab] || '');
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
+    try {
+      await navigator.clipboard.writeText(code[codeTab] || '');
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      toast('복사하지 못했어요. 코드를 길게 눌러 복사해 보세요.');
+    }
+  }
+
+  async function handleDownload() {
+    try {
+      await downloadProgramZip(code, editing?.title || plan.name || '내작품');
+    } catch (e) {
+      console.error('ZIP 저장 실패:', e);
+      toast('저장에 실패했어요. 잠시 후 다시 해주세요.');
+    }
   }
 
   function handleReset() {
@@ -248,6 +278,7 @@ export default function Creator() {
     setResultTab('preview');
     if (editing) {
       setEditing(null);
+      loadedEditId.current = null; // 다시 같은 작품을 편집으로 열 수 있게 가드 해제
       router.replace('/');
     }
     nameRef.current?.focus();
@@ -398,7 +429,7 @@ export default function Creator() {
                     <Upload size={17} aria-hidden /> 게시판에 올리기
                   </Button>
                 )}
-                <Button variant="ghost" onClick={() => downloadProgramZip(code, editing?.title || plan.name)}>
+                <Button variant="ghost" onClick={handleDownload}>
                   <Download size={17} aria-hidden /> 저장하기
                 </Button>
                 <Button variant="ghost" onClick={handleReset} title={editing ? '편집 취소' : '계획서와 결과를 지우고 처음부터'}>

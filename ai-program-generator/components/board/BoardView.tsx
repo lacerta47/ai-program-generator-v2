@@ -27,6 +27,8 @@ export default function BoardView() {
   );
   const [posts, setPosts] = useState<Post[]>([]);
   const cursorRef = useRef<PostCursor>(null);
+  const selectedPostRef = useRef<Post | null>(null);
+  const resolvedDeepLink = useRef<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -37,6 +39,8 @@ export default function BoardView() {
   const [deepLinkResolving, setDeepLinkResolving] = useState(
     Boolean(params.get('post') && !params.get('category')),
   );
+  // 공유 링크 글을 못 찾았을 때의 안내 — 토스트는 초기 로드 직후 유실될 수 있어 미리보기 패널에 인라인 표시
+  const [deepLinkError, setDeepLinkError] = useState<string | null>(null);
 
   // 카테고리 실시간 구독
   useEffect(
@@ -55,27 +59,62 @@ export default function BoardView() {
     }
   }, [categories, selectedCategoryId, deepLinkResolving]);
 
-  // 공유 링크(?post=)로 진입한 경우 해당 게시물 로드
+  // 보던 카테고리가 삭제되면 첫 카테고리로 되돌림 (빈 화면에 갇히지 않게).
+  // categories가 아직 비어 있으면(로딩 전) 건드리지 않아 URL의 ?category= 가 살아 있게 둔다.
+  useEffect(() => {
+    if (!selectedCategoryId || categories.length === 0) return;
+    if (!categories.some((c) => c.id === selectedCategoryId)) {
+      setSelectedCategoryId(categories[0].id);
+      setSelectedPost(null);
+    }
+  }, [categories, selectedCategoryId]);
+
+  // 선택 게시물을 ref로도 들고 있어, loadFirst가 목록을 채울 때 딥링크 글을 끼워 넣을 수 있게 한다.
+  useEffect(() => {
+    selectedPostRef.current = selectedPost;
+  }, [selectedPost]);
+
+  // 공유 링크(?post=)로 진입한 경우 해당 게시물 로드.
+  // params에 반응한다 — 정적 프리렌더 페이지에서 useSearchParams가 마운트 직후에야 채워질 수 있어
+  // []-deps로 한 번만 돌면 postId를 놓친다. 같은 id 재요청은 ref로 막는다.
   useEffect(() => {
     const postId = params.get('post');
-    if (!postId) return;
+    if (!postId) {
+      setDeepLinkResolving(false);
+      return;
+    }
+    if (resolvedDeepLink.current === postId) return;
+    resolvedDeepLink.current = postId;
+    setDeepLinkResolving(true);
     getPost(postId)
       .then((p) => {
         if (p) {
+          setDeepLinkError(null);
           setSelectedPost(p);
-          setSelectedCategoryId((prev) => prev ?? p.categoryId);
+          setSelectedCategoryId(p.categoryId);
+        } else {
+          setDeepLinkError('이 작품은 찾을 수 없어요. 지워졌거나 주소가 잘못됐을 수 있어요.');
         }
       })
+      .catch((e) => {
+        console.error('공유 글 불러오기 실패:', e);
+        setDeepLinkError('작품을 불러오지 못했어요. 잠시 후 다시 해주세요.');
+      })
       .finally(() => setDeepLinkResolving(false));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [params, toast]);
 
   const loadFirst = useCallback(async (categoryId: string) => {
     setLoading(true);
     setLoadError(false);
     try {
       const page = await fetchPosts(categoryId);
-      setPosts(page.posts);
+      // 공유링크로 연 글이 이 카테고리에 속하는데 첫 페이지에 없으면, 목록 맨 위에 끼워 선택 표시되게 한다.
+      const sel = selectedPostRef.current;
+      const list =
+        sel && sel.categoryId === categoryId && !page.posts.some((p) => p.id === sel.id)
+          ? [sel, ...page.posts]
+          : page.posts;
+      setPosts(list);
       cursorRef.current = page.cursor;
       setHasMore(page.hasMore);
     } catch (e) {
@@ -96,7 +135,11 @@ export default function BoardView() {
     setLoadingMore(true);
     try {
       const page = await fetchPosts(selectedCategoryId, cursorRef.current);
-      setPosts((prev) => [...prev, ...page.posts]);
+      // 딥링크로 위에 끼워 둔 글이 다음 페이지에 또 나올 수 있어 중복 제거
+      setPosts((prev) => {
+        const seen = new Set(prev.map((p) => p.id));
+        return [...prev, ...page.posts.filter((p) => !seen.has(p.id))];
+      });
       cursorRef.current = page.cursor;
       setHasMore(page.hasMore);
     } catch (e) {
@@ -111,10 +154,12 @@ export default function BoardView() {
   function selectCategory(id: string) {
     setSelectedCategoryId(id);
     setSelectedPost(null);
+    setDeepLinkError(null);
     router.replace(`/board?category=${id}`, { scroll: false });
   }
 
   function selectPost(post: Post) {
+    resolvedDeepLink.current = post.id; // 이미 가진 객체라 딥링크 효과가 재요청하지 않게 표시
     setSelectedPost(post);
     router.replace(`/board?category=${post.categoryId}&post=${post.id}`, { scroll: false });
   }
@@ -128,6 +173,15 @@ export default function BoardView() {
     } catch (e) {
       console.error('게시물 삭제 실패:', e);
       toast('삭제하지 못했어요. 인터넷 연결이나 권한을 확인해 주세요.');
+    }
+  }
+
+  async function handleDownload(post: Post) {
+    try {
+      await downloadProgramZip(post.code, post.title);
+    } catch (e) {
+      console.error('ZIP 저장 실패:', e);
+      toast('저장에 실패했어요. 잠시 후 다시 해주세요.');
     }
   }
 
@@ -177,7 +231,7 @@ export default function BoardView() {
               currentUserUid={user?.uid ?? null}
               isAdmin={isAdmin}
               onDelete={handleDelete}
-              onDownload={(p) => downloadProgramZip(p.code, p.title)}
+              onDownload={handleDownload}
               onTitleSaved={handleTitleSaved}
               hasMore={hasMore}
               loadingMore={loadingMore}
@@ -192,10 +246,19 @@ export default function BoardView() {
         className="anim-pop-in flex min-h-[62vh] flex-col rounded-[var(--r-lg)] border-2 border-line bg-surface p-5"
         style={{ animationDelay: '60ms' }}
       >
-        <PostPreview
-          post={selectedPost}
-          canEdit={!!selectedPost && (isAdmin || selectedPost.ownerUid === user?.uid)}
-        />
+        {deepLinkError && !selectedPost ? (
+          <div className="flex flex-1 flex-col items-center justify-center gap-3 py-10 text-center">
+            <span className="grid h-14 w-14 place-items-center rounded-full bg-coral-soft text-coral-ink">
+              <CloudOff size={26} aria-hidden />
+            </span>
+            <p className="text-[15px] text-muted">{deepLinkError}</p>
+          </div>
+        ) : (
+          <PostPreview
+            post={selectedPost}
+            canEdit={!!selectedPost && (isAdmin || selectedPost.ownerUid === user?.uid)}
+          />
+        )}
       </section>
     </div>
   );

@@ -57,7 +57,13 @@ export class GeminiProvider implements AIProvider {
     } catch {
       throw new Error('Gemini 응답을 JSON으로 파싱하지 못했습니다.');
     }
-    return normalize(parsed);
+    const result = normalize(parsed);
+    // 스키마상 세 필드가 required지만 모델이 빈 문자열을 줄 수 있다.
+    // html(화면 본문)이 비면 빈 미리보기를 "성공"으로 처리하게 되므로, 실패로 보고 한도를 환불받게 한다.
+    if (!result.html.trim()) {
+      throw new Error('AI가 빈 결과를 만들었어요. 다시 한 번 만들어 볼까요?');
+    }
+    return result;
   }
 }
 
