@@ -21,9 +21,12 @@ interface Props {
   plan: PlanFields;
   prompt: string;
   defaultTitle: string;
+  forkedFrom?: string;
+  forkedFromAuthor?: string;
+  defaultCategoryId?: string;
 }
 
-export default function UploadDialog({ open, onClose, code, plan, prompt, defaultTitle }: Props) {
+export default function UploadDialog({ open, onClose, code, plan, prompt, defaultTitle, forkedFrom, forkedFromAuthor, defaultCategoryId }: Props) {
   const { user } = useAuth();
   const router = useRouter();
   const [categories, setCategories] = useState<Category[]>([]);
@@ -55,8 +58,14 @@ export default function UploadDialog({ open, onClose, code, plan, prompt, defaul
   }, [open, user]);
 
   useEffect(() => {
-    if (categories.length && !categoryId) setCategoryId(categories[0].id);
-  }, [categories, categoryId]);
+    if (!categories.length || categoryId) return;
+    // fork면 원본 카테고리를 기본 선택, 아니면 첫 카테고리
+    const preferred =
+      defaultCategoryId && categories.some((c) => c.id === defaultCategoryId)
+        ? defaultCategoryId
+        : categories[0].id;
+    setCategoryId(preferred);
+  }, [categories, categoryId, defaultCategoryId]);
 
   if (!open) return null;
 
@@ -96,6 +105,7 @@ export default function UploadDialog({ open, onClose, code, plan, prompt, defaul
         plan,
         prompt,
         createdAt: Date.now(),
+        ...(forkedFrom ? { forkedFrom, forkedFromAuthor: forkedFromAuthor ?? '익명' } : {}),
       });
       setDone({ postId, categoryId });
     } catch (err) {
