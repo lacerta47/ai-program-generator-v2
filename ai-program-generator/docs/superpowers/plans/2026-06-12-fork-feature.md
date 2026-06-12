@@ -88,6 +88,70 @@ git commit -m "feat(fork): Post에 forkedFrom 필드 + 규칙 검증"
 
 ---
 
+## Task 1b: 공용 post 액션 헬퍼 신설 (중복 제거 시드)
+
+**Files:**
+- Create: `lib/client/postActions.ts`
+
+확장 시 좋아요·신고 등도 여기 붙는다. 공유·다운로드 로직이 현재 PostList·PostPreview·BoardView·Creator에 흩어져 있어 한 곳으로 모은다.
+
+- [ ] **Step 1: 헬퍼 작성**
+
+```ts
+import type { Post } from '@/lib/firebase/types';
+import type { GeneratedCode } from '@/lib/ai/types';
+import { downloadProgramZip } from './downloadZip';
+
+type ToastFn = (msg: string, kind?: 'error' | 'success') => void;
+
+/** 코드(게시물·생성결과)를 ZIP으로 받기 + 실패 토스트 */
+export async function downloadProgram(code: GeneratedCode, title: string, toast: ToastFn): Promise<void> {
+  try {
+    await downloadProgramZip(code, title);
+  } catch (e) {
+    console.error('ZIP 저장 실패:', e);
+    toast('저장에 실패했어요. 잠시 후 다시 해주세요.');
+  }
+}
+
+/** 게시물 공유 링크 복사 + 토스트. 성공 시 onCopied 콜백. */
+export async function sharePostUrl(
+  post: Pick<Post, 'id' | 'categoryId'>,
+  toast: ToastFn,
+  onCopied?: () => void,
+): Promise<void> {
+  const url = `${window.location.origin}/board?category=${post.categoryId}&post=${post.id}`;
+  try {
+    await navigator.clipboard.writeText(url);
+    onCopied?.();
+    toast('작품 주소를 복사했어요! 친구들에게 자랑해 봐요', 'success');
+  } catch {
+    toast('링크 복사에 실패했어요.');
+  }
+}
+```
+
+- [ ] **Step 2: 기존 호출부를 헬퍼로 교체(중복 제거)**
+  - `BoardView.handleDownload` → `downloadProgram(post.code, post.title, toast)` 호출로 축소
+  - `PostList.share` → `sharePostUrl(post, toast, () => { setCopiedId(post.id); setTimeout(() => setCopiedId(''), 1500); })`
+  - (PostPreview·Creator는 각 태스크에서 이 헬퍼를 사용)
+
+  *주의:* 아래 Task 2~5의 코드 예시는 인라인 로직으로 적혀 있으나, **실제 구현 시 download/share는 이 헬퍼를 호출**한다(plan보다 헬퍼 우선).
+
+- [ ] **Step 3: tsc 통과 확인**
+
+Run: `cd /c/Users/amh47/Documents/test/ai-program-generator && ./node_modules/.bin/tsc --noEmit`
+Expected: 종료코드 0
+
+- [ ] **Step 4: 커밋**
+
+```bash
+git add ai-program-generator/lib/client/postActions.ts ai-program-generator/components/board/BoardView.tsx ai-program-generator/components/board/PostList.tsx
+git commit -m "refactor: 공유·다운로드 로직을 postActions 헬퍼로 통합"
+```
+
+---
+
 ## Task 2: UploadDialog — fork props + 조건부 저장 + 카테고리 기본값
 
 **Files:**
@@ -509,3 +573,6 @@ Expected: 작업트리 clean, 모든 태스크 커밋됨
 ## 의존성 메모
 - Task 4의 fork 버튼은 `/?fork=id`로 이동 → Task 3가 있어야 실제로 동작. (Task 1·2·3·4를 순서대로 끝내면 fork 저장까지 완성.)
 - Task 1의 규칙 배포 전에는 `forkedFrom` 포함 글 저장이 거부되므로, 규칙 배포(Task 1 Step 4)는 반드시 선행.
+
+## 이 기능 다음 우선순위 (사용자 지시)
+Fork 완료 직후, **다른 신규 기능(좋아요·신고 등) 추가 전에** `Creator.tsx`(현재 ~570줄 god component)를 정리한다. 지정 분리지점: URL 모드(`?edit=`/`?fork=`) 로딩을 `useCreatorSource(params)` 훅으로 추출. (메모리 `creator-refactor-after-fork` 참조.) 지금은 과설계 방지를 위해 Fork까지만 기존 패턴 재활용.
