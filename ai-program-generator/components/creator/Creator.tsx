@@ -20,6 +20,7 @@ import type { GeneratedCode } from '@/lib/ai/types';
 import { type PlanFields, EMPTY_PLAN } from '@/lib/firebase/types';
 import { requestGenerate } from '@/lib/client/generate';
 import { getPost, updatePostContent } from '@/lib/firebase/posts';
+import { ProfanityError } from '@/lib/moderation';
 import { downloadProgramZip } from '@/lib/client/downloadZip';
 import { EXAMPLE_PLANS } from '@/lib/examples';
 import { useAuth } from '@/components/auth/AuthProvider';
@@ -146,7 +147,11 @@ export default function Creator() {
       router.push(`/board?post=${editing.id}`);
     } catch (e) {
       console.error('작품 수정 저장 실패:', e);
-      toast('저장하지 못했어요. 인터넷 연결이나 권한을 확인해 주세요.');
+      if (e instanceof ProfanityError) {
+        toast('제목에 쓸 수 없는 말이 있어요. 고운 말로 바꿔 주세요.');
+      } else {
+        toast('저장하지 못했어요. 인터넷 연결이나 권한을 확인해 주세요.');
+      }
     } finally {
       setSaving(false);
     }

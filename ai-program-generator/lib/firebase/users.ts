@@ -1,5 +1,6 @@
 import { doc, getDoc, runTransaction, serverTimestamp, Timestamp } from 'firebase/firestore';
 import { db } from './client';
+import { hasProfanity } from '@/lib/moderation';
 import type { UserProfile } from './types';
 
 const COL = 'users';
@@ -9,7 +10,7 @@ export const NICKNAME_COOLDOWN_DAYS = 15;
 const DAY_MS = 24 * 60 * 60 * 1000;
 const COOLDOWN_MS = NICKNAME_COOLDOWN_DAYS * DAY_MS;
 
-export type NicknameFailReason = 'taken' | 'cooldown';
+export type NicknameFailReason = 'taken' | 'cooldown' | 'profanity';
 
 /** 닉네임 설정/변경 실패 사유를 구분하기 위한 에러 */
 export class NicknameError extends Error {
@@ -40,6 +41,9 @@ const keyOf = (name: string) => name.trim().toLowerCase();
 export async function claimNickname(uid: string, displayName: string): Promise<void> {
   const name = displayName.trim();
   const key = keyOf(name);
+
+  // 비속어 별명 차단(트랜잭션 전에 먼저 검사)
+  if (await hasProfanity(name)) throw new NicknameError('profanity');
 
   await runTransaction(db, async (tx) => {
     const profileRef = doc(db, COL, uid);

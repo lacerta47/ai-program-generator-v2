@@ -1,0 +1,92 @@
+// 비속어 검사 — 닉네임·게시물 제목·작성자명처럼 게시판에 공개로 노출되는 텍스트용.
+//
+// 엔진: korcen(한국어 비속어 — 띄어쓰기/초성/숫자삽입 등 우회표기 탐지, 오탐 적음)
+//   + 보강 목록: korcen이 놓치는 표기(예: '씨발' 계열)와 영어 비속어를 부분일치로 추가 차단.
+//
+// 이 검사는 클라이언트 1차 방어선이다(입력 시점 차단). 데이터 계층 write 함수에서 호출해
+// 모든 작성 경로가 같은 관문을 지나게 한다. (악의적 우회까지 막으려면 추후 서버 강제 필요)
+
+// korcen은 CommonJS라 dynamic import 시 named/ default 위치가 번들러에 따라 다를 수 있어 방어적으로 해석.
+type KorcenApi = {
+  check: (t: string) => boolean;
+  sexual: (t: string) => boolean;
+  belittle: (t: string) => boolean;
+  race: (t: string) => boolean;
+  parents: (t: string) => boolean;
+  minor: (t: string) => boolean;
+};
+let apiPromise: Promise<KorcenApi> | null = null;
+function loadKorcen(): Promise<KorcenApi> {
+  if (!apiPromise) {
+    apiPromise = import('korcen').then((m) => {
+      const raw = m as unknown as Record<string, unknown>;
+      return (typeof raw.check === 'function' ? raw : (raw.default ?? raw)) as KorcenApi;
+    });
+  }
+  return apiPromise;
+}
+
+// korcen이 놓치는 한국어 비속어만 보강(나머지는 korcen이 잡음). 정규화본에 부분일치.
+// '씨발' 한 항목이 씨발/씨발놈/씨발년/씨발새끼 등을 함께 커버.
+// 제외: '시발'(korcen이 잡고 '시발점' 오탐), '등신'('1등 신나' 오탐), '걸레'('물걸레/걸레질' 오탐).
+const KO_EXTRA = ['씨발', '찐따', '존나'];
+
+// 영어 비속어. 글자별 +패턴이라 반복(fuuuck)도 잡고, 이중자음(asshole·nigger)도 정확히 매칭한다
+// (단순 부분일치는 'ss'를 놓치고, 단순 축약은 'Nigeria'를 오탐함 — 이 방식이 둘 다 피함).
+// 불명확한 짧은 단어(ass/dick/cock 등)는 오탐 우려로 제외.
+const EN_PATTERNS = [
+  'fuck', 'shit', 'bitch', 'asshole', 'pussy', 'cunt', 'nigger',
+  'faggot', 'slut', 'whore', 'bastard', 'motherfuck', 'retard',
+].map((w) => new RegExp(w.split('').map((c) => `${c}+`).join('')));
+
+// 공백·문장부호 모두 제거(한글·영문·숫자만), 반복 축약 — 보강 단어 부분일치용('씨 발'→'씨발').
+function stripKo(s: string): string {
+  return s
+    .replace(/[^가-힣ㄱ-ㅣa-zA-Z0-9]/g, '')
+    .replace(/(.)\1{2,}/g, '$1$1');
+}
+// 문장부호·기호만 제거(공백은 유지), 반복 축약 — korcen 보조 검사용('병,신'→'병신').
+// 공백을 남기는 이유: korcen이 띄어쓰기를 문맥 판단에 쓰므로(화이트리스트), 임의로 지우면 판단이 흐트러진다.
+function dePunctKo(s: string): string {
+  return s
+    .replace(/[^가-힣ㄱ-ㅣa-zA-Z0-9\s]/g, '')
+    .replace(/(.)\1{2,}/g, '$1$1');
+}
+// 영어 정규화: 소문자 영문자만 남김('f.u.c.k', 'f u c k' 우회 차단)
+function normEn(s: string): string {
+  return s.toLowerCase().replace(/[^a-z]/g, '');
+}
+
+/** 텍스트에 비속어가 들어있으면 true. 빈 문자열은 안전 처리. */
+export async function hasProfanity(text: string): Promise<boolean> {
+  const t = (text ?? '').trim();
+  if (!t) return false;
+
+  const k = await loadKorcen();
+  // 원문 + 문장부호 제거본(공백 유지) 양쪽에 korcen 적용 — '병,신' 같은 문장부호 우회까지 차단.
+  // 카테고리: 욕설/성적/비하/인종/패드립/미성년 (정치·외국어는 오탐 우려로 제외).
+  for (const s of [t, dePunctKo(t)]) {
+    if (k.check(s) || k.sexual(s) || k.belittle(s) || k.race(s) || k.parents(s) || k.minor(s)) {
+      return true;
+    }
+  }
+  if (KO_EXTRA.some((w) => stripKo(t).includes(w))) return true;
+
+  const en = normEn(t);
+  if (en && EN_PATTERNS.some((re) => re.test(en))) return true;
+
+  return false;
+}
+
+/** 비속어 차단을 알리는 에러 — UI에서 instanceof로 잡아 친절한 안내로 바꾼다. */
+export class ProfanityError extends Error {
+  constructor(message = '쓸 수 없는 말이 들어 있어요.') {
+    super(message);
+    this.name = 'ProfanityError';
+  }
+}
+
+/** 비속어가 있으면 ProfanityError를 던진다(데이터 계층 write 가드용). */
+export async function assertClean(text: string): Promise<void> {
+  if (await hasProfanity(text)) throw new ProfanityError();
+}

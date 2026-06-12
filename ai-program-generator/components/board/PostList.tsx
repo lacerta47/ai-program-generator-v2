@@ -4,6 +4,7 @@ import { useCallback, useRef, useState } from 'react';
 import { Link2, Check, Download, Pencil, Trash2, FileQuestion } from 'lucide-react';
 import type { Post } from '@/lib/firebase/types';
 import { updatePostTitle } from '@/lib/firebase/posts';
+import { ProfanityError } from '@/lib/moderation';
 import { formatDate } from '@/lib/program';
 import { TextInput } from '@/components/ui/Field';
 import { useToast } from '@/components/ui/Toast';
@@ -61,7 +62,11 @@ export default function PostList({
       onTitleSaved(target.id, target.title.trim());
     } catch (e) {
       console.error('제목 변경 실패:', e);
-      toast('제목을 바꾸지 못했어요. 인터넷 연결이나 권한을 확인해 주세요.');
+      if (e instanceof ProfanityError) {
+        toast('제목에 쓸 수 없는 말이 있어요. 고운 말로 바꿔 주세요.');
+      } else {
+        toast('제목을 바꾸지 못했어요. 인터넷 연결이나 권한을 확인해 주세요.');
+      }
     }
   }
 

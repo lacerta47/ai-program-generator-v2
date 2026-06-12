@@ -15,6 +15,7 @@ import {
   type DocumentData,
 } from 'firebase/firestore';
 import { db } from './client';
+import { assertClean } from '@/lib/moderation';
 import type { Post, NewPost, PostEdit } from './types';
 
 const COL = 'posts';
@@ -56,16 +57,21 @@ export async function getPost(id: string): Promise<Post | null> {
 }
 
 export async function createPost(data: NewPost): Promise<string> {
+  await assertClean(data.title);
+  await assertClean(data.authorName);
   const ref = await addDoc(collection(db, COL), data);
   return ref.id;
 }
 
 export async function updatePostTitle(id: string, title: string): Promise<void> {
+  await assertClean(title);
   await updateDoc(doc(db, COL, id), { title: title.trim() });
 }
 
 /** 작품 전체 편집(덮어쓰기) — 제목·작성자명·계획서·코드. ownerUid/categoryId/createdAt는 불변. */
 export async function updatePostContent(id: string, edit: PostEdit): Promise<void> {
+  await assertClean(edit.title);
+  await assertClean(edit.authorName);
   await updateDoc(doc(db, COL, id), { ...edit });
 }
 

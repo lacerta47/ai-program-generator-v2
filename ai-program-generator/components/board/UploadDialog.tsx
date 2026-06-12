@@ -7,6 +7,7 @@ import { useAuth } from '@/components/auth/AuthProvider';
 import { subscribeCategories } from '@/lib/firebase/categories';
 import { createPost } from '@/lib/firebase/posts';
 import { getUserProfile, claimNickname, NicknameError } from '@/lib/firebase/users';
+import { ProfanityError } from '@/lib/moderation';
 import type { Category, PlanFields } from '@/lib/firebase/types';
 import type { GeneratedCode } from '@/lib/ai/types';
 import Button from '@/components/ui/Button';
@@ -77,6 +78,8 @@ export default function UploadDialog({ open, onClose, code, plan, prompt, defaul
         } catch (err) {
           if (err instanceof NicknameError && err.reason === 'taken') {
             setError('이미 누가 쓰는 별명이에요. 다른 별명으로 해볼까요?');
+          } else if (err instanceof NicknameError && err.reason === 'profanity') {
+            setError('그 별명은 쓸 수 없어요. 예쁜 말로 바꿔 볼까요?');
           } else {
             setError('별명을 정하지 못했어요. 잠시 후 다시 해주세요.');
           }
@@ -96,7 +99,11 @@ export default function UploadDialog({ open, onClose, code, plan, prompt, defaul
       });
       setDone({ postId, categoryId });
     } catch (err) {
-      setError(err instanceof Error ? err.message : '올리다가 문제가 생겼어요.');
+      if (err instanceof ProfanityError) {
+        setError('제목에 쓸 수 없는 말이 있어요. 고운 말로 바꿔 주세요.');
+      } else {
+        setError(err instanceof Error ? err.message : '올리다가 문제가 생겼어요.');
+      }
     } finally {
       setBusy(false);
     }
