@@ -169,7 +169,7 @@ export default function UploadDialog({ open, onClose, code, plan, prompt, defaul
                 </Label>
               )}
               <Label text="작품 제목" required>
-                <TextInput value={title} onChange={(e) => setTitle(e.target.value)} required />
+                <TextInput value={title} onChange={(e) => setTitle(e.target.value)} maxLength={100} required />
               </Label>
               <Label text="어느 게시판에 올릴까요?">
                 <Select value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>

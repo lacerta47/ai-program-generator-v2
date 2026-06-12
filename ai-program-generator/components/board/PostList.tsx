@@ -118,6 +118,7 @@ export default function PostList({
                 onChange={(e) => setEditing({ ...editing, title: e.target.value })}
                 onBlur={saveTitle}
                 onKeyDown={(e) => e.key === 'Enter' && saveTitle()}
+                maxLength={100}
               />
             ) : (
               <button

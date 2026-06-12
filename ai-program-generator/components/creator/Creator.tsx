@@ -313,6 +313,7 @@ export default function Creator() {
             value={plan.name}
             onChange={(e) => setField('name', e.target.value)}
             placeholder="예: 간단한 메모장"
+            maxLength={2000}
           />
         </Label>
         <Label
@@ -323,6 +324,7 @@ export default function Creator() {
             value={plan.look}
             onChange={(e) => setField('look', e.target.value)}
             placeholder="예: 어두운 배경에 파란 저장 버튼"
+            maxLength={5000}
           />
         </Label>
         <Label
@@ -333,6 +335,7 @@ export default function Creator() {
             value={plan.usage}
             onChange={(e) => setField('usage', e.target.value)}
             placeholder="예: 글을 쓰고 저장 버튼을 누르면 목록에 추가돼요"
+            maxLength={5000}
           />
         </Label>
         <Label
@@ -343,6 +346,7 @@ export default function Creator() {
             value={plan.how}
             onChange={(e) => setField('how', e.target.value)}
             placeholder="예: 정답을 맞히면 점수가 1점 올라가요"
+            maxLength={5000}
           />
         </Label>
         <Label
@@ -353,6 +357,7 @@ export default function Creator() {
             value={plan.etc}
             onChange={(e) => setField('etc', e.target.value)}
             placeholder="예: 휴대폰에서도 잘 보이게 해주세요"
+            maxLength={5000}
           />
         </Label>
 
