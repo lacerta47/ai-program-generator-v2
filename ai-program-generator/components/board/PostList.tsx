@@ -5,6 +5,7 @@ import { Link2, Check, Download, Pencil, Trash2, FileQuestion } from 'lucide-rea
 import type { Post } from '@/lib/firebase/types';
 import { updatePostTitle } from '@/lib/firebase/posts';
 import { ProfanityError } from '@/lib/moderation';
+import { sharePostUrl } from '@/lib/client/postActions';
 import { formatDate } from '@/lib/program';
 import { TextInput } from '@/components/ui/Field';
 import { useToast } from '@/components/ui/Toast';
@@ -71,15 +72,10 @@ export default function PostList({
   }
 
   function share(post: Post) {
-    const url = `${window.location.origin}/board?category=${post.categoryId}&post=${post.id}`;
-    navigator.clipboard.writeText(url).then(
-      () => {
-        setCopiedId(post.id);
-        setTimeout(() => setCopiedId(''), 1500);
-        toast('작품 주소를 복사했어요! 친구들에게 자랑해 봐요', 'success');
-      },
-      () => toast('링크 복사에 실패했어요.'),
-    );
+    sharePostUrl(post, toast, () => {
+      setCopiedId(post.id);
+      setTimeout(() => setCopiedId(''), 1500);
+    });
   }
 
   if (posts.length === 0) {

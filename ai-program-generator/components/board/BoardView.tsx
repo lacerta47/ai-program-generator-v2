@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/components/auth/AuthProvider';
 import { subscribeCategories } from '@/lib/firebase/categories';
 import { fetchPosts, getPost, deletePost, type PostCursor } from '@/lib/firebase/posts';
-import { downloadProgramZip } from '@/lib/client/downloadZip';
+import { downloadProgram } from '@/lib/client/postActions';
 import type { Category, Post } from '@/lib/firebase/types';
 import { CloudOff, RotateCcw } from 'lucide-react';
 import CategoryBar from './CategoryBar';
@@ -176,15 +176,6 @@ export default function BoardView() {
     }
   }
 
-  async function handleDownload(post: Post) {
-    try {
-      await downloadProgramZip(post.code, post.title);
-    } catch (e) {
-      console.error('ZIP 저장 실패:', e);
-      toast('저장에 실패했어요. 잠시 후 다시 해주세요.');
-    }
-  }
-
   function handleTitleSaved(id: string, title: string) {
     setPosts((prev) => prev.map((p) => (p.id === id ? { ...p, title } : p)));
     setSelectedPost((prev) => (prev?.id === id ? { ...prev, title } : prev));
@@ -231,7 +222,7 @@ export default function BoardView() {
               currentUserUid={user?.uid ?? null}
               isAdmin={isAdmin}
               onDelete={handleDelete}
-              onDownload={handleDownload}
+              onDownload={(p) => downloadProgram(p.code, p.title, toast)}
               onTitleSaved={handleTitleSaved}
               hasMore={hasMore}
               loadingMore={loadingMore}
