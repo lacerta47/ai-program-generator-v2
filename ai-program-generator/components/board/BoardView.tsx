@@ -11,6 +11,7 @@ import { CloudOff, RotateCcw } from 'lucide-react';
 import CategoryBar from './CategoryBar';
 import PostList from './PostList';
 import PostPreview from './PostPreview';
+import LoginDialog from '@/components/auth/LoginDialog';
 import LoadingDots from '@/components/ui/LoadingDots';
 import Button from '@/components/ui/Button';
 import { useToast } from '@/components/ui/Toast';
@@ -34,6 +35,7 @@ export default function BoardView() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [loadError, setLoadError] = useState(false);
+  const [loginOpen, setLoginOpen] = useState(false);
   // 공유 링크 ?post= 의 카테고리가 정해지기 전에는 "첫 카테고리 자동선택"을 보류
   // (categoryId 없이 들어온 딥링크가 엉뚱한 카테고리 목록을 띄우는 레이스 방지)
   const [deepLinkResolving, setDeepLinkResolving] = useState(
@@ -164,6 +166,14 @@ export default function BoardView() {
     router.replace(`/board?category=${post.categoryId}&post=${post.id}`, { scroll: false });
   }
 
+  function handleFork(post: Post) {
+    if (!user) {
+      setLoginOpen(true);
+      return;
+    }
+    router.push(`/?fork=${post.id}`);
+  }
+
   async function handleDelete(post: Post) {
     if (!confirm(`'${post.title}' 게시물을 삭제할까요?`)) return;
     try {
@@ -248,9 +258,13 @@ export default function BoardView() {
           <PostPreview
             post={selectedPost}
             canEdit={!!selectedPost && (isAdmin || selectedPost.ownerUid === user?.uid)}
+            canFork={!!selectedPost && selectedPost.ownerUid !== user?.uid}
+            onFork={handleFork}
           />
         )}
       </section>
+
+      <LoginDialog open={loginOpen} onClose={() => setLoginOpen(false)} />
     </div>
   );
 }

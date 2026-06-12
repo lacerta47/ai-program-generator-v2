@@ -2,18 +2,31 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { FileText, Download, MonitorPlay, Pencil, X } from 'lucide-react';
+import { FileText, Download, MonitorPlay, Pencil, X, Link2, Check, GitFork } from 'lucide-react';
 import Modal from '@/components/ui/Modal';
 import type { Post } from '@/lib/firebase/types';
 import { formatDate } from '@/lib/program';
-import { downloadProgramZip } from '@/lib/client/downloadZip';
+import { downloadProgram, sharePostUrl } from '@/lib/client/postActions';
 import Button from '@/components/ui/Button';
 import FloatingShapes from '@/components/ui/FloatingShapes';
 import FullscreenFrame from '@/components/ui/FullscreenFrame';
 import EmptyParticles from '@/components/fx/EmptyParticles';
+import { useToast } from '@/components/ui/Toast';
 
-export default function PostPreview({ post, canEdit }: { post: Post | null; canEdit?: boolean }) {
+export default function PostPreview({
+  post,
+  canEdit,
+  canFork,
+  onFork,
+}: {
+  post: Post | null;
+  canEdit?: boolean;
+  canFork?: boolean;
+  onFork?: (post: Post) => void;
+}) {
   const [planOpen, setPlanOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const { toast } = useToast();
   const router = useRouter();
 
   if (!post) {
@@ -45,25 +58,49 @@ export default function PostPreview({ post, canEdit }: { post: Post | null; canE
           <p className="truncate text-[13px] text-muted">
             {post.authorName || '익명'} · {formatDate(post.createdAt)}
           </p>
-        </div>
-        <div className="flex shrink-0 flex-wrap justify-end gap-2">
-          {canEdit && (
-            <Button variant="soft" onClick={() => router.push(`/?edit=${post.id}`)} className="min-h-10 px-3 text-[14px]">
-              <Pencil size={16} aria-hidden /> 고치기
-            </Button>
+          {post.forkedFrom && (
+            <span
+              className="mt-1 inline-flex items-center gap-1 rounded-full bg-grape-soft px-2 py-0.5 text-[12px] text-grape-ink"
+              title={`${post.forkedFromAuthor || '누군가'}의 작품에서 이어 만들었어요`}
+            >
+              <GitFork size={12} aria-hidden /> 이어 만든 작품
+            </span>
           )}
+        </div>
+        <div className="flex shrink-0 flex-wrap justify-end gap-1.5">
           {post.prompt && (
-            <Button variant="ghost" onClick={() => setPlanOpen(true)} className="min-h-10 px-3 text-[14px]">
-              <FileText size={16} aria-hidden /> 계획서
+            <Button variant="ghost" size="icon" onClick={() => setPlanOpen(true)} aria-label="계획서 보기" title="계획서 보기" className="rounded-full">
+              <FileText size={18} aria-hidden />
             </Button>
           )}
           <Button
             variant="ghost"
-            onClick={() => downloadProgramZip(post.code, post.title)}
-            className="min-h-10 px-3 text-[14px]"
+            size="icon"
+            onClick={() =>
+              sharePostUrl(post, toast, () => {
+                setCopied(true);
+                setTimeout(() => setCopied(false), 1500);
+              })
+            }
+            aria-label="링크 복사"
+            title="링크 복사"
+            className="rounded-full"
           >
-            <Download size={16} aria-hidden /> 저장
+            {copied ? <Check size={18} className="text-mint-ink" aria-hidden /> : <Link2 size={18} aria-hidden />}
           </Button>
+          <Button variant="ghost" size="icon" onClick={() => downloadProgram(post.code, post.title, toast)} aria-label="ZIP 저장" title="ZIP 저장" className="rounded-full">
+            <Download size={18} aria-hidden />
+          </Button>
+          {canEdit && (
+            <Button variant="ghost" size="icon" onClick={() => router.push(`/?edit=${post.id}`)} aria-label="고치기" title="고치기" className="rounded-full">
+              <Pencil size={18} aria-hidden />
+            </Button>
+          )}
+          {canFork && (
+            <Button variant="soft" size="icon" onClick={() => onFork?.(post)} aria-label="이어서 만들기" title="이어서 만들기" className="rounded-full">
+              <GitFork size={18} aria-hidden />
+            </Button>
+          )}
         </div>
       </div>
 
