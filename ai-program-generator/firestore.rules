@@ -92,21 +92,23 @@ service cloud.firestore {
       return n is string && n.size() > 0 && n.size() <= 20;
     }
 
-    // 사용자 프로필: 닉네임 + 마지막 변경시각. 본인만. 변경 쿨다운 15일을 서버시계로 강제.
+    // 사용자 프로필: 닉네임 + 마지막 변경시각(서버 타임스탬프). 본인만.
+    // 변경 쿨다운 15일을 request.time + duration 으로 강제(구버전 number 문서는 1회 마이그레이션 허용).
     match /users/{uid} {
       allow read: if true;
       allow create: if isOwner(uid)
         && request.resource.data.keys().hasOnly(['nickname', 'nicknameUpdatedAt'])
         && validNick(request.resource.data.nickname)
-        && request.resource.data.nicknameUpdatedAt is number;
+        && request.resource.data.nicknameUpdatedAt is timestamp;
       allow update: if isOwner(uid)
         && request.resource.data.keys().hasOnly(['nickname', 'nicknameUpdatedAt'])
         && validNick(request.resource.data.nickname)
-        && request.resource.data.nicknameUpdatedAt is number
+        && request.resource.data.nicknameUpdatedAt is timestamp
         && (
           !('nicknameUpdatedAt' in resource.data)
+          || !(resource.data.nicknameUpdatedAt is timestamp)
           || request.resource.data.nickname == resource.data.nickname
-          || request.time.toMillis() > resource.data.nicknameUpdatedAt + (15 * 24 * 60 * 60 * 1000)
+          || request.time > resource.data.nicknameUpdatedAt + duration.value(15, 'd')
         );
       allow delete: if isAdmin();
     }

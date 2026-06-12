@@ -1,4 +1,4 @@
-import { doc, getDoc, runTransaction } from 'firebase/firestore';
+import { doc, getDoc, runTransaction, serverTimestamp, Timestamp } from 'firebase/firestore';
 import { db } from './client';
 import type { UserProfile } from './types';
 
@@ -33,7 +33,8 @@ const keyOf = (name: string) => name.trim().toLowerCase();
 /**
  * 닉네임 설정/변경.
  * - 유일성: nicknames/{소문자별명} 문서를 계정이 영구 점유(다른 계정은 못 가져감, 재활용 없음)
- * - 변경 쿨다운: 마지막 변경 후 15일 이내엔 변경 불가(규칙에서도 서버시계로 강제)
+ * - 변경 쿨다운: 마지막 변경 후 15일 이내엔 변경 불가
+ *   (변경시각은 서버 타임스탬프로 저장 → 규칙에서도 request.time + duration 으로 강제)
  * - 같은 별명 재저장은 no-op
  */
 export async function claimNickname(uid: string, displayName: string): Promise<void> {
@@ -52,8 +53,10 @@ export async function claimNickname(uid: string, displayName: string): Promise<v
     if (profile?.nickname === name) return;
 
     // 이미 다른 별명을 쓰던 중이면(=변경) 쿨다운 확인
-    if (profile?.nickname && typeof profile.nicknameUpdatedAt === 'number') {
-      const elapsed = Date.now() - profile.nicknameUpdatedAt;
+    // (구버전 number 타임스탬프는 Timestamp가 아니므로 1회 통과 후 새로 기록됨)
+    const last = profile?.nicknameUpdatedAt;
+    if (profile?.nickname && last instanceof Timestamp) {
+      const elapsed = Date.now() - last.toMillis();
       if (elapsed < COOLDOWN_MS) {
         throw new NicknameError('cooldown', Math.ceil((COOLDOWN_MS - elapsed) / DAY_MS));
       }
@@ -65,6 +68,6 @@ export async function claimNickname(uid: string, displayName: string): Promise<v
     }
 
     if (!nickSnap.exists()) tx.set(nickRef, { uid });
-    tx.set(profileRef, { nickname: name, nicknameUpdatedAt: Date.now() }, { merge: true });
+    tx.set(profileRef, { nickname: name, nicknameUpdatedAt: serverTimestamp() }, { merge: true });
   });
 }

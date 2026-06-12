@@ -1,3 +1,4 @@
+import type { Timestamp } from 'firebase/firestore';
 import type { GeneratedCode } from '@/lib/ai/types';
 
 export interface Category {
@@ -48,6 +49,6 @@ export interface PostEdit {
 
 export interface UserProfile {
   nickname: string;
-  /** 마지막 닉네임 변경 시각(ms) — 변경 쿨다운 판정용 */
-  nicknameUpdatedAt?: number;
+  /** 마지막 닉네임 변경 시각(서버 타임스탬프) — 변경 쿨다운 판정용. 구버전 문서엔 number일 수 있음 */
+  nicknameUpdatedAt?: Timestamp;
 }
