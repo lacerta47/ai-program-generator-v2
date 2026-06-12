@@ -36,7 +36,7 @@ service cloud.firestore {
 
     // 게시물 생성 문서 형태/크기 검증
     function validPost(d) {
-      return d.keys().hasOnly(['title', 'categoryId', 'ownerUid', 'authorName', 'code', 'plan', 'prompt', 'createdAt', 'updatedAt'])
+      return d.keys().hasOnly(['title', 'categoryId', 'ownerUid', 'authorName', 'code', 'plan', 'prompt', 'createdAt', 'updatedAt', 'forkedFrom', 'forkedFromAuthor'])
         && d.title is string && d.title.size() > 0 && d.title.size() <= 100
         && d.categoryId is string && d.categoryId.size() > 0 && d.categoryId.size() <= 128
         && d.ownerUid is string
@@ -44,7 +44,9 @@ service cloud.firestore {
         && d.prompt is string && d.prompt.size() <= 50000
         && d.createdAt is number
         && validCode(d.code)
-        && (!('plan' in d) || validPlan(d.plan));
+        && (!('plan' in d) || validPlan(d.plan))
+        && (!('forkedFrom' in d) || (d.forkedFrom is string && d.forkedFrom.size() <= 128))
+        && (!('forkedFromAuthor' in d) || (d.forkedFromAuthor is string && d.forkedFromAuthor.size() <= 20));
     }
 
     // 카테고리(게시판): 누구나 읽기, 관리자만 생성/수정/삭제

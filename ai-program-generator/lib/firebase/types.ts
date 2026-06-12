@@ -32,6 +32,10 @@ export interface Post {
   prompt: string;
   createdAt: number;
   updatedAt?: number;
+  /** 이어서 만들기(fork) 출처 — 원본 게시물 id (비-fork 글엔 없음) */
+  forkedFrom?: string;
+  /** 이어서 만들기 출처 작성자명 스냅샷 (원본이 지워져도 표시 유지) */
+  forkedFromAuthor?: string;
 }
 
 /** 새 게시물 생성 시 입력 (id 제외) */
