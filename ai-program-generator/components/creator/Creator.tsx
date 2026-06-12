@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Sparkles,
   Wand2,
@@ -19,7 +19,7 @@ import {
 import type { GeneratedCode } from '@/lib/ai/types';
 import { type PlanFields, EMPTY_PLAN } from '@/lib/firebase/types';
 import { requestGenerate } from '@/lib/client/generate';
-import { getPost, updatePostContent } from '@/lib/firebase/posts';
+import { updatePostContent } from '@/lib/firebase/posts';
 import { ProfanityError } from '@/lib/moderation';
 import { downloadProgramZip } from '@/lib/client/downloadZip';
 import { EXAMPLE_PLANS } from '@/lib/examples';
@@ -38,6 +38,7 @@ import FullscreenFrame from '@/components/ui/FullscreenFrame';
 import CodeView from '@/components/ui/CodeView';
 import EmptyParticles from '@/components/fx/EmptyParticles';
 import { buildGeneratePrompt, buildModifyPrompt } from './prompts';
+import { useCreatorSource } from './useCreatorSource';
 
 type CodeTab = 'html' | 'css' | 'javascript';
 type ResultTab = 'preview' | 'code';
@@ -74,72 +75,25 @@ export default function Creator() {
   const [genPrompt, setGenPrompt] = useState('');
   const [uploadOpen, setUploadOpen] = useState(false);
   const [loginOpen, setLoginOpen] = useState(false);
-  // 편집 모드(?edit=postId) — 기존 작품을 불러와 덮어쓰기
-  const [editing, setEditing] = useState<{ id: string; title: string; authorName: string } | null>(null);
   const [saving, setSaving] = useState(false);
-  // 이어서 만들기 모드(?fork=postId) — 원본을 불러와 "새 작품"으로 저장(출처 첨부용)
-  const [forkSource, setForkSource] = useState<{ id: string; author: string; categoryId: string } | null>(null);
 
-  const { user, isAdmin, loading: authLoading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
   const router = useRouter();
-  const params = useSearchParams();
   const nameRef = useRef<HTMLInputElement>(null);
   const modifyRef = useRef<HTMLTextAreaElement>(null);
-  const loadedEditId = useRef<string | null>(null);
-  const loadedForkId = useRef<string | null>(null);
   const hasCode = Boolean(code.html || code.css || code.javascript);
   const busy = loading !== 'idle';
 
-  // ?edit=postId 로 들어오면 해당 작품을 폼·결과에 복원.
-  // 인증이 풀릴 때까지 기다렸다가(소유권 오판 방지) 본인/관리자만 편집을 열어준다.
-  useEffect(() => {
-    const editId = params.get('edit');
-    if (!editId || authLoading) return; // 로그인 상태 확정 전엔 대기
-    if (loadedEditId.current === editId) return; // 같은 글 중복 로드 방지
-    loadedEditId.current = editId;
-    getPost(editId).then((p) => {
-      if (!p) {
-        toast('고칠 작품을 찾지 못했어요.');
-        router.replace('/');
-        return;
-      }
-      if (!isAdmin && p.ownerUid !== user?.uid) {
-        toast('이 작품은 내 작품이 아니라서 고칠 수 없어요.');
-        router.replace('/');
-        return;
-      }
-      setEditing({ id: p.id, title: p.title, authorName: p.authorName || '' });
-      setPlan(p.plan ?? EMPTY_PLAN);
-      setCode(p.code);
-      setGenPrompt(p.prompt ?? '');
-      setResultTab('preview');
-      setPreviewKey((k) => k + 1);
-    });
-  }, [params, authLoading, user, isAdmin, toast, router]);
-
-  // ?fork=postId 로 들어오면 원본을 불러와 "새 작품"으로 시작(편집모드 아님 → 저장 시 새 글).
-  // 불러오기 자체는 AI를 안 써서 비로그인도 허용(저장 단계에서 로그인 강제).
-  useEffect(() => {
-    const forkId = params.get('fork');
-    if (!forkId) return;
-    if (loadedForkId.current === forkId) return;
-    loadedForkId.current = forkId;
-    getPost(forkId).then((p) => {
-      if (!p) {
-        toast('이어 만들 작품을 찾지 못했어요.');
-        router.replace('/');
-        return;
-      }
-      const srcPlan = p.plan ?? EMPTY_PLAN;
-      setPlan(srcPlan);
-      setCode(p.code);
-      setGenPrompt(p.plan ? buildGeneratePrompt(srcPlan) : p.prompt ?? '');
-      setResultTab('preview');
-      setPreviewKey((k) => k + 1);
-      setForkSource({ id: p.id, author: p.authorName || '익명', categoryId: p.categoryId });
-    });
-  }, [params, toast, router]);
+  // ?edit= / ?fork= URL 소스 로딩은 훅으로 분리(불러온 값만 받아 생성 상태에 반영).
+  const applyLoaded = (d: { plan: PlanFields; code: GeneratedCode; genPrompt: string }) => {
+    setPlan(d.plan);
+    setCode(d.code);
+    setGenPrompt(d.genPrompt);
+    setResultTab('preview');
+    setPreviewKey((k) => k + 1);
+  };
+  const { editing, forkSource, clearSource } = useCreatorSource(applyLoaded);
 
   async function handleSaveEdit() {
     if (!editing) return;
@@ -277,16 +231,7 @@ export default function Creator() {
     setModifyText('');
     setGenPrompt('');
     setResultTab('preview');
-    if (editing) {
-      setEditing(null);
-      loadedEditId.current = null; // 다시 같은 작품을 편집으로 열 수 있게 가드 해제
-      router.replace('/');
-    }
-    if (forkSource) {
-      setForkSource(null);
-      loadedForkId.current = null;
-      router.replace('/');
-    }
+    clearSource();
     nameRef.current?.focus();
   }
 
