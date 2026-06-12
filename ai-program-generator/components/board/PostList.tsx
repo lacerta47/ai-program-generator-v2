@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useRef, useState } from 'react';
-import { Link2, Check, Download, Pencil, Trash2, FileQuestion } from 'lucide-react';
+import { Link2, Check, Download, Pencil, Trash2, FileQuestion, GitFork } from 'lucide-react';
 import type { Post } from '@/lib/firebase/types';
 import { updatePostTitle } from '@/lib/firebase/posts';
 import { ProfanityError } from '@/lib/moderation';
@@ -129,8 +129,13 @@ export default function PostList({
                 >
                   {post.title}
                 </span>
-                <span className="block truncate text-[12.5px] text-muted">
-                  {post.authorName || '익명'} · {formatDate(post.createdAt)}
+                <span className="flex min-w-0 items-center gap-1 text-[12.5px] text-muted">
+                  {post.forkedFrom && (
+                    <GitFork size={11} aria-hidden className="shrink-0 text-grape" />
+                  )}
+                  <span className="truncate">
+                    {post.authorName || '익명'} · {formatDate(post.createdAt)}
+                  </span>
                 </span>
               </button>
             )}
