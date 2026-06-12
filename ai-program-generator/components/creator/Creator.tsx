@@ -102,6 +102,8 @@ export default function Creator() {
   // 편집 모드(?edit=postId) — 기존 작품을 불러와 덮어쓰기
   const [editing, setEditing] = useState<{ id: string; title: string; authorName: string } | null>(null);
   const [saving, setSaving] = useState(false);
+  // 이어서 만들기 모드(?fork=postId) — 원본을 불러와 "새 작품"으로 저장(출처 첨부용)
+  const [forkSource, setForkSource] = useState<{ id: string; author: string; categoryId: string } | null>(null);
 
   const { user, isAdmin, loading: authLoading } = useAuth();
   const { toast } = useToast();
@@ -110,6 +112,7 @@ export default function Creator() {
   const nameRef = useRef<HTMLInputElement>(null);
   const modifyRef = useRef<HTMLTextAreaElement>(null);
   const loadedEditId = useRef<string | null>(null);
+  const loadedForkId = useRef<string | null>(null);
   const hasCode = Boolean(code.html || code.css || code.javascript);
   const busy = loading !== 'idle';
 
@@ -139,6 +142,29 @@ export default function Creator() {
       setPreviewKey((k) => k + 1);
     });
   }, [params, authLoading, user, isAdmin, toast, router]);
+
+  // ?fork=postId 로 들어오면 원본을 불러와 "새 작품"으로 시작(편집모드 아님 → 저장 시 새 글).
+  // 불러오기 자체는 AI를 안 써서 비로그인도 허용(저장 단계에서 로그인 강제).
+  useEffect(() => {
+    const forkId = params.get('fork');
+    if (!forkId) return;
+    if (loadedForkId.current === forkId) return;
+    loadedForkId.current = forkId;
+    getPost(forkId).then((p) => {
+      if (!p) {
+        toast('이어 만들 작품을 찾지 못했어요.');
+        router.replace('/');
+        return;
+      }
+      const srcPlan = p.plan ?? EMPTY_PLAN;
+      setPlan(srcPlan);
+      setCode(p.code);
+      setGenPrompt(p.plan ? buildGeneratePrompt(srcPlan) : p.prompt ?? '');
+      setResultTab('preview');
+      setPreviewKey((k) => k + 1);
+      setForkSource({ id: p.id, author: p.authorName || '익명', categoryId: p.categoryId });
+    });
+  }, [params, toast, router]);
 
   async function handleSaveEdit() {
     if (!editing) return;
@@ -279,6 +305,11 @@ export default function Creator() {
     if (editing) {
       setEditing(null);
       loadedEditId.current = null; // 다시 같은 작품을 편집으로 열 수 있게 가드 해제
+      router.replace('/');
+    }
+    if (forkSource) {
+      setForkSource(null);
+      loadedForkId.current = null;
       router.replace('/');
     }
     nameRef.current?.focus();
@@ -528,6 +559,9 @@ export default function Creator() {
         plan={plan}
         prompt={genPrompt}
         defaultTitle={plan.name}
+        forkedFrom={forkSource?.id}
+        forkedFromAuthor={forkSource?.author}
+        defaultCategoryId={forkSource?.categoryId}
       />
     </div>
   );
