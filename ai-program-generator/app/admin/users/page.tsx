@@ -1,7 +1,16 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { CloudOff, RotateCcw, Search, ArrowUpRight, ArrowDownRight, Minus } from 'lucide-react';
+import {
+  CloudOff,
+  RotateCcw,
+  Search,
+  ArrowUpRight,
+  ArrowDownRight,
+  Minus,
+  ArrowUp,
+  ArrowDown,
+} from 'lucide-react';
 import { fetchMembers, type Member } from '@/lib/admin/members';
 import { formatDate } from '@/lib/program';
 import Header from '@/components/common/Header';
@@ -10,7 +19,29 @@ import Button from '@/components/ui/Button';
 import { TextInput } from '@/components/ui/Field';
 import LoadingDots from '@/components/ui/LoadingDots';
 
-type SortKey = 'usage' | 'created';
+type SortKey = 'nickname' | 'email' | 'created' | 'lastSignIn' | 'posts' | 'usageToday' | 'week';
+type SortDir = 'asc' | 'desc';
+const TEXT_KEYS: SortKey[] = ['nickname', 'email'];
+
+/** 정렬 비교용 값 추출. 문자열 키는 localeCompare, 나머지는 숫자. */
+function sortValue(m: Member, key: SortKey): string | number {
+  switch (key) {
+    case 'nickname':
+      return (m.nickname ?? '').toLowerCase();
+    case 'email':
+      return (m.email ?? '').toLowerCase();
+    case 'created':
+      return m.createdAt;
+    case 'lastSignIn':
+      return m.lastSignInAt ?? 0;
+    case 'posts':
+      return m.postCount;
+    case 'usageToday':
+      return m.usageToday;
+    case 'week':
+      return m.usage7d.reduce((a, b) => a + b, 0);
+  }
+}
 
 /** 최근 7일 합계 + 추세(최근 3일 vs 앞 3일 합 비교, 가운데 날 제외). */
 function WeekUsage({ usage7d }: { usage7d: number[] }) {
@@ -47,7 +78,8 @@ function UsersContent() {
   const [usageLimit, setUsageLimit] = useState(30);
   const [error, setError] = useState(false);
   const [q, setQ] = useState('');
-  const [sort, setSort] = useState<SortKey>('usage');
+  const [sortKey, setSortKey] = useState<SortKey>('usageToday');
+  const [sortDir, setSortDir] = useState<SortDir>('desc');
   const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
@@ -79,17 +111,54 @@ function UsersContent() {
             (m.email ?? '').toLowerCase().includes(term),
         )
       : members;
-    return [...filtered].sort((a, b) =>
-      sort === 'usage' ? b.usageToday - a.usageToday : b.createdAt - a.createdAt,
-    );
-  }, [members, q, sort]);
+    return [...filtered].sort((a, b) => {
+      const va = sortValue(a, sortKey);
+      const vb = sortValue(b, sortKey);
+      const r =
+        typeof va === 'string' && typeof vb === 'string'
+          ? va.localeCompare(vb, 'ko')
+          : (va as number) - (vb as number);
+      return sortDir === 'asc' ? r : -r;
+    });
+  }, [members, q, sortKey, sortDir]);
+
+  // 같은 열 다시 클릭 → 방향 토글, 다른 열 클릭 → 그 열로(텍스트는 오름, 숫자·날짜는 내림 기본)
+  function toggleSort(key: SortKey) {
+    if (sortKey === key) {
+      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortKey(key);
+      setSortDir(TEXT_KEYS.includes(key) ? 'asc' : 'desc');
+    }
+  }
+
+  const sortHead = (label: string, key: SortKey) => (
+    <th
+      className="p-3 font-medium"
+      aria-sort={sortKey === key ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
+    >
+      <button
+        type="button"
+        onClick={() => toggleSort(key)}
+        className="inline-flex items-center gap-1 whitespace-nowrap hover:text-ink"
+      >
+        {label}
+        {sortKey === key &&
+          (sortDir === 'asc' ? (
+            <ArrowUp size={13} aria-hidden />
+          ) : (
+            <ArrowDown size={13} aria-hidden />
+          ))}
+      </button>
+    </th>
+  );
 
   return (
     <div className="mx-auto max-w-5xl p-4 sm:p-6">
       <h1 className="mb-4 text-[24px]">가입자</h1>
 
-      <div className="mb-4 flex flex-wrap items-center gap-2">
-        <div className="relative min-w-[200px] flex-1">
+      <div className="mb-4">
+        <div className="relative max-w-sm">
           <Search
             size={16}
             className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted"
@@ -101,14 +170,6 @@ function UsersContent() {
             placeholder="닉네임·이메일 검색"
             className="pl-9"
           />
-        </div>
-        <div className="flex gap-1">
-          <Button variant={sort === 'usage' ? 'soft' : 'ghost'} onClick={() => setSort('usage')}>
-            사용량순
-          </Button>
-          <Button variant={sort === 'created' ? 'soft' : 'ghost'} onClick={() => setSort('created')}>
-            가입순
-          </Button>
         </div>
       </div>
 
@@ -135,13 +196,13 @@ function UsersContent() {
           <table className="w-full min-w-[680px] text-left text-[14px]">
             <thead className="bg-surface-2 text-[13px] text-muted">
               <tr>
-                <th className="p-3 font-medium">닉네임</th>
-                <th className="p-3 font-medium">이메일</th>
-                <th className="p-3 font-medium">가입일</th>
-                <th className="p-3 font-medium">마지막 접속</th>
-                <th className="p-3 font-medium">작품</th>
-                <th className="p-3 font-medium">오늘 사용</th>
-                <th className="p-3 font-medium">최근 7일</th>
+                {sortHead('닉네임', 'nickname')}
+                {sortHead('이메일', 'email')}
+                {sortHead('가입일', 'created')}
+                {sortHead('마지막 접속', 'lastSignIn')}
+                {sortHead('작품', 'posts')}
+                {sortHead('오늘 사용', 'usageToday')}
+                {sortHead('최근 7일', 'week')}
               </tr>
             </thead>
             <tbody>
