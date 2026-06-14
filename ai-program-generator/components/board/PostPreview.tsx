@@ -2,8 +2,9 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { FileText, Download, MonitorPlay, Pencil, X, Link2, Check, GitFork, Heart, Eye } from 'lucide-react';
+import { FileText, Download, MonitorPlay, Pencil, X, Link2, Check, GitFork, Heart, Eye, Flag } from 'lucide-react';
 import Modal from '@/components/ui/Modal';
+import ReportDialog from './ReportDialog';
 import type { Post } from '@/lib/firebase/types';
 import { formatDate } from '@/lib/program';
 import { downloadProgram, sharePostUrl } from '@/lib/client/postActions';
@@ -35,6 +36,7 @@ export default function PostPreview({
   onViewChanged?: (postId: string) => void;
 }) {
   const [planOpen, setPlanOpen] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [liked, setLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(0);
@@ -136,6 +138,18 @@ export default function PostPreview({
           )}
         </div>
         <div className="flex shrink-0 flex-wrap justify-end gap-1.5">
+          {currentUserUid !== post.ownerUid && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => (currentUserUid ? setReportOpen(true) : onNeedLogin?.())}
+              aria-label="신고"
+              title="신고"
+              className="rounded-full"
+            >
+              <Flag size={18} aria-hidden />
+            </Button>
+          )}
           {post.prompt && (
             <Button variant="ghost" size="icon" onClick={() => setPlanOpen(true)} aria-label="계획서 보기" title="계획서 보기" className="rounded-full">
               <FileText size={18} aria-hidden />
@@ -213,6 +227,15 @@ export default function PostPreview({
           {post.prompt}
         </pre>
       </Modal>
+
+      {currentUserUid && (
+        <ReportDialog
+          open={reportOpen}
+          onClose={() => setReportOpen(false)}
+          post={post}
+          reporterUid={currentUserUid}
+        />
+      )}
     </div>
   );
 }
