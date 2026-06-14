@@ -47,6 +47,8 @@ export default function UploadDialog({ open, onClose, code, plan, prompt, defaul
       setTitle(defaultTitle);
       setDone(null);
       setError('');
+      setCategoryId(''); // 비우면 아래 derive 효과가 fork 원본/첫 카테고리로 재선택
+      setNickname('');
     }
   }, [defaultTitle, open]);
 

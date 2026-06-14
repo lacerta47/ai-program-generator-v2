@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   GoogleAuthProvider,
   signInWithPopup,
@@ -35,6 +35,17 @@ export default function LoginDialog({ open, onClose }: { open: boolean; onClose:
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [busy, setBusy] = useState(false);
+
+  // 열 때마다 초기 상태로(이전 세션의 모드·입력·메시지 잔존 방지)
+  useEffect(() => {
+    if (open) {
+      setMode('login');
+      setEmail('');
+      setPw('');
+      setError('');
+      setNotice('');
+    }
+  }, [open]);
 
   async function withGoogle() {
     setError('');

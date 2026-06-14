@@ -43,11 +43,18 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ ui
       }
     }
     if ('password' in b) {
-      if (typeof b.password === 'string' && b.password.length >= 6) {
-        await adminAuth.updateUser(uid, { password: b.password });
-      } else {
+      if (typeof b.password !== 'string' || b.password.length < 6) {
         return NextResponse.json({ error: '비밀번호는 6자 이상이어야 해요.' }, { status: 400 });
       }
+      // 수업용 계정(@class.kr)만 직접 재설정 — 관리자·가입 회원(실제 이메일)은 불가(본인 재설정 메일로).
+      const target = await adminAuth.getUser(uid);
+      if (target.customClaims?.admin === true || !(target.email ?? '').endsWith('@class.kr')) {
+        return NextResponse.json(
+          { error: '이 계정은 비밀번호를 직접 바꿀 수 없어요. (수업용 계정만 가능)' },
+          { status: 403 },
+        );
+      }
+      await adminAuth.updateUser(uid, { password: b.password });
     }
     return NextResponse.json({ ok: true });
   } catch (e) {
