@@ -166,6 +166,7 @@ service cloud.firestore {
       allow read: if isAdmin();
       allow create, update: if isSignedIn()
         && request.resource.data.reporterUid == request.auth.uid
+        && reportId == request.resource.data.postId + '_' + request.auth.uid
         && request.resource.data.keys().hasOnly(['postId','postTitle','postAuthorName','postOwnerUid','reporterUid','reason','memo','createdAt'])
         && request.resource.data.postId is string
         && request.resource.data.reason is string && request.resource.data.reason.size() <= 20
