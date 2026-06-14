@@ -1,10 +1,12 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { signOut } from 'firebase/auth';
 import { LogIn, LogOut, Crown, Pencil } from 'lucide-react';
 import { auth } from '@/lib/firebase/client';
 import { getUserProfile, claimNickname, NicknameError, NICKNAME_COOLDOWN_DAYS } from '@/lib/firebase/users';
+import { countReports } from '@/lib/firebase/reports';
 import { useAuth } from './AuthProvider';
 import LoginDialog from './LoginDialog';
 import Button from '@/components/ui/Button';
@@ -20,11 +22,19 @@ export default function AuthButton() {
   const [editOpen, setEditOpen] = useState(false);
   const [draft, setDraft] = useState('');
   const [busy, setBusy] = useState(false);
+  const [reportCount, setReportCount] = useState(0);
 
   useEffect(() => {
     if (user) getUserProfile(user.uid).then((p) => setNickname(p?.nickname ?? null));
     else setNickname(null);
   }, [user]);
+
+  useEffect(() => {
+    if (!isAdmin) return;
+    countReports()
+      .then(setReportCount)
+      .catch((e) => console.error('신고 수 조회 실패:', e));
+  }, [isAdmin]);
 
   async function saveNick(e: React.FormEvent) {
     e.preventDefault();
@@ -58,9 +68,12 @@ export default function AuthButton() {
     return (
       <div className="flex items-center gap-2">
         {isAdmin && (
-          <span className="inline-flex items-center gap-1 rounded-full bg-sunshine-soft px-3 py-1.5 text-[13px] font-medium text-sunshine-ink">
-            <Crown size={14} aria-hidden /> 관리자
-          </span>
+          <Link
+            href="/admin"
+            className="press inline-flex items-center gap-1 rounded-full bg-sunshine-soft px-3 py-1.5 text-[13px] font-medium text-sunshine-ink hover:brightness-95"
+          >
+            <Crown size={14} aria-hidden /> 관리자{reportCount > 0 ? ` · 신고 ${reportCount}` : ''}
+          </Link>
         )}
         <button
           onClick={() => {
