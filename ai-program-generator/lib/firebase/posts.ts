@@ -11,6 +11,7 @@ import {
   updateDoc,
   deleteDoc,
   doc,
+  increment,
   type QueryDocumentSnapshot,
   type DocumentData,
 } from 'firebase/firestore';
@@ -77,4 +78,9 @@ export async function updatePostContent(id: string, edit: PostEdit): Promise<voi
 
 export async function deletePost(id: string): Promise<void> {
   await deleteDoc(doc(db, COL, id));
+}
+
+/** 이어 만들기 저장 시 원본의 forkCount +1 */
+export async function incrementForkCount(postId: string): Promise<void> {
+  await updateDoc(doc(db, COL, postId), { forkCount: increment(1) });
 }
