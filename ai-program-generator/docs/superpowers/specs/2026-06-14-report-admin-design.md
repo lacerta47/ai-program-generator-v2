@@ -53,8 +53,10 @@ match /reports/{reportId} {
 - 정렬: 신고 많은 순(client).
 - 빈 상태: "처리할 신고가 없어요".
 
-## 헤더 배지 (`components/common/Header.tsx`)
-- **`isAdmin` 일 때만**: "신고 N" 배지 + `/admin` 링크. `useEffect`로 `countReports()` **1회** 호출(세션 캐시). N=0이면 링크만(배지 숨김).
+## 관리자 진입점 (`components/auth/AuthButton.tsx`)
+- 기존 "관리자" 칩(현재 비클릭 라벨)을 **클릭 가능한 `/admin` 링크**로 만든다(별도 헤더 배지 신설 X — 기존 표시 재사용).
+- 칩에 미처리 신고 수 표시: `관리자 · 신고 N`(N>0일 때). `useEffect`로 `countReports()` **세션 1회** 호출.
+- 일반 사용자: **변화 없음**(닉네임 클릭 = 별명 바꾸기 그대로). "마이페이지"(닉네임 클릭 → 내 작품/설정/별명변경 통합)는 **별도 미래 기능**으로 분리.
 
 ## 범위 밖
 - 신고 누적 카운트 비정규화(게시판 내 ⚠ 배지·정렬) — 필요해지면 like/view 패턴으로
@@ -63,12 +65,12 @@ match /reports/{reportId} {
 
 ## 영향 파일
 - 신규: `app/admin/page.tsx`, `lib/firebase/reports.ts`, `components/board/ReportDialog.tsx`
-- 수정: `firestore.rules`(reports 규칙, 배포), `components/board/PostPreview.tsx`(신고 버튼+다이얼로그), `components/common/Header.tsx`(관리자 배지·링크)
+- 수정: `firestore.rules`(reports 규칙, 배포), `components/board/PostPreview.tsx`(신고 버튼+다이얼로그), `components/auth/AuthButton.tsx`(관리자 칩 → /admin 링크 + 신고 count)
 
 ## 검증 기준 (완료 정의)
 1. 남의 글에 신고 버튼, 비로그인 클릭 → 로그인창. 로그인 후 사유+메모 신고 → reports 기록, 토스트.
 2. 같은 사용자 재신고 → 덮어쓰기(중복 doc 없음).
 3. 비관리자가 `/admin` 직접 진입 → 홈 리다이렉트 + 규칙이 reports 읽기 거부(빈 화면).
 4. 관리자 `/admin` → 신고된 작품 카드, 작품 보기(새 탭), **삭제**(작품+신고 사라짐) / **무시**(신고만 사라짐).
-5. 관리자 헤더에 "신고 N" 배지 + 링크.
+5. 관리자 "관리자" 칩 클릭 → `/admin` 진입, 칩에 "신고 N" 표시.
 6. `tsc` + 프로덕션 빌드 통과, 규칙 배포. 자체 통합테스트(custom token)로 신고 제출·관리자 읽기·삭제 + 규칙 거부 검증.
