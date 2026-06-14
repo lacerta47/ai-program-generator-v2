@@ -30,7 +30,7 @@ export default function ReportDialog({
     setBusy(true);
     try {
       await submitReport(post, reporterUid, reason, memo);
-      toast('신고했어요. 선생님이 확인할게요.', 'success');
+      toast('신고를 접수했어요. 관리자가 확인 후 처리할게요.', 'success');
       setMemo('');
       onClose();
     } catch (e) {
