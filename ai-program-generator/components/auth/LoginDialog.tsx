@@ -6,6 +6,7 @@ import {
   signInWithPopup,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
+  sendPasswordResetEmail,
 } from 'firebase/auth';
 import { X, Sparkles } from 'lucide-react';
 import { auth } from '@/lib/firebase/client';
@@ -32,6 +33,7 @@ export default function LoginDialog({ open, onClose }: { open: boolean; onClose:
   const [email, setEmail] = useState('');
   const [pw, setPw] = useState('');
   const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
   const [busy, setBusy] = useState(false);
 
   async function withGoogle() {
@@ -40,6 +42,24 @@ export default function LoginDialog({ open, onClose }: { open: boolean; onClose:
     try {
       await signInWithPopup(auth, new GoogleAuthProvider());
       onClose();
+    } catch (e) {
+      setError(toMessage(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function resetPw() {
+    setError('');
+    setNotice('');
+    if (!email.trim()) {
+      setError('이메일을 먼저 적어 주세요.');
+      return;
+    }
+    setBusy(true);
+    try {
+      await sendPasswordResetEmail(auth, email.trim());
+      setNotice('가입된 이메일이면 재설정 메일을 보냈어요. 메일함을 확인해 주세요.');
     } catch (e) {
       setError(toMessage(e));
     } finally {
@@ -120,16 +140,35 @@ export default function LoginDialog({ open, onClose }: { open: boolean; onClose:
               {error}
             </p>
           )}
+          {notice && (
+            <p className="anim-pop-in rounded-[var(--r-md)] bg-mint-soft px-3.5 py-2.5 text-[14px] text-mint-ink">
+              {notice}
+            </p>
+          )}
           <Button type="submit" variant="primary" disabled={busy} className="w-full">
             {busy ? '잠깐만요…' : mode === 'login' ? '로그인' : '가입하기'}
           </Button>
         </form>
+
+        {mode === 'login' && (
+          <div className="mt-3 text-center">
+            <button
+              type="button"
+              onClick={resetPw}
+              disabled={busy}
+              className="text-[13px] text-muted underline-offset-4 hover:underline disabled:opacity-50"
+            >
+              비밀번호를 잊으셨어요?
+            </button>
+          </div>
+        )}
 
         <div className="mt-5 text-center">
           <button
             onClick={() => {
               setMode(mode === 'login' ? 'signup' : 'login');
               setError('');
+              setNotice('');
             }}
             className="text-[14px] text-brand-strong underline-offset-4 hover:underline dark:text-brand"
           >
