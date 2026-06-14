@@ -11,6 +11,7 @@ export interface Member {
   postCount: number;
   usageToday: number;
   usage7d: number[]; // days 순서(오래된→오늘)에 맞춘 7개
+  limitOverride: number | null; // 학생별 한도(없으면 null=전역)
 }
 
 export interface MembersResponse {

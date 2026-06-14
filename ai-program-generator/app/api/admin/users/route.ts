@@ -36,10 +36,11 @@ export async function GET(req: NextRequest) {
   // 3) 부가: 닉네임·사용량·작품 수 (병렬 + 개별 폴백)
   const days = lastDayKeysKST(7);
   const today = todayKeyKST();
-  const [nickRes, usageRes, postRes] = await Promise.allSettled([
+  const [nickRes, usageRes, postRes, limitRes] = await Promise.allSettled([
     adminDb.collection('users').get(),
     adminDb.collection('usage').where('day', 'in', days).get(),
     adminDb.collection('posts').select('ownerUid').get(),
+    adminDb.collection('limits').get(),
   ]);
 
   const nickById = new Map<string, string>();
@@ -74,6 +75,16 @@ export async function GET(req: NextRequest) {
     console.error('posts 조회 실패:', postRes.reason);
   }
 
+  const overrideByUid = new Map<string, number>();
+  if (limitRes.status === 'fulfilled') {
+    limitRes.value.forEach((d) => {
+      const v = (d.data() as { dailyLimit?: number }).dailyLimit;
+      if (typeof v === 'number' && v >= 0) overrideByUid.set(d.id, v);
+    });
+  } else {
+    console.error('limits 조회 실패:', limitRes.reason);
+  }
+
   // 4) 조립
   const members = users.map((u) => {
     const perDay = usageByUid.get(u.uid);
@@ -88,6 +99,7 @@ export async function GET(req: NextRequest) {
       postCount: postCountByUid.get(u.uid) ?? 0,
       usageToday: perDay?.get(today) ?? 0,
       usage7d: days.map((d) => perDay?.get(d) ?? 0),
+      limitOverride: overrideByUid.get(u.uid) ?? null,
     };
   });
 

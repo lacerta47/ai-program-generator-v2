@@ -4,7 +4,7 @@ import { DEFAULT_SYSTEM_PROMPT } from '@/lib/ai/prompts';
 import type { GenerateMode } from '@/lib/ai/types';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { todayKeyKST } from '@/lib/usageDay';
-import { readDailyLimit } from '@/lib/admin/usageConfig';
+import { readEffectiveLimit } from '@/lib/admin/usageConfig';
 
 // AI 호출은 반드시 서버에서만 실행한다(키 노출 방지).
 export const runtime = 'nodejs';
@@ -65,7 +65,7 @@ export async function POST(req: NextRequest) {
   const day = todayKeyKST();
   const usageRef = adminDb.collection('usage').doc(`${uid}_${day}`);
   if (!isAdmin) {
-    const dailyLimit = await readDailyLimit();
+    const dailyLimit = await readEffectiveLimit(uid);
     try {
       const allowed = await adminDb.runTransaction(async (tx) => {
         const snap = await tx.get(usageRef);
