@@ -184,6 +184,16 @@ export default function BoardView() {
     );
   }
 
+  // 첫 조회 기록 시 목록·선택 게시물의 viewCount 동기화(재선택 시 내 조회가 유지되게)
+  function handleViewChanged(postId: string) {
+    setPosts((prev) =>
+      prev.map((p) => (p.id === postId ? { ...p, viewCount: (p.viewCount ?? 0) + 1 } : p)),
+    );
+    setSelectedPost((prev) =>
+      prev && prev.id === postId ? { ...prev, viewCount: (prev.viewCount ?? 0) + 1 } : prev,
+    );
+  }
+
   async function handleDelete(post: Post) {
     if (!confirm(`'${post.title}' 게시물을 삭제할까요?`)) return;
     try {
@@ -273,6 +283,7 @@ export default function BoardView() {
             currentUserUid={user?.uid ?? null}
             onNeedLogin={() => setLoginOpen(true)}
             onLikeChanged={handleLikeChanged}
+            onViewChanged={handleViewChanged}
           />
         )}
       </section>

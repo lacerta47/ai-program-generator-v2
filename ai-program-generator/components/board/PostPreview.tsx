@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { FileText, Download, MonitorPlay, Pencil, X, Link2, Check, GitFork, Heart, Eye } from 'lucide-react';
 import Modal from '@/components/ui/Modal';
@@ -23,6 +23,7 @@ export default function PostPreview({
   currentUserUid,
   onNeedLogin,
   onLikeChanged,
+  onViewChanged,
 }: {
   post: Post | null;
   canEdit?: boolean;
@@ -31,12 +32,14 @@ export default function PostPreview({
   currentUserUid?: string | null;
   onNeedLogin?: () => void;
   onLikeChanged?: (postId: string, delta: number) => void;
+  onViewChanged?: (postId: string) => void;
 }) {
   const [planOpen, setPlanOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [liked, setLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(0);
   const [viewCount, setViewCount] = useState(0);
+  const togglingLike = useRef(false);
   const { toast } = useToast();
   const router = useRouter();
 
@@ -49,12 +52,19 @@ export default function PostPreview({
     setViewCount(post.viewCount ?? 0);
     if (!currentUserUid) return;
     let alive = true;
-    isLiked(post.id, currentUserUid).then((v) => {
-      if (alive) setLiked(v);
-    });
-    recordView(post.id, currentUserUid).then((inc) => {
-      if (alive && inc) setViewCount((c) => c + 1);
-    });
+    isLiked(post.id, currentUserUid)
+      .then((v) => {
+        if (alive) setLiked(v);
+      })
+      .catch((e) => console.error('isLiked 실패:', e));
+    recordView(post.id, currentUserUid)
+      .then((inc) => {
+        if (alive && inc) {
+          setViewCount((c) => c + 1);
+          onViewChanged?.(post.id);
+        }
+      })
+      .catch((e) => console.error('recordView 실패:', e));
     return () => {
       alive = false;
     };
@@ -67,18 +77,24 @@ export default function PostPreview({
       onNeedLogin?.();
       return;
     }
+    if (togglingLike.current) return; // 진행 중 중복 클릭 방지(카운트 드리프트 차단)
+    togglingLike.current = true;
     const wasLiked = liked;
     const delta = wasLiked ? -1 : 1;
     setLiked(!wasLiked);
     setLikeCount((c) => c + delta);
     onLikeChanged?.(post.id, delta);
-    toggleLike(post.id, currentUserUid, wasLiked).catch((e) => {
-      console.error('좋아요 실패:', e);
-      setLiked(wasLiked);
-      setLikeCount((c) => c - delta);
-      onLikeChanged?.(post.id, -delta);
-      toast('좋아요를 처리하지 못했어요. 잠시 후 다시 해주세요.');
-    });
+    toggleLike(post.id, currentUserUid, wasLiked)
+      .catch((e) => {
+        console.error('좋아요 실패:', e);
+        setLiked(wasLiked);
+        setLikeCount((c) => c - delta);
+        onLikeChanged?.(post.id, -delta);
+        toast('좋아요를 처리하지 못했어요. 잠시 후 다시 해주세요.');
+      })
+      .finally(() => {
+        togglingLike.current = false;
+      });
   }
 
   if (!post) {
