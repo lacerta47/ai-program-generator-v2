@@ -2,11 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import type { UserRecord } from 'firebase-admin/auth';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { todayKeyKST, lastDayKeysKST } from '@/lib/usageDay';
+import { readDailyLimit } from '@/lib/admin/usageConfig';
 
 export const runtime = 'nodejs';
-
-const parsedLimit = Number(process.env.GEN_DAILY_LIMIT);
-const DAILY_LIMIT = Number.isFinite(parsedLimit) && parsedLimit >= 0 ? parsedLimit : 30;
 
 const toMs = (s?: string): number | null => (s ? new Date(s).getTime() : null);
 
@@ -93,5 +91,6 @@ export async function GET(req: NextRequest) {
     };
   });
 
-  return NextResponse.json({ members, usageLimit: DAILY_LIMIT, days });
+  const usageLimit = await readDailyLimit();
+  return NextResponse.json({ members, usageLimit, days });
 }

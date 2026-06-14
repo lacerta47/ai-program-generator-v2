@@ -4,13 +4,10 @@ import { DEFAULT_SYSTEM_PROMPT } from '@/lib/ai/prompts';
 import type { GenerateMode } from '@/lib/ai/types';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { todayKeyKST } from '@/lib/usageDay';
+import { readDailyLimit } from '@/lib/admin/usageConfig';
 
 // AI 호출은 반드시 서버에서만 실행한다(키 노출 방지).
 export const runtime = 'nodejs';
-
-// 계정당 하루 생성 한도 (관리자는 무제한). env로 조정 가능. (0 = 전체 차단도 허용)
-const parsedLimit = Number(process.env.GEN_DAILY_LIMIT);
-const DAILY_LIMIT = Number.isFinite(parsedLimit) && parsedLimit >= 0 ? parsedLimit : 30;
 
 function isMode(v: unknown): v is GenerateMode {
   return v === 'generate' || v === 'modify';
@@ -68,17 +65,18 @@ export async function POST(req: NextRequest) {
   const day = todayKeyKST();
   const usageRef = adminDb.collection('usage').doc(`${uid}_${day}`);
   if (!isAdmin) {
+    const dailyLimit = await readDailyLimit();
     try {
       const allowed = await adminDb.runTransaction(async (tx) => {
         const snap = await tx.get(usageRef);
         const count = (snap.data()?.count as number | undefined) ?? 0;
-        if (count >= DAILY_LIMIT) return false;
+        if (count >= dailyLimit) return false;
         tx.set(usageRef, { uid, day, count: count + 1, updatedAt: Date.now() }, { merge: true });
         return true;
       });
       if (!allowed) {
         return NextResponse.json(
-          { error: `오늘 만들 수 있는 횟수(${DAILY_LIMIT}번)를 모두 썼어요. 내일 다시 만들어 보세요!` },
+          { error: `오늘 만들 수 있는 횟수(${dailyLimit}번)를 모두 썼어요. 내일 다시 만들어 보세요!` },
           { status: 429 },
         );
       }
