@@ -115,7 +115,7 @@ function CreateForms() {
             <TextInput value={email} onChange={(e) => setEmail(e.target.value)} placeholder="hong@class.kr" />
           </Label>
           <Label text="비밀번호 (6자 이상)">
-            <TextInput value={singlePw} onChange={(e) => setSinglePw(e.target.value)} />
+            <TextInput type="password" value={singlePw} onChange={(e) => setSinglePw(e.target.value)} />
           </Label>
           <div className="flex justify-end">
             <Button
@@ -141,7 +141,7 @@ function CreateForms() {
               <TextInput type="number" min={1} max={50} value={count} onChange={(e) => setCount(e.target.value)} className="w-28" />
             </Label>
             <Label text="반 공통 비밀번호 (6자 이상)">
-              <TextInput value={batchPw} onChange={(e) => setBatchPw(e.target.value)} />
+              <TextInput type="password" value={batchPw} onChange={(e) => setBatchPw(e.target.value)} />
             </Label>
           </div>
           <div className="flex justify-end">
