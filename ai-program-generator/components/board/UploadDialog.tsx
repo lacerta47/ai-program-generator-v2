@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { PartyPopper, LayoutGrid, X } from 'lucide-react';
 import { useAuth } from '@/components/auth/AuthProvider';
 import { subscribeCategories } from '@/lib/firebase/categories';
-import { createPost } from '@/lib/firebase/posts';
+import { createPost, incrementForkCount } from '@/lib/firebase/posts';
 import { getUserProfile, claimNickname, NicknameError } from '@/lib/firebase/users';
 import { ProfanityError } from '@/lib/moderation';
 import type { Category, PlanFields } from '@/lib/firebase/types';
@@ -107,6 +107,9 @@ export default function UploadDialog({ open, onClose, code, plan, prompt, defaul
         createdAt: Date.now(),
         ...(forkedFrom ? { forkedFrom, forkedFromAuthor: forkedFromAuthor ?? '익명' } : {}),
       });
+      if (forkedFrom) {
+        incrementForkCount(forkedFrom).catch((e) => console.error('forkCount 증가 실패:', e));
+      }
       setDone({ postId, categoryId });
     } catch (err) {
       if (err instanceof ProfanityError) {
