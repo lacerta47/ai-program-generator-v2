@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useRef, useState } from 'react';
-import { Link2, Check, Download, Pencil, Trash2, FileQuestion, GitFork } from 'lucide-react';
+import { Link2, Check, Download, Pencil, Trash2, FileQuestion, GitFork, Heart } from 'lucide-react';
 import type { Post } from '@/lib/firebase/types';
 import { updatePostTitle } from '@/lib/firebase/posts';
 import { ProfanityError } from '@/lib/moderation';
@@ -136,6 +136,11 @@ export default function PostList({
                   <span className="truncate">
                     {post.authorName || '익명'} · {formatDate(post.createdAt)}
                   </span>
+                  {!!post.likeCount && (
+                    <span className="inline-flex shrink-0 items-center gap-0.5 text-coral-ink">
+                      <Heart size={11} aria-hidden /> {post.likeCount}
+                    </span>
+                  )}
                 </span>
               </button>
             )}
