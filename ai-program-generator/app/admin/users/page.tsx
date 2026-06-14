@@ -364,6 +364,10 @@ function UserActionModal({
               variant="soft"
               disabled={busy}
               onClick={() => {
+                if (limitInput.trim() === '') {
+                  toast('숫자를 입력해 주세요. (0은 완전 차단이에요)');
+                  return;
+                }
                 const n = Number(limitInput);
                 if (!Number.isInteger(n) || n < 0) {
                   toast('한도는 0 이상의 정수여야 해요.');
