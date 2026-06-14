@@ -36,6 +36,12 @@ export interface Post {
   forkedFrom?: string;
   /** 이어서 만들기 출처 작성자명 스냅샷 (원본이 지워져도 표시 유지) */
   forkedFromAuthor?: string;
+  /** 좋아요 수(비정규화). 구버전 글엔 없음 → 0으로 취급 */
+  likeCount?: number;
+  /** 본 사람 수(비정규화) */
+  viewCount?: number;
+  /** 이어 만든 횟수(비정규화) */
+  forkCount?: number;
 }
 
 /** 새 게시물 생성 시 입력 (id 제외) */

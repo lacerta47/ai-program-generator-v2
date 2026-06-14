@@ -77,17 +77,54 @@ service cloud.firestore {
         && validPost(request.resource.data);
       // 수정: 본인/관리자만. 변경 가능 필드는 제목·작성자명·계획서·코드·수정시각으로 제한
       // (ownerUid·categoryId·createdAt 변조 차단). 변경되는 값은 형태·크기 재검증.
-      allow update: if (isAdmin() || isOwner(resource.data.ownerUid))
-        && request.resource.data.diff(resource.data).affectedKeys()
-             .hasOnly(['title', 'authorName', 'plan', 'code', 'prompt', 'updatedAt'])
-        && request.resource.data.title is string
-        && request.resource.data.title.size() > 0 && request.resource.data.title.size() <= 100
-        && request.resource.data.authorName is string
-        && request.resource.data.authorName.size() > 0 && request.resource.data.authorName.size() <= 20
-        && request.resource.data.prompt is string && request.resource.data.prompt.size() <= 50000
-        && validCode(request.resource.data.code)
-        && (!('plan' in request.resource.data) || validPlan(request.resource.data.plan));
+      // (a) 본인/관리자 콘텐츠 편집  OR  (b)좋아요 ±1  OR  (c)조회수 +1  OR  (d)이어만든수 +1
+      allow update: if (
+          (isAdmin() || isOwner(resource.data.ownerUid))
+          && request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(['title', 'authorName', 'plan', 'code', 'prompt', 'updatedAt'])
+          && request.resource.data.title is string
+          && request.resource.data.title.size() > 0 && request.resource.data.title.size() <= 100
+          && request.resource.data.authorName is string
+          && request.resource.data.authorName.size() > 0 && request.resource.data.authorName.size() <= 20
+          && request.resource.data.prompt is string && request.resource.data.prompt.size() <= 50000
+          && validCode(request.resource.data.code)
+          && (!('plan' in request.resource.data) || validPlan(request.resource.data.plan))
+        )
+        || (
+          isSignedIn()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likeCount'])
+          && request.resource.data.likeCount is number
+          && ( request.resource.data.likeCount == resource.data.get('likeCount', 0) + 1
+            || request.resource.data.likeCount == resource.data.get('likeCount', 0) - 1 )
+        )
+        || (
+          isSignedIn()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['viewCount'])
+          && request.resource.data.viewCount == resource.data.get('viewCount', 0) + 1
+        )
+        || (
+          isSignedIn()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['forkCount'])
+          && request.resource.data.forkCount == resource.data.get('forkCount', 0) + 1
+        );
       allow delete: if isAdmin() || isOwner(resource.data.ownerUid);
+
+      match /likes/{uid} {
+        allow read: if true;
+        allow create: if isSignedIn() && uid == request.auth.uid
+          && request.resource.data.keys().hasOnly(['createdAt'])
+          && request.resource.data.createdAt is number;
+        allow update: if false;
+        allow delete: if isOwner(uid) || isAdmin();
+      }
+      match /views/{uid} {
+        allow read: if true;
+        allow create: if isSignedIn() && uid == request.auth.uid
+          && request.resource.data.keys().hasOnly(['createdAt'])
+          && request.resource.data.createdAt is number;
+        allow update: if false;
+        allow delete: if isAdmin();
+      }
     }
 
     function validNick(n) {
