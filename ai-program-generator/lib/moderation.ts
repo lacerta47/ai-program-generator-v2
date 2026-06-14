@@ -78,6 +78,21 @@ export async function hasProfanity(text: string): Promise<boolean> {
   return false;
 }
 
+// 관리자/운영자 사칭 우려가 있는 예약어 — 닉네임 전용(제목·일반 텍스트엔 적용하지 않음).
+// 정규화 부분일치: 한글은 stripKo(공백·기호 제거)에서, 영문은 normEn(소문자·영문자만)에서 검사
+// → '관 리 자', 'ADMIN9', 'ad-min' 모두 차단.
+const RESERVED_NICK_KO = ['관리자', '운영자', '운영진', '운영팀', '관리팀', '매니저', '스태프'];
+const RESERVED_NICK_EN = ['admin', 'administrator', 'manager', 'staff', 'moderator', 'official'];
+
+/** 닉네임이 관리자/운영자 사칭 예약어를 포함하면 true(닉네임 전용 검사). */
+export function isReservedNickname(name: string): boolean {
+  const ko = stripKo(name ?? '');
+  const en = normEn(name ?? '');
+  if (ko && RESERVED_NICK_KO.some((w) => ko.includes(w))) return true;
+  if (en && RESERVED_NICK_EN.some((w) => en.includes(w))) return true;
+  return false;
+}
+
 /** 비속어 차단을 알리는 에러 — UI에서 instanceof로 잡아 친절한 안내로 바꾼다. */
 export class ProfanityError extends Error {
   constructor(message = '쓸 수 없는 말이 들어 있어요.') {

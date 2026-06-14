@@ -50,6 +50,8 @@ export default function AuthButton() {
         toast('이미 누가 쓰는 별명이에요. 다른 별명으로 해볼까요?');
       } else if (err instanceof NicknameError && err.reason === 'profanity') {
         toast('그 별명은 쓸 수 없어요. 예쁜 말로 바꿔 볼까요?');
+      } else if (err instanceof NicknameError && err.reason === 'reserved') {
+        toast("그 별명은 쓸 수 없어요. '관리자' 같은 말은 넣을 수 없어요.");
       } else if (err instanceof NicknameError && err.reason === 'cooldown') {
         toast(`별명은 ${NICKNAME_COOLDOWN_DAYS}일에 한 번만 바꿀 수 있어요. ${err.daysLeft}일 뒤에 다시 해주세요.`);
       } else {
