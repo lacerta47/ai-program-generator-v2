@@ -24,6 +24,8 @@ import LoadingDots from '@/components/ui/LoadingDots';
 import Modal from '@/components/ui/Modal';
 import { patchUser, deleteUserAccount } from '@/lib/admin/accounts';
 import { useToast } from '@/components/ui/Toast';
+import { sendPasswordResetEmail } from 'firebase/auth';
+import { auth } from '@/lib/firebase/client';
 
 type SortKey = 'nickname' | 'email' | 'created' | 'lastSignIn' | 'posts' | 'usageToday' | 'week';
 type SortDir = 'asc' | 'desc';
@@ -392,29 +394,48 @@ function UserActionModal({
         </div>
 
         <div>
-          <p className="mb-1 text-[14px]">비밀번호 재설정</p>
-          <div className="flex flex-wrap items-end gap-2">
-            <TextInput
-              type="password"
-              value={pwInput}
-              onChange={(e) => setPwInput(e.target.value)}
-              placeholder="새 비밀번호 (6자 이상)"
-              className="w-44"
-            />
-            <Button
-              variant="soft"
-              disabled={busy}
-              onClick={() => {
-                if (pwInput.length < 6) {
-                  toast('비밀번호는 6자 이상이어야 해요.');
-                  return;
-                }
-                act(() => patchUser(member.uid, { password: pwInput }), '비밀번호를 바꿨어요.');
-              }}
-            >
-              재설정
-            </Button>
-          </div>
+          <p className="mb-1 text-[14px]">비밀번호</p>
+          {(member.email ?? '').endsWith('@class.kr') ? (
+            // 수업용 계정(관리자가 만든 합성 이메일) — 직접 재설정
+            <div className="flex flex-wrap items-end gap-2">
+              <TextInput
+                type="password"
+                value={pwInput}
+                onChange={(e) => setPwInput(e.target.value)}
+                placeholder="새 비밀번호 (6자 이상)"
+                className="w-44"
+              />
+              <Button
+                variant="soft"
+                disabled={busy}
+                onClick={() => {
+                  if (pwInput.length < 6) {
+                    toast('비밀번호는 6자 이상이어야 해요.');
+                    return;
+                  }
+                  act(() => patchUser(member.uid, { password: pwInput }), '비밀번호를 바꿨어요.');
+                }}
+              >
+                재설정
+              </Button>
+            </div>
+          ) : (
+            // 가입한 회원(실제 이메일) — 직접 변경 대신 재설정 메일 발송
+            <div className="flex flex-col gap-2">
+              <p className="text-[12px] text-muted">
+                가입한 회원이라 비밀번호를 직접 바꿀 수 없어요. 본인 이메일로 재설정 링크를 보내요.
+              </p>
+              <div>
+                <Button
+                  variant="soft"
+                  disabled={busy || !member.email}
+                  onClick={() => act(() => sendPasswordResetEmail(auth, member.email!), '재설정 메일을 보냈어요.')}
+                >
+                  재설정 메일 보내기
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="border-t border-line pt-3">
