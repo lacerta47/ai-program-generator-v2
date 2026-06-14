@@ -3,6 +3,7 @@ import { getAIProvider } from '@/lib/ai/provider';
 import { DEFAULT_SYSTEM_PROMPT } from '@/lib/ai/prompts';
 import type { GenerateMode } from '@/lib/ai/types';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
+import { todayKeyKST } from '@/lib/usageDay';
 
 // AI 호출은 반드시 서버에서만 실행한다(키 노출 방지).
 export const runtime = 'nodejs';
@@ -13,12 +14,6 @@ const DAILY_LIMIT = Number.isFinite(parsedLimit) && parsedLimit >= 0 ? parsedLim
 
 function isMode(v: unknown): v is GenerateMode {
   return v === 'generate' || v === 'modify';
-}
-
-/** 한국 시간 기준 오늘 날짜 키 (자정에 한도 리셋) */
-function todayKeyKST(): string {
-  const kst = new Date(Date.now() + 9 * 60 * 60 * 1000);
-  return kst.toISOString().slice(0, 10);
 }
 
 export async function POST(req: NextRequest) {
