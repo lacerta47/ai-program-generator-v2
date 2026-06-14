@@ -10,6 +10,9 @@ import {
   Minus,
   ArrowUp,
   ArrowDown,
+  Settings2,
+  Ban,
+  Trash2,
 } from 'lucide-react';
 import { fetchMembers, type Member } from '@/lib/admin/members';
 import { formatDate } from '@/lib/program';
@@ -18,6 +21,9 @@ import AdminGate from '@/components/admin/AdminGate';
 import Button from '@/components/ui/Button';
 import { TextInput } from '@/components/ui/Field';
 import LoadingDots from '@/components/ui/LoadingDots';
+import Modal from '@/components/ui/Modal';
+import { patchUser, deleteUserAccount } from '@/lib/admin/accounts';
+import { useToast } from '@/components/ui/Toast';
 
 type SortKey = 'nickname' | 'email' | 'created' | 'lastSignIn' | 'posts' | 'usageToday' | 'week';
 type SortDir = 'asc' | 'desc';
@@ -81,6 +87,7 @@ function UsersContent() {
   const [sortKey, setSortKey] = useState<SortKey>('usageToday');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
   const [reloadKey, setReloadKey] = useState(0);
+  const [actionMember, setActionMember] = useState<Member | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -203,6 +210,7 @@ function UsersContent() {
                 {sortHead('작품', 'posts')}
                 {sortHead('오늘 사용', 'usageToday')}
                 {sortHead('최근 7일', 'week')}
+                <th className="p-3 font-medium">관리</th>
               </tr>
             </thead>
             <tbody>
@@ -229,9 +237,30 @@ function UsersContent() {
                     {m.lastSignInAt ? formatDate(m.lastSignInAt) : '—'}
                   </td>
                   <td className="p-3">{m.postCount}</td>
-                  <td className="p-3">{m.isAdmin ? '무제한' : `${m.usageToday}/${usageLimit}`}</td>
+                  <td className="p-3">
+                    {m.isAdmin ? (
+                      '무제한'
+                    ) : (
+                      <span className="inline-flex items-center gap-1">
+                        {m.usageToday}/{m.limitOverride ?? usageLimit}
+                        {m.limitOverride !== null && (
+                          <span className="rounded-full bg-brand-soft px-1.5 py-0.5 text-[11px] text-brand-ink">맞춤</span>
+                        )}
+                      </span>
+                    )}
+                  </td>
                   <td className="p-3">
                     <WeekUsage usage7d={m.usage7d} />
+                  </td>
+                  <td className="p-3">
+                    <button
+                      type="button"
+                      onClick={() => setActionMember(m)}
+                      aria-label="관리"
+                      className="press rounded-full p-1.5 text-muted hover:bg-surface-2 hover:text-ink"
+                    >
+                      <Settings2 size={16} aria-hidden />
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -239,6 +268,142 @@ function UsersContent() {
           </table>
         </div>
       )}
+      {actionMember && (
+        <UserActionModal
+          member={actionMember}
+          globalLimit={usageLimit}
+          onClose={() => setActionMember(null)}
+          onChanged={() => setReloadKey((k) => k + 1)}
+        />
+      )}
     </div>
+  );
+}
+
+function UserActionModal({
+  member,
+  globalLimit,
+  onClose,
+  onChanged,
+}: {
+  member: Member;
+  globalLimit: number;
+  onClose: () => void;
+  onChanged: () => void;
+}) {
+  const { toast } = useToast();
+  const [busy, setBusy] = useState(false);
+  const [limitInput, setLimitInput] = useState(
+    member.limitOverride !== null ? String(member.limitOverride) : '',
+  );
+
+  async function act(fn: () => Promise<unknown>, okMsg: string) {
+    setBusy(true);
+    try {
+      await fn();
+      toast(okMsg, 'success');
+      onChanged();
+      onClose();
+    } catch (e) {
+      console.error(e);
+      toast(e instanceof Error ? e.message : '처리하지 못했어요.');
+      setBusy(false);
+    }
+  }
+
+  if (member.isAdmin) {
+    return (
+      <Modal open onClose={onClose} label="계정 관리" className="max-w-sm p-6">
+        <h2 className="mb-2 text-[20px]">{member.nickname ?? member.email ?? '관리자'}</h2>
+        <p className="text-[14px] text-muted">관리자 계정이라 정지·삭제할 수 없어요.</p>
+        <div className="mt-4 flex justify-end">
+          <Button variant="ghost" onClick={onClose}>닫기</Button>
+        </div>
+      </Modal>
+    );
+  }
+
+  return (
+    <Modal open onClose={onClose} label="계정 관리" className="max-w-sm p-6">
+      <h2 className="text-[20px]">{member.nickname ?? '(별명 없음)'}</h2>
+      <p className="mb-4 text-[13px] text-muted">{member.email ?? '—'}</p>
+
+      <div className="flex flex-col gap-4">
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-[14px]">{member.disabled ? '정지된 계정' : '사용 중'}</span>
+          <Button
+            variant="soft"
+            disabled={busy}
+            onClick={() =>
+              act(
+                () => patchUser(member.uid, { disabled: !member.disabled }),
+                member.disabled ? '정지를 풀었어요.' : '계정을 정지했어요.',
+              )
+            }
+          >
+            {member.disabled ? <RotateCcw size={16} aria-hidden /> : <Ban size={16} aria-hidden />}
+            {member.disabled ? ' 정지 풀기' : ' 정지'}
+          </Button>
+        </div>
+
+        <div>
+          <p className="mb-1 text-[14px]">하루 한도</p>
+          <p className="mb-2 text-[12px] text-muted">
+            지금: {member.limitOverride !== null ? `맞춤 ${member.limitOverride}회` : `기본 ${globalLimit}회`}
+          </p>
+          <div className="flex flex-wrap items-end gap-2">
+            <TextInput
+              type="number"
+              min={0}
+              value={limitInput}
+              onChange={(e) => setLimitInput(e.target.value)}
+              placeholder={String(globalLimit)}
+              className="w-24"
+            />
+            <Button
+              variant="soft"
+              disabled={busy}
+              onClick={() => {
+                const n = Number(limitInput);
+                if (!Number.isInteger(n) || n < 0) {
+                  toast('한도는 0 이상의 정수여야 해요.');
+                  return;
+                }
+                act(() => patchUser(member.uid, { dailyLimit: n }), '한도를 바꿨어요.');
+              }}
+            >
+              적용
+            </Button>
+            {member.limitOverride !== null && (
+              <Button
+                variant="ghost"
+                disabled={busy}
+                onClick={() => act(() => patchUser(member.uid, { dailyLimit: null }), '기본 한도로 되돌렸어요.')}
+              >
+                기본값으로
+              </Button>
+            )}
+          </div>
+        </div>
+
+        <div className="border-t border-line pt-3">
+          <Button
+            variant="primary"
+            disabled={busy}
+            className="!bg-coral !text-white hover:!brightness-95"
+            onClick={() => {
+              if (!confirm(`'${member.nickname ?? member.email}' 계정과 그 작품을 영구 삭제할까요? 되돌릴 수 없어요.`)) return;
+              act(() => deleteUserAccount(member.uid), '계정을 삭제했어요.');
+            }}
+          >
+            <Trash2 size={16} aria-hidden /> 계정·작품 영구 삭제
+          </Button>
+        </div>
+      </div>
+
+      <div className="mt-4 flex justify-end">
+        <Button variant="ghost" onClick={onClose} disabled={busy}>닫기</Button>
+      </div>
+    </Modal>
   );
 }
