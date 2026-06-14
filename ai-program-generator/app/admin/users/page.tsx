@@ -1,17 +1,35 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { CloudOff, RotateCcw, Search } from 'lucide-react';
+import { CloudOff, RotateCcw, Search, ArrowUpRight, ArrowDownRight, Minus } from 'lucide-react';
 import { fetchMembers, type Member } from '@/lib/admin/members';
 import { formatDate } from '@/lib/program';
 import Header from '@/components/common/Header';
 import AdminGate from '@/components/admin/AdminGate';
-import Sparkline from '@/components/admin/Sparkline';
 import Button from '@/components/ui/Button';
 import { TextInput } from '@/components/ui/Field';
 import LoadingDots from '@/components/ui/LoadingDots';
 
 type SortKey = 'usage' | 'created';
+
+/** 최근 7일 합계 + 추세(최근 3일 vs 앞 3일 합 비교, 가운데 날 제외). */
+function WeekUsage({ usage7d }: { usage7d: number[] }) {
+  const sum = usage7d.reduce((a, b) => a + b, 0);
+  const early = usage7d.slice(0, 3).reduce((a, b) => a + b, 0);
+  const late = usage7d.slice(4, 7).reduce((a, b) => a + b, 0);
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      <span>{sum}회</span>
+      {late > early ? (
+        <ArrowUpRight size={16} className="text-mint-ink" aria-hidden />
+      ) : late < early ? (
+        <ArrowDownRight size={16} className="text-muted" aria-hidden />
+      ) : (
+        <Minus size={16} className="text-muted" aria-hidden />
+      )}
+    </span>
+  );
+}
 
 export default function AdminUsersPage() {
   return (
@@ -152,7 +170,7 @@ function UsersContent() {
                   <td className="p-3">{m.postCount}</td>
                   <td className="p-3">{m.isAdmin ? '무제한' : `${m.usageToday}/${usageLimit}`}</td>
                   <td className="p-3">
-                    <Sparkline values={m.usage7d} />
+                    <WeekUsage usage7d={m.usage7d} />
                   </td>
                 </tr>
               ))}
