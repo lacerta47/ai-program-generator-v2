@@ -296,6 +296,7 @@ function UserActionModal({
   const [limitInput, setLimitInput] = useState(
     member.limitOverride !== null ? String(member.limitOverride) : '',
   );
+  const [pwInput, setPwInput] = useState('');
 
   async function act(fn: () => Promise<unknown>, okMsg: string) {
     setBusy(true);
@@ -387,6 +388,32 @@ function UserActionModal({
                 기본값으로
               </Button>
             )}
+          </div>
+        </div>
+
+        <div>
+          <p className="mb-1 text-[14px]">비밀번호 재설정</p>
+          <div className="flex flex-wrap items-end gap-2">
+            <TextInput
+              type="password"
+              value={pwInput}
+              onChange={(e) => setPwInput(e.target.value)}
+              placeholder="새 비밀번호 (6자 이상)"
+              className="w-44"
+            />
+            <Button
+              variant="soft"
+              disabled={busy}
+              onClick={() => {
+                if (pwInput.length < 6) {
+                  toast('비밀번호는 6자 이상이어야 해요.');
+                  return;
+                }
+                act(() => patchUser(member.uid, { password: pwInput }), '비밀번호를 바꿨어요.');
+              }}
+            >
+              재설정
+            </Button>
           </div>
         </div>
 
