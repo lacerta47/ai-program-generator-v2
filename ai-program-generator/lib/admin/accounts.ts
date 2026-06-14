@@ -44,7 +44,7 @@ export function setConfig(dailyLimit: number): Promise<{ dailyLimit: number }> {
 
 export function patchUser(
   uid: string,
-  body: { disabled?: boolean; dailyLimit?: number | null },
+  body: { disabled?: boolean; dailyLimit?: number | null; password?: string },
 ): Promise<{ ok: true }> {
   return authedFetch(`/api/admin/users/${uid}`, {
     method: 'PATCH',

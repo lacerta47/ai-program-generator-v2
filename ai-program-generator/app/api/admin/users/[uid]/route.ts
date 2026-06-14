@@ -25,7 +25,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ ui
   } catch {
     return NextResponse.json({ error: '요청 본문이 올바르지 않아요.' }, { status: 400 });
   }
-  const b = body as { disabled?: unknown; dailyLimit?: unknown };
+  const b = body as { disabled?: unknown; dailyLimit?: unknown; password?: unknown };
 
   try {
     if (typeof b.disabled === 'boolean') {
@@ -40,6 +40,13 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ ui
         await setUserLimit(uid, b.dailyLimit);
       } else {
         return NextResponse.json({ error: '한도는 0 이상의 정수 또는 null이어야 해요.' }, { status: 400 });
+      }
+    }
+    if ('password' in b) {
+      if (typeof b.password === 'string' && b.password.length >= 6) {
+        await adminAuth.updateUser(uid, { password: b.password });
+      } else {
+        return NextResponse.json({ error: '비밀번호는 6자 이상이어야 해요.' }, { status: 400 });
       }
     }
     return NextResponse.json({ ok: true });
