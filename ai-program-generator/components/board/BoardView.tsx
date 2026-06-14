@@ -174,6 +174,16 @@ export default function BoardView() {
     router.push(`/?fork=${post.id}`);
   }
 
+  // 좋아요 토글 시 목록·선택 게시물의 likeCount를 즉시 동기화
+  function handleLikeChanged(postId: string, delta: number) {
+    setPosts((prev) =>
+      prev.map((p) => (p.id === postId ? { ...p, likeCount: (p.likeCount ?? 0) + delta } : p)),
+    );
+    setSelectedPost((prev) =>
+      prev && prev.id === postId ? { ...prev, likeCount: (prev.likeCount ?? 0) + delta } : prev,
+    );
+  }
+
   async function handleDelete(post: Post) {
     if (!confirm(`'${post.title}' 게시물을 삭제할까요?`)) return;
     try {
@@ -260,6 +270,9 @@ export default function BoardView() {
             canEdit={!!selectedPost && (isAdmin || selectedPost.ownerUid === user?.uid)}
             canFork={!!selectedPost && selectedPost.ownerUid !== user?.uid}
             onFork={handleFork}
+            currentUserUid={user?.uid ?? null}
+            onNeedLogin={() => setLoginOpen(true)}
+            onLikeChanged={handleLikeChanged}
           />
         )}
       </section>

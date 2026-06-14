@@ -1,12 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { FileText, Download, MonitorPlay, Pencil, X, Link2, Check, GitFork } from 'lucide-react';
+import { FileText, Download, MonitorPlay, Pencil, X, Link2, Check, GitFork, Heart, Eye } from 'lucide-react';
 import Modal from '@/components/ui/Modal';
 import type { Post } from '@/lib/firebase/types';
 import { formatDate } from '@/lib/program';
 import { downloadProgram, sharePostUrl } from '@/lib/client/postActions';
+import { isLiked, toggleLike } from '@/lib/firebase/likes';
+import { recordView } from '@/lib/firebase/views';
 import Button from '@/components/ui/Button';
 import FloatingShapes from '@/components/ui/FloatingShapes';
 import FullscreenFrame from '@/components/ui/FullscreenFrame';
@@ -18,16 +20,66 @@ export default function PostPreview({
   canEdit,
   canFork,
   onFork,
+  currentUserUid,
+  onNeedLogin,
+  onLikeChanged,
 }: {
   post: Post | null;
   canEdit?: boolean;
   canFork?: boolean;
   onFork?: (post: Post) => void;
+  currentUserUid?: string | null;
+  onNeedLogin?: () => void;
+  onLikeChanged?: (postId: string, delta: number) => void;
 }) {
   const [planOpen, setPlanOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [liked, setLiked] = useState(false);
+  const [likeCount, setLikeCount] = useState(0);
+  const [viewCount, setViewCount] = useState(0);
   const { toast } = useToast();
   const router = useRouter();
+
+  // 작품이 바뀌면 카운트 초기화 + (로그인 시) 내 좋아요 여부·조회 기록.
+  // post 객체가 아니라 id에만 반응(좋아요 동기화로 객체가 바뀌어도 재초기화 안 함).
+  useEffect(() => {
+    if (!post) return;
+    setLiked(false);
+    setLikeCount(post.likeCount ?? 0);
+    setViewCount(post.viewCount ?? 0);
+    if (!currentUserUid) return;
+    let alive = true;
+    isLiked(post.id, currentUserUid).then((v) => {
+      if (alive) setLiked(v);
+    });
+    recordView(post.id, currentUserUid).then((inc) => {
+      if (alive && inc) setViewCount((c) => c + 1);
+    });
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [post?.id, currentUserUid]);
+
+  function handleLike() {
+    if (!post) return;
+    if (!currentUserUid) {
+      onNeedLogin?.();
+      return;
+    }
+    const wasLiked = liked;
+    const delta = wasLiked ? -1 : 1;
+    setLiked(!wasLiked);
+    setLikeCount((c) => c + delta);
+    onLikeChanged?.(post.id, delta);
+    toggleLike(post.id, currentUserUid, wasLiked).catch((e) => {
+      console.error('좋아요 실패:', e);
+      setLiked(wasLiked);
+      setLikeCount((c) => c - delta);
+      onLikeChanged?.(post.id, -delta);
+      toast('좋아요를 처리하지 못했어요. 잠시 후 다시 해주세요.');
+    });
+  }
 
   if (!post) {
     return (
@@ -102,6 +154,24 @@ export default function PostPreview({
             </Button>
           )}
         </div>
+      </div>
+
+      <div className="flex items-center gap-1 text-[14px]">
+        <button
+          onClick={handleLike}
+          aria-label={liked ? '좋아요 취소' : '좋아요'}
+          title={liked ? '좋아요 취소' : '좋아요'}
+          className="press inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 hover:bg-coral-soft"
+        >
+          <Heart size={18} fill={liked ? 'currentColor' : 'none'} className={liked ? 'text-coral' : 'text-muted'} aria-hidden />
+          <span className="font-medium tabular-nums text-ink">{likeCount}</span>
+        </button>
+        <span className="inline-flex items-center gap-1.5 px-2 py-1 text-muted" title="이어 만든 횟수">
+          <GitFork size={16} aria-hidden /> <span className="tabular-nums">{post.forkCount ?? 0}</span>
+        </span>
+        <span className="inline-flex items-center gap-1.5 px-2 py-1 text-muted" title="본 사람 수">
+          <Eye size={16} aria-hidden /> <span className="tabular-nums">{viewCount}</span>
+        </span>
       </div>
 
       <FullscreenFrame
