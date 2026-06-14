@@ -41,3 +41,18 @@ export function setConfig(dailyLimit: number): Promise<{ dailyLimit: number }> {
     body: JSON.stringify({ dailyLimit }),
   });
 }
+
+export function patchUser(
+  uid: string,
+  body: { disabled?: boolean; dailyLimit?: number | null },
+): Promise<{ ok: true }> {
+  return authedFetch(`/api/admin/users/${uid}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+}
+
+export function deleteUserAccount(uid: string): Promise<{ ok: true }> {
+  return authedFetch(`/api/admin/users/${uid}`, { method: 'DELETE' });
+}
