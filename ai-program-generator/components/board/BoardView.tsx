@@ -264,7 +264,7 @@ export default function BoardView() {
 
       {/* 오른쪽: 미리보기 */}
       <section
-        className="anim-pop-in flex min-h-[62vh] flex-col rounded-[var(--r-lg)] border-2 border-line bg-surface p-5"
+        className="anim-pop-in flex min-h-[72vh] flex-col rounded-[var(--r-lg)] border-2 border-line bg-surface p-5"
         style={{ animationDelay: '60ms' }}
       >
         {deepLinkError && !selectedPost ? (
