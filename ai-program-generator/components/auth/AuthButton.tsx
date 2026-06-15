@@ -18,8 +18,17 @@ export default function AuthButton() {
   const [reportCount, setReportCount] = useState(0);
 
   useEffect(() => {
-    if (user) getUserProfile(user.uid).then((p) => setNickname(p?.nickname ?? null));
-    else setNickname(null);
+    if (!user) {
+      setNickname(null);
+      return;
+    }
+    let alive = true;
+    getUserProfile(user.uid).then((p) => {
+      if (alive) setNickname(p?.nickname ?? null);
+    });
+    return () => {
+      alive = false;
+    };
   }, [user]);
 
   useEffect(() => {

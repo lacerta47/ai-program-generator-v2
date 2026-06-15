@@ -82,6 +82,7 @@ function AccountCard({
   const { toast } = useToast();
   const [nickname, setNickname] = useState<string | null>(null);
   const [usage, setUsage] = useState<Usage | null>(null);
+  const [usageError, setUsageError] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [draft, setDraft] = useState('');
   const [busy, setBusy] = useState(false);
@@ -100,15 +101,19 @@ function AccountCard({
 
   useEffect(() => {
     let alive = true;
+    setUsageError(false);
     fetchMyUsage()
       .then((u) => {
         if (alive) setUsage(u);
       })
-      .catch((e) => console.error('사용량 조회 실패:', e));
+      .catch((e) => {
+        console.error('사용량 조회 실패:', e);
+        if (alive) setUsageError(true);
+      });
     return () => {
       alive = false;
     };
-  }, []);
+  }, [uid]);
 
   async function saveNick(e: React.FormEvent) {
     e.preventDefault();
@@ -136,7 +141,13 @@ function AccountCard({
     }
   }
 
-  const usageText = usage ? (usage.unlimited ? '무제한' : `${usage.used}/${usage.limit}`) : '…';
+  const usageText = usageError
+    ? '—'
+    : usage
+      ? usage.unlimited
+        ? '무제한'
+        : `${usage.used}/${usage.limit}`
+      : '…';
 
   return (
     <section className="rounded-[var(--r-lg)] border-2 border-line bg-surface p-5">
