@@ -87,9 +87,15 @@ function AccountCard({
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
+    let alive = true;
     getUserProfile(uid)
-      .then((p) => setNickname(p?.nickname ?? null))
+      .then((p) => {
+        if (alive) setNickname(p?.nickname ?? null);
+      })
       .catch((e) => console.error('프로필 조회 실패:', e));
+    return () => {
+      alive = false;
+    };
   }, [uid]);
 
   useEffect(() => {
