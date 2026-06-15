@@ -52,6 +52,18 @@ export async function fetchPosts(categoryId: string, cursor?: PostCursor): Promi
   };
 }
 
+/** 내가 만든 작품 (ownerUid 기준, 최신순). 복합 인덱스 posts(ownerUid asc, createdAt desc) 필요. */
+export async function fetchMyPosts(uid: string, limitN = 50): Promise<Post[]> {
+  const q = query(
+    collection(db, COL),
+    where('ownerUid', '==', uid),
+    orderBy('createdAt', 'desc'),
+    limit(limitN),
+  );
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Post);
+}
+
 export async function getPost(id: string): Promise<Post | null> {
   const snap = await getDoc(doc(db, COL, id));
   return snap.exists() ? ({ id: snap.id, ...snap.data() } as Post) : null;
