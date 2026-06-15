@@ -1,0 +1,334 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { Pencil, Download, Link2, Check, Trash2, Heart, Eye, GitFork, Sparkles } from 'lucide-react';
+import { useAuth } from '@/components/auth/AuthProvider';
+import { useToast } from '@/components/ui/Toast';
+import { auth } from '@/lib/firebase/client';
+import { fetchMyPosts, deletePost } from '@/lib/firebase/posts';
+import {
+  getUserProfile,
+  claimNickname,
+  NicknameError,
+  NICKNAME_COOLDOWN_DAYS,
+} from '@/lib/firebase/users';
+import { sharePostUrl, downloadProgram } from '@/lib/client/postActions';
+import { formatDate } from '@/lib/program';
+import type { Post } from '@/lib/firebase/types';
+import Header from '@/components/common/Header';
+import Button from '@/components/ui/Button';
+import { TextInput, Label } from '@/components/ui/Field';
+import Modal from '@/components/ui/Modal';
+import LoadingDots from '@/components/ui/LoadingDots';
+
+interface Usage {
+  used: number;
+  limit: number | null;
+  unlimited: boolean;
+}
+
+/** 본인 토큰으로 /api/me/usage 호출. */
+async function fetchMyUsage(): Promise<Usage> {
+  const u = auth.currentUser;
+  if (!u) throw new Error('로그인이 필요해요.');
+  const idToken = await u.getIdToken();
+  const res = await fetch('/api/me/usage', { headers: { Authorization: `Bearer ${idToken}` } });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data?.error || `요청 실패 (${res.status})`);
+  return data as Usage;
+}
+
+export default function MyPage() {
+  const { user, loading } = useAuth();
+  const router = useRouter();
+  const { toast } = useToast();
+
+  useEffect(() => {
+    if (loading) return;
+    if (!user) {
+      toast('로그인이 필요해요.');
+      router.replace('/');
+    }
+  }, [loading, user, router, toast]);
+
+  return (
+    <main className="min-h-screen">
+      <Header />
+      {loading || !user ? (
+        <div className="py-16">
+          <LoadingDots label="확인 중…" />
+        </div>
+      ) : (
+        <div className="mx-auto flex max-w-3xl flex-col gap-6 p-4 sm:p-6">
+          <AccountCard uid={user.uid} email={user.email} createdAt={user.metadata?.creationTime} />
+          <MyWorks uid={user.uid} />
+        </div>
+      )}
+    </main>
+  );
+}
+
+function AccountCard({
+  uid,
+  email,
+  createdAt,
+}: {
+  uid: string;
+  email: string | null;
+  createdAt?: string;
+}) {
+  const { toast } = useToast();
+  const [nickname, setNickname] = useState<string | null>(null);
+  const [usage, setUsage] = useState<Usage | null>(null);
+  const [editOpen, setEditOpen] = useState(false);
+  const [draft, setDraft] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    getUserProfile(uid)
+      .then((p) => setNickname(p?.nickname ?? null))
+      .catch((e) => console.error('프로필 조회 실패:', e));
+  }, [uid]);
+
+  useEffect(() => {
+    let alive = true;
+    fetchMyUsage()
+      .then((u) => {
+        if (alive) setUsage(u);
+      })
+      .catch((e) => console.error('사용량 조회 실패:', e));
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  async function saveNick(e: React.FormEvent) {
+    e.preventDefault();
+    if (!draft.trim()) return;
+    setBusy(true);
+    try {
+      await claimNickname(uid, draft);
+      setNickname(draft.trim());
+      setEditOpen(false);
+      toast('별명을 바꿨어요!', 'success');
+    } catch (err) {
+      if (err instanceof NicknameError && err.reason === 'taken') {
+        toast('이미 누가 쓰는 별명이에요. 다른 별명으로 해볼까요?');
+      } else if (err instanceof NicknameError && err.reason === 'profanity') {
+        toast('그 별명은 쓸 수 없어요. 예쁜 말로 바꿔 볼까요?');
+      } else if (err instanceof NicknameError && err.reason === 'reserved') {
+        toast("그 별명은 쓸 수 없어요. '관리자' 같은 말은 넣을 수 없어요.");
+      } else if (err instanceof NicknameError && err.reason === 'cooldown') {
+        toast(`별명은 ${NICKNAME_COOLDOWN_DAYS}일에 한 번만 바꿀 수 있어요. ${err.daysLeft}일 뒤에 다시 해주세요.`);
+      } else {
+        toast('별명을 바꾸지 못했어요. 잠시 후 다시 해주세요.');
+      }
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const usageText = usage ? (usage.unlimited ? '무제한' : `${usage.used}/${usage.limit}`) : '…';
+
+  return (
+    <section className="rounded-[var(--r-lg)] border-2 border-line bg-surface p-5">
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="truncate text-[24px]">{nickname ?? '별명을 정해 주세요'}</h1>
+          {email && <p className="truncate text-[13px] text-muted">{email}</p>}
+        </div>
+        <Button
+          variant="soft"
+          onClick={() => {
+            setDraft(nickname ?? '');
+            setEditOpen(true);
+          }}
+        >
+          <Pencil size={15} aria-hidden /> 별명 바꾸기
+        </Button>
+      </div>
+      <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-[14px]">
+        <span className="text-muted">
+          가입일 <span className="text-ink">{createdAt ? formatDate(new Date(createdAt).getTime()) : '—'}</span>
+        </span>
+        <span className="text-muted">
+          오늘 사용 <span className="text-ink">{usageText}</span>
+        </span>
+      </div>
+
+      <Modal open={editOpen} onClose={() => setEditOpen(false)} label="별명 바꾸기" className="max-w-xs p-6">
+        <h2 className="mb-4 text-[20px]">별명 바꾸기</h2>
+        <form onSubmit={saveNick} className="flex flex-col gap-3">
+          <Label text="새 별명 (게시판에 보여요)" required>
+            <TextInput
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              maxLength={20}
+              placeholder="예: 코딩왕"
+              autoFocus
+            />
+          </Label>
+          <p className="text-[13px] text-muted">
+            별명은 {NICKNAME_COOLDOWN_DAYS}일에 한 번만 바꿀 수 있어요. 이미 올린 작품의 별명은 그대로고, 다음 작품부터 새 별명으로 보여요.
+          </p>
+          <div className="mt-1 flex justify-end gap-2">
+            <Button type="button" variant="ghost" onClick={() => setEditOpen(false)}>
+              취소
+            </Button>
+            <Button type="submit" variant="primary" disabled={busy}>
+              {busy ? '저장 중…' : '저장'}
+            </Button>
+          </div>
+        </form>
+      </Modal>
+    </section>
+  );
+}
+
+function MyWorks({ uid }: { uid: string }) {
+  const { toast } = useToast();
+  const [posts, setPosts] = useState<Post[] | null>(null);
+  const [error, setError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    setError(false);
+    setPosts(null);
+    fetchMyPosts(uid)
+      .then((p) => {
+        if (alive) setPosts(p);
+      })
+      .catch((e) => {
+        console.error('내 작품 불러오기 실패:', e);
+        if (alive) setError(true);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [uid, reloadKey]);
+
+  async function handleDelete(post: Post) {
+    if (!confirm(`'${post.title}' 작품을 삭제할까요? 되돌릴 수 없어요.`)) return;
+    try {
+      await deletePost(post.id);
+      setPosts((prev) => prev?.filter((p) => p.id !== post.id) ?? null);
+      toast('작품을 삭제했어요.', 'success');
+    } catch (e) {
+      console.error('작품 삭제 실패:', e);
+      toast('삭제하지 못했어요. 잠시 후 다시 해주세요.');
+    }
+  }
+
+  return (
+    <section>
+      <h2 className="mb-3 text-[20px]">내 작품</h2>
+      {error ? (
+        <div className="flex flex-col items-center gap-3 py-10 text-center">
+          <p className="text-[15px] text-muted">작품을 불러오지 못했어요.</p>
+          <Button variant="soft" onClick={() => setReloadKey((k) => k + 1)}>
+            다시 시도
+          </Button>
+        </div>
+      ) : posts === null ? (
+        <div className="py-10">
+          <LoadingDots label="불러오는 중…" />
+        </div>
+      ) : posts.length === 0 ? (
+        <div className="flex flex-col items-center gap-3 rounded-[var(--r-lg)] border-2 border-dashed border-line py-10 text-center">
+          <Sparkles size={28} className="text-brand" aria-hidden />
+          <p className="text-[15px] text-muted">
+            아직 만든 작품이 없어요.
+            <br />첫 작품을 만들어 볼까요?
+          </p>
+          <Link href="/" className="press rounded-full bg-brand px-4 py-2 text-[14px] text-white">
+            만들러 가기
+          </Link>
+        </div>
+      ) : (
+        <div className="grid gap-3 sm:grid-cols-2">
+          {posts.map((post) => (
+            <div
+              key={post.id}
+              className="anim-pop-in flex flex-col gap-2 rounded-[var(--r-lg)] border-2 border-line bg-surface p-4"
+            >
+              <div className="min-w-0">
+                <h3 className="truncate text-[17px]" title={post.title}>
+                  {post.title}
+                </h3>
+                <p className="text-[12px] text-muted">{formatDate(post.createdAt)}</p>
+              </div>
+              <div className="flex items-center gap-3 text-[13px] text-muted">
+                {(post.likeCount ?? 0) > 0 && (
+                  <span className="inline-flex items-center gap-1">
+                    <Heart size={13} aria-hidden /> {post.likeCount}
+                  </span>
+                )}
+                {(post.viewCount ?? 0) > 0 && (
+                  <span className="inline-flex items-center gap-1">
+                    <Eye size={13} aria-hidden /> {post.viewCount}
+                  </span>
+                )}
+                {(post.forkCount ?? 0) > 0 && (
+                  <span className="inline-flex items-center gap-1">
+                    <GitFork size={13} aria-hidden /> {post.forkCount}
+                  </span>
+                )}
+              </div>
+              <div className="mt-auto flex flex-wrap justify-end gap-1.5">
+                <Link
+                  href={`/?edit=${post.id}`}
+                  className="press inline-flex items-center gap-1 rounded-full border-2 border-line px-2.5 py-1 text-[13px] hover:border-brand/50"
+                >
+                  <Pencil size={14} aria-hidden /> 고치기
+                </Link>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() =>
+                    sharePostUrl(post, toast, () => {
+                      setCopiedId(post.id);
+                      setTimeout(() => setCopiedId(null), 1500);
+                    })
+                  }
+                  aria-label="공유"
+                  title="공유"
+                  className="rounded-full"
+                >
+                  {copiedId === post.id ? (
+                    <Check size={16} className="text-mint-ink" aria-hidden />
+                  ) : (
+                    <Link2 size={16} aria-hidden />
+                  )}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => downloadProgram(post.code, post.title, toast)}
+                  aria-label="다운로드"
+                  title="다운로드"
+                  className="rounded-full"
+                >
+                  <Download size={16} aria-hidden />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => handleDelete(post)}
+                  aria-label="삭제"
+                  title="삭제"
+                  className="rounded-full text-coral-ink"
+                >
+                  <Trash2 size={16} aria-hidden />
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
