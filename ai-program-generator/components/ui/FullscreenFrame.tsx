@@ -1,9 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { Maximize, X } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Maximize, Minimize, ZoomIn, ZoomOut } from 'lucide-react';
 import type { GeneratedCode } from '@/lib/ai/types';
-import Modal from './Modal';
 import LoadingDots from './LoadingDots';
 
 interface Props {
@@ -25,6 +24,7 @@ function previewOrigin(): string {
   // 배포 환경: 별도 미리보기 도메인이 있어야 프로세스 격리가 유지된다.
   const configured = process.env.NEXT_PUBLIC_PREVIEW_ORIGIN;
   if (!configured) {
+    // 같은 오리진으로 폴백 = 격리 없음. 무한루프 코드가 탭을 얼릴 수 있으므로 경고.
     console.warn(
       '[preview] NEXT_PUBLIC_PREVIEW_ORIGIN 미설정 — 미리보기가 같은 오리진에서 실행되어 프로세스 격리가 적용되지 않습니다.',
     );
@@ -54,11 +54,23 @@ function requestPreviewId(code: GeneratedCode): Promise<string> {
   return p;
 }
 
-/** 생성된 프로그램 미리보기 iframe(프로세스 격리) + 인앱 "크게 보기" 모달 */
+// "맞춤(한눈에 보기)" 축소배율 — 프로그램 전체를 한눈에 담기 위한 줌아웃 비율.
+// iframe을 1/FIT_SCALE 크기로 키운 뒤 scale(FIT_SCALE)로 줄여, 같은 칸에 더 넓은 영역을 보여준다.
+const FIT_SCALE = 0.5;
+
+/** 생성된 프로그램 미리보기 iframe(프로세스 격리) + 전체화면 토글 + "맞춤" 축소배율 토글 */
 export default function FullscreenFrame({ code, title, frameKey, className = '' }: Props) {
-  const [expanded, setExpanded] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [fit, setFit] = useState(false);
   const [src, setSrc] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    const onChange = () => setIsFullscreen(Boolean(document.fullscreenElement));
+    document.addEventListener('fullscreenchange', onChange);
+    return () => document.removeEventListener('fullscreenchange', onChange);
+  }, []);
 
   useEffect(() => {
     let alive = true;
@@ -74,8 +86,18 @@ export default function FullscreenFrame({ code, title, frameKey, className = '' 
     };
   }, [code, frameKey]);
 
+  function toggle() {
+    if (!document.fullscreenElement) {
+      containerRef.current?.requestFullscreen().catch(() => {
+        alert('전체화면을 켤 수 없어요.');
+      });
+    } else {
+      document.exitFullscreen();
+    }
+  }
+
   return (
-    <div className={`relative bg-white ${className}`}>
+    <div ref={containerRef} className={`relative overflow-hidden bg-white ${className}`}>
       {failed ? (
         <p className="grid h-full place-items-center p-6 text-center text-[15px] text-muted">
           미리보기를 불러오지 못했어요. 새로고침해 주세요.
@@ -83,7 +105,17 @@ export default function FullscreenFrame({ code, title, frameKey, className = '' 
       ) : src ? (
         <iframe
           key={`${frameKey ?? ''}-${src}`}
-          className="h-full w-full bg-white"
+          className={fit ? 'bg-white' : 'h-full w-full bg-white'}
+          style={
+            fit
+              ? {
+                  width: `${100 / FIT_SCALE}%`,
+                  height: `${100 / FIT_SCALE}%`,
+                  transform: `scale(${FIT_SCALE})`,
+                  transformOrigin: 'top left',
+                }
+              : undefined
+          }
           src={src}
           title={title}
           sandbox="allow-scripts"
@@ -93,42 +125,30 @@ export default function FullscreenFrame({ code, title, frameKey, className = '' 
           <LoadingDots />
         </div>
       )}
-      {src && (
-        <button
-          onClick={() => setExpanded(true)}
-          aria-label="크게 보기"
-          title="크게 보기"
-          className="press absolute right-3 top-3 grid h-11 w-11 place-items-center rounded-full border-2 border-line bg-surface/90 text-ink backdrop-blur-sm hover:border-brand/60 hover:text-brand-strong dark:hover:text-brand"
-        >
-          <Maximize size={19} />
-        </button>
-      )}
-
-      <Modal
-        open={expanded}
-        onClose={() => setExpanded(false)}
-        label="크게 보기"
-        className="flex h-[90vh] w-[min(96vw,1100px)] max-w-none flex-col p-3"
-      >
-        <div className="mb-2 flex items-center justify-between gap-2">
-          <h2 className="truncate text-[18px]">{title}</h2>
-          <button
-            onClick={() => setExpanded(false)}
-            aria-label="닫기"
-            className="press grid h-10 w-10 shrink-0 place-items-center rounded-full text-muted hover:bg-surface-2 hover:text-ink"
-          >
-            <X size={20} />
-          </button>
-        </div>
+      <div className="absolute right-3 top-3 flex gap-1.5">
         {src && (
-          <iframe
-            className="min-h-0 w-full flex-1 rounded-[var(--r-md)] border-2 border-line bg-white"
-            src={src}
-            title={title}
-            sandbox="allow-scripts"
-          />
+          <button
+            onClick={() => setFit((v) => !v)}
+            aria-label={fit ? '실제 크기로 보기' : '한눈에 보기(맞춤)'}
+            title={fit ? '실제 크기로 보기' : '한눈에 보기(맞춤)'}
+            className={`press grid h-11 w-11 place-items-center rounded-full border-2 backdrop-blur-sm ${
+              fit
+                ? 'border-brand bg-brand text-white'
+                : 'border-line bg-surface/90 text-ink hover:border-brand/60 hover:text-brand-strong dark:hover:text-brand'
+            }`}
+          >
+            {fit ? <ZoomIn size={19} /> : <ZoomOut size={19} />}
+          </button>
         )}
-      </Modal>
+        <button
+          onClick={toggle}
+          aria-label={isFullscreen ? '전체화면 끝내기' : '전체화면으로 보기'}
+          title={isFullscreen ? '전체화면 끝내기 (Esc)' : '전체화면으로 보기'}
+          className="press grid h-11 w-11 place-items-center rounded-full border-2 border-line bg-surface/90 text-ink backdrop-blur-sm hover:border-brand/60 hover:text-brand-strong dark:hover:text-brand"
+        >
+          {isFullscreen ? <Minimize size={19} /> : <Maximize size={19} />}
+        </button>
+      </div>
     </div>
   );
 }
