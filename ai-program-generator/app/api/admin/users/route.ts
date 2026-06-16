@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import type { UserRecord } from 'firebase-admin/auth';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
+import { requireAdmin } from '@/lib/admin/requireAdmin';
 import { todayKeyKST, lastDayKeysKST } from '@/lib/usageDay';
 import { readDailyLimit } from '@/lib/admin/usageConfig';
 
@@ -9,20 +10,9 @@ export const runtime = 'nodejs';
 const toMs = (s?: string): number | null => (s ? new Date(s).getTime() : null);
 
 export async function GET(req: NextRequest) {
-  // 1) admin 게이트 (/api/generate와 동일 패턴)
-  const authHeader = req.headers.get('authorization') ?? '';
-  const idToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
-  if (!idToken) {
-    return NextResponse.json({ error: '로그인이 필요해요.' }, { status: 401 });
-  }
-  try {
-    const decoded = await adminAuth.verifyIdToken(idToken);
-    if (decoded.admin !== true) {
-      return NextResponse.json({ error: '관리자만 볼 수 있어요.' }, { status: 403 });
-    }
-  } catch {
-    return NextResponse.json({ error: '로그인이 만료됐어요. 다시 로그인해 주세요.' }, { status: 401 });
-  }
+  // 1) admin 게이트 (공용 헬퍼)
+  const gate = await requireAdmin(req);
+  if (gate) return gate;
 
   // 2) 핵심: 가입자 명단 (실패 시 500 — 명단 없으면 표 자체가 불가)
   let users: UserRecord[];
