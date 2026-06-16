@@ -8,7 +8,8 @@ import { fetchPosts, getPost, deletePost, type PostCursor } from '@/lib/firebase
 import { downloadProgram } from '@/lib/client/postActions';
 import type { Category, Post } from '@/lib/firebase/types';
 import { CloudOff, RotateCcw } from 'lucide-react';
-import CategoryBar from './CategoryBar';
+import CategoryTree from './CategoryTree';
+import { leafPaths } from '@/lib/board/categoryTree';
 import PostList from './PostList';
 import PostPreview from './PostPreview';
 import LoginDialog from '@/components/auth/LoginDialog';
@@ -54,10 +55,11 @@ export default function BoardView() {
     [],
   );
 
-  // 선택된 카테고리가 없으면 첫 번째로 (딥링크 글 해결 중이면 대기)
+  // 선택된 카테고리가 없으면 첫 잎새로 (딥링크 글 해결 중이면 대기)
   useEffect(() => {
     if (!selectedCategoryId && !deepLinkResolving && categories.length > 0) {
-      setSelectedCategoryId(categories[0].id);
+      const firstLeaf = leafPaths(categories)[0];
+      if (firstLeaf) setSelectedCategoryId(firstLeaf.id);
     }
   }, [categories, selectedCategoryId, deepLinkResolving]);
 
@@ -66,7 +68,8 @@ export default function BoardView() {
   useEffect(() => {
     if (!selectedCategoryId || categories.length === 0) return;
     if (!categories.some((c) => c.id === selectedCategoryId)) {
-      setSelectedCategoryId(categories[0].id);
+      const firstLeaf = leafPaths(categories)[0];
+      setSelectedCategoryId(firstLeaf?.id ?? null);
       setSelectedPost(null);
     }
   }, [categories, selectedCategoryId]);
@@ -216,11 +219,10 @@ export default function BoardView() {
       {/* 왼쪽: 카테고리 + 목록 */}
       <section className="anim-pop-in flex max-h-[80vh] flex-col gap-4 rounded-[var(--r-lg)] border-2 border-line bg-surface p-5">
         <h2 className="text-[21px]">친구들의 작품</h2>
-        <CategoryBar
+        <CategoryTree
           categories={categories}
           selectedId={selectedCategoryId}
           onSelect={selectCategory}
-          isAdmin={isAdmin}
         />
         <div className="min-h-0 flex-1 overflow-y-auto">
           {loading ? (
