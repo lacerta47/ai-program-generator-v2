@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAIProvider } from '@/lib/ai/provider';
-import { DEFAULT_SYSTEM_PROMPT } from '@/lib/ai/prompts';
+import { SYSTEM_PROMPTS, type SystemPromptVariant } from '@/lib/ai/prompts';
 import type { GenerateMode } from '@/lib/ai/types';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { todayKeyKST } from '@/lib/usageDay';
@@ -45,8 +45,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: '요청 본문이 올바른 JSON이 아닙니다.' }, { status: 400 });
   }
 
-  // system 은 클라이언트가 보내도 무시한다 — 안전 프롬프트(sandbox 제약 등)를 우회하지 못하게.
-  const { prompt, mode } = (body ?? {}) as { prompt?: unknown; mode?: unknown };
+  // system 텍스트는 클라이언트가 보내도 무시(주입 차단). 대신 variant 키로 서버가 선택.
+  const { prompt, mode, variant } = (body ?? {}) as {
+    prompt?: unknown;
+    mode?: unknown;
+    variant?: unknown;
+  };
+  const promptVariant: SystemPromptVariant = variant === 'survey' ? 'survey' : 'default';
 
   if (typeof prompt !== 'string' || !prompt.trim()) {
     return NextResponse.json({ error: 'prompt(문자열)가 필요합니다.' }, { status: 400 });
@@ -92,7 +97,7 @@ export async function POST(req: NextRequest) {
   // 4) 생성 — 실패 시 선점한 한도를 환불
   try {
     const provider = getAIProvider();
-    const code = await provider.generate({ prompt, system: DEFAULT_SYSTEM_PROMPT, mode });
+    const code = await provider.generate({ prompt, system: SYSTEM_PROMPTS[promptVariant], mode });
     return NextResponse.json(code);
   } catch (e) {
     console.error('[/api/generate] 실패:', e);
