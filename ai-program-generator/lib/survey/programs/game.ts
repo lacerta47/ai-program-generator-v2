@@ -41,6 +41,7 @@ export const game: ProgramType = {
     },
     {
       id: 'hero',
+      showIf: (a) => a.genre !== 'mole', // 두더지 잡기는 움직이는 주인공이 없음
       question: '주인공 모습은?',
       options: [
         {
@@ -71,6 +72,7 @@ export const game: ProgramType = {
     },
     {
       id: 'control',
+      showIf: (a) => a.genre !== 'mole', // 두더지 잡기는 클릭만 — 이동 조작 불필요
       question: '어떻게 조작할까?',
       options: [
         {

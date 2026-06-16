@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import { ArrowLeft, RotateCcw, Wand2 } from 'lucide-react';
 import type { GeneratedCode } from '@/lib/ai/types';
-import type { ProgramType, SurveyAnswers } from '@/lib/survey/types';
+import type { ProgramType, SurveyAnswers, SurveyStep } from '@/lib/survey/types';
 import { PROGRAM_TYPES } from '@/lib/survey/programs';
 import { visibleSteps, assemblePrompt, surveyToPlan } from '@/lib/survey/assemble';
 import { requestGenerate } from '@/lib/client/generate';
@@ -20,6 +20,9 @@ import SurveySummary from './SurveySummary';
 
 const EMPTY_CODE: GeneratedCode = { html: '', css: '', javascript: '' };
 
+// 수정 후 복귀 지점을 '마지막 만들기 화면'으로 나타내는 센티넬(단계 id와 겹치지 않음)
+const FINISH = '__finish__';
+
 const BUILD_MESSAGES = [
   '고른 걸 읽고 있어요…',
   '어떻게 만들지 생각하는 중…',
@@ -32,7 +35,7 @@ export default function SurveyWizard() {
   const [type, setType] = useState<ProgramType | null>(null);
   const [answers, setAnswers] = useState<SurveyAnswers>({});
   const [stepIdx, setStepIdx] = useState(0);
-  const [editReturn, setEditReturn] = useState<number | null>(null);
+  const [editReturn, setEditReturn] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [buildMsg, setBuildMsg] = useState(BUILD_MESSAGES[0]);
   const [code, setCode] = useState<GeneratedCode>(EMPTY_CODE);
@@ -61,14 +64,23 @@ export default function SurveyWizard() {
     setEditReturn(null);
   }
   function goToStep(i: number) {
-    // 요약 칩으로 특정 단계 수정 — 원래 위치를 기억해 수정 후 그대로 복귀
-    setEditReturn((r) => (r === null ? stepIdx : r));
+    // 요약 칩으로 특정 단계 수정 — 복귀 지점을 '단계 id'(또는 FINISH)로 기억.
+    // 인덱스가 아니라 id라, 수정으로 조건부 단계가 생기거나 사라져도 정확히 복귀한다.
+    setEditReturn((r) =>
+      r !== null ? r : stepIdx >= steps.length ? FINISH : (steps[stepIdx]?.id ?? FINISH),
+    );
     setStepIdx(i);
   }
-  function advance() {
-    // 수정 중이었으면 원래 위치로 복귀, 아니면 다음 단계
+  // 기억한 복귀 지점(단계 id/FINISH)을 주어진 steps 기준 인덱스로 환산
+  function returnIndex(forSteps: SurveyStep[]): number {
+    if (editReturn === FINISH) return forSteps.length;
+    const i = forSteps.findIndex((s) => s.id === editReturn);
+    return i === -1 ? forSteps.length : i;
+  }
+  function advance(nextSteps: SurveyStep[]) {
+    // 수정 중이었으면 원래 위치로 복귀(새 steps 기준), 아니면 다음 단계
     if (editReturn !== null) {
-      setStepIdx(editReturn);
+      setStepIdx(returnIndex(nextSteps));
       setEditReturn(null);
     } else {
       setStepIdx((i) => i + 1);
@@ -86,15 +98,22 @@ export default function SurveyWizard() {
       });
       return;
     }
-    setAnswers((prev) => ({ ...prev, [step.id]: optionId }));
-    advance();
+    // 단일: 새 답 기준으로 다음 노출 단계를 계산해 진행/복귀(조건부 분기 즉시 반영)
+    const nextAnswers = { ...answers, [step.id]: optionId };
+    setAnswers(nextAnswers);
+    advance(visibleSteps(type, nextAnswers));
   }
   function back() {
     if (stepIdx === 0) {
       backToTypes();
       return;
     }
-    setEditReturn(null);
+    // 수정 중 뒤로 = 수정 취소하고 원래 위치로 복귀
+    if (editReturn !== null) {
+      setStepIdx(returnIndex(steps));
+      setEditReturn(null);
+      return;
+    }
     setStepIdx((i) => Math.max(0, i - 1));
   }
   function reset() {
@@ -233,7 +252,7 @@ export default function SurveyWizard() {
               onChoose={choose}
             />
             {steps[stepIdx].multi && (
-              <Button variant="primary" onClick={advance} className="w-fit self-end">
+              <Button variant="primary" onClick={() => advance(steps)} className="w-fit self-end">
                 다음
               </Button>
             )}

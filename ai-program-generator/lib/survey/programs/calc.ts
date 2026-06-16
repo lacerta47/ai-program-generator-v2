@@ -65,6 +65,7 @@ export const calc: ProgramType = {
     },
     {
       id: 'extra',
+      showIf: (a) => a.mode !== 'times', // 구구단 연습엔 숫자 입력·지우기 개념이 없음
       question: '추가 기능을 넣을까? (여러 개 OK)',
       multi: true,
       options: [
@@ -75,6 +76,7 @@ export const calc: ProgramType = {
     },
     {
       id: 'display',
+      showIf: (a) => a.mode !== 'times', // 구구단은 결과 숫자 표시 개념이 아님(문제·점수 위주)
       question: '숫자 화면을 어떻게 보여줄까?',
       options: [
         { id: 'bignum', label: '큰 숫자', icon: '🔠', promptFragment: '결과 숫자를 화면에 아주 크게 표시해.' },

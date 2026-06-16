@@ -61,7 +61,7 @@ export const roulette: ProgramType = {
       options: [
         { id: 'confetti', label: '색종이 팡!', icon: '🎊', promptFragment: '룰렛이 멈출 때 색종이가 화면에 쏟아지는 효과를 넣어.' },
         { id: 'flash', label: '반짝반짝', icon: '✨', promptFragment: '룰렛이 멈출 때 뽑힌 칸이 반짝이는 효과를 넣어.' },
-        { id: 'cheer', label: '효과음', icon: '🔊', promptFragment: '룻렛이 멈출 때 Web Audio로 짧고 기분 좋은 효과음을 넣어.' },
+        { id: 'cheer', label: '효과음', icon: '🔊', promptFragment: '룰렛이 멈출 때 Web Audio로 짧고 기분 좋은 효과음을 넣어.' },
       ],
     },
     {
