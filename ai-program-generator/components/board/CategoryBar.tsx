@@ -7,7 +7,7 @@ import {
   addCategory,
   renameCategory,
   swapCategoryOrder,
-  deleteCategoryWithPosts,
+  deleteCategoryTree,
 } from '@/lib/firebase/categories';
 import Chip, { CHIP_COLORS } from '@/components/ui/Chip';
 import Button from '@/components/ui/Button';
@@ -70,7 +70,7 @@ export default function CategoryBar({ categories, selectedId, onSelect, isAdmin 
     if (!current) return;
     if (!confirm(`'${current.name}' 게시판과 그 안의 모든 게시물을 삭제할까요?`)) return;
     try {
-      await deleteCategoryWithPosts(current.id);
+      await deleteCategoryTree(current.id, categories);
     } catch (err) {
       console.error('게시판 삭제 실패:', err);
       toast(FAIL_MSG);
