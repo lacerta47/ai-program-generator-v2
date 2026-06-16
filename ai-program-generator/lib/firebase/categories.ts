@@ -8,6 +8,7 @@ import {
   doc,
   getDocs,
   where,
+  limit,
   writeBatch,
 } from 'firebase/firestore';
 import { db } from './client';
@@ -48,6 +49,14 @@ export async function addCategory(
 
 export async function renameCategory(id: string, name: string): Promise<void> {
   await updateDoc(doc(db, COL, id), { name: name.trim() });
+}
+
+/** 해당 카테고리에 직속 게시물이 하나라도 있는지 (잎새 판정·하위 추가 가드용). */
+export async function categoryHasPosts(id: string): Promise<boolean> {
+  const snap = await getDocs(
+    query(collection(db, 'posts'), where('categoryId', '==', id), limit(1)),
+  );
+  return !snap.empty;
 }
 
 /** 두 카테고리의 순서(order)를 맞바꿈 */

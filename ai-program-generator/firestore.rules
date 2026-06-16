@@ -100,7 +100,8 @@ service cloud.firestore {
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likeCount'])
           && request.resource.data.likeCount is number
           && ( request.resource.data.likeCount == resource.data.get('likeCount', 0) + 1
-            || request.resource.data.likeCount == resource.data.get('likeCount', 0) - 1 )
+            || ( request.resource.data.likeCount == resource.data.get('likeCount', 0) - 1
+                 && resource.data.get('likeCount', 0) > 0 ) )
         )
         || (
           isSignedIn()
@@ -169,11 +170,21 @@ service cloud.firestore {
 
     match /reports/{reportId} {
       allow read: if isAdmin();
-      allow create, update: if isSignedIn()
+      allow create: if isSignedIn()
         && request.resource.data.reporterUid == request.auth.uid
         && reportId == request.resource.data.postId + '_' + request.auth.uid
         && request.resource.data.keys().hasOnly(['postId','postTitle','postAuthorName','postOwnerUid','reporterUid','reason','memo','createdAt'])
         && request.resource.data.postId is string
+        && request.resource.data.reason is string && request.resource.data.reason.size() <= 20
+        && (!('memo' in request.resource.data) || (request.resource.data.memo is string && request.resource.data.memo.size() <= 500))
+        && request.resource.data.createdAt is number;
+      // 재신고(덮어쓰기)는 사유/메모/제목 갱신만 허용. 작성자·대상(postOwnerUid/postId)·reporterUid는 불변 → 신고 귀속 변조 차단.
+      allow update: if isSignedIn()
+        && request.resource.data.reporterUid == resource.data.reporterUid
+        && request.resource.data.reporterUid == request.auth.uid
+        && request.resource.data.postOwnerUid == resource.data.postOwnerUid
+        && request.resource.data.postId == resource.data.postId
+        && request.resource.data.keys().hasOnly(['postId','postTitle','postAuthorName','postOwnerUid','reporterUid','reason','memo','createdAt'])
         && request.resource.data.reason is string && request.resource.data.reason.size() <= 20
         && (!('memo' in request.resource.data) || (request.resource.data.memo is string && request.resource.data.memo.size() <= 500))
         && request.resource.data.createdAt is number;

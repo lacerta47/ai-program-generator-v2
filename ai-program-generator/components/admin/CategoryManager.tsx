@@ -1,14 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import {
-  collection,
-  getDocs,
-  query,
-  where,
-  limit,
-} from 'firebase/firestore';
-import { db } from '@/lib/firebase/client';
 import { ChevronRight, ChevronDown, Folder, FolderOpen, FileCode2, Plus, Pencil, ArrowUp, ArrowDown, Trash2 } from 'lucide-react';
 import type { Category } from '@/lib/firebase/types';
 import { buildTree, depthOf, type CategoryNode } from '@/lib/board/categoryTree';
@@ -18,6 +10,7 @@ import {
   renameCategory,
   swapCategoryOrder,
   deleteCategoryTree,
+  categoryHasPosts,
 } from '@/lib/firebase/categories';
 import Button from '@/components/ui/Button';
 import { TextInput } from '@/components/ui/Field';
@@ -54,10 +47,7 @@ export default function CategoryManager() {
     // 글 있는 폴더 아래 하위 추가 금지(작품 미아 방지)
     if (parentId) {
       try {
-        const snap = await getDocs(
-          query(collection(db, 'posts'), where('categoryId', '==', parentId), limit(1)),
-        );
-        if (!snap.empty) {
+        if (await categoryHasPosts(parentId)) {
           toast('이 게시판에는 이미 작품이 있어서 하위를 만들 수 없어요. (작품은 맨 아래 칸에만)');
           return;
         }
