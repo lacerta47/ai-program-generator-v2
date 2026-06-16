@@ -7,7 +7,7 @@ import { subscribeCategories } from '@/lib/firebase/categories';
 import { fetchPosts, getPost, deletePost, type PostCursor } from '@/lib/firebase/posts';
 import { downloadProgram } from '@/lib/client/postActions';
 import type { Category, Post } from '@/lib/firebase/types';
-import { CloudOff, RotateCcw } from 'lucide-react';
+import { CloudOff, RotateCcw, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import CategoryTree from './CategoryTree';
 import { leafPaths, hasChildren } from '@/lib/board/categoryTree';
 import PostList from './PostList';
@@ -37,6 +37,8 @@ export default function BoardView() {
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [loadError, setLoadError] = useState(false);
   const [loginOpen, setLoginOpen] = useState(false);
+  // 데스크탑에서 좌측 목록 패널을 접어 미리보기를 넓히는 상태(세션 로컬)
+  const [collapsed, setCollapsed] = useState(false);
   // 공유 링크 ?post= 의 카테고리가 정해지기 전에는 "첫 카테고리 자동선택"을 보류
   // (categoryId 없이 들어온 딥링크가 엉뚱한 카테고리 목록을 띄우는 레이스 방지)
   const [deepLinkResolving, setDeepLinkResolving] = useState(
@@ -216,10 +218,28 @@ export default function BoardView() {
   }
 
   return (
-    <div className="mx-auto grid max-w-7xl gap-5 p-4 sm:p-6 lg:grid-cols-[minmax(320px,2fr)_3fr]">
-      {/* 왼쪽: 카테고리 + 목록 */}
-      <section className="anim-pop-in flex max-h-[80vh] flex-col gap-4 rounded-[var(--r-lg)] border-2 border-line bg-surface p-5">
-        <h2 className="text-[21px]">친구들의 작품</h2>
+    <div
+      className={`mx-auto grid max-w-7xl gap-5 p-4 sm:p-6 ${
+        collapsed ? 'lg:grid-cols-[3rem_1fr]' : 'lg:grid-cols-[minmax(320px,2fr)_3fr]'
+      }`}
+    >
+      {/* 왼쪽: 카테고리 + 목록 (접히는 전체 패널) */}
+      <section
+        className={`anim-pop-in flex max-h-[80vh] flex-col gap-4 rounded-[var(--r-lg)] border-2 border-line bg-surface p-5 ${
+          collapsed ? 'lg:hidden' : ''
+        }`}
+      >
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="text-[21px]">친구들의 작품</h2>
+          <button
+            onClick={() => setCollapsed(true)}
+            aria-label="목록 접기"
+            title="목록 접기"
+            className="press hidden h-10 w-10 place-items-center rounded-full text-muted hover:bg-surface-2 hover:text-ink lg:grid"
+          >
+            <PanelLeftClose size={20} />
+          </button>
+        </div>
         <CategoryTree
           categories={categories}
           selectedId={selectedCategoryId}
@@ -264,6 +284,30 @@ export default function BoardView() {
           )}
         </div>
       </section>
+
+      {/* 접힌 띠 (데스크탑에서만 보임; 클릭하면 다시 펼침) */}
+      <aside
+        className={`anim-pop-in max-h-[80vh] flex-col items-center gap-3 rounded-[var(--r-lg)] border-2 border-line bg-surface py-4 ${
+          collapsed ? 'hidden lg:flex' : 'hidden'
+        }`}
+      >
+        <button
+          onClick={() => setCollapsed(false)}
+          aria-label="목록 펼치기"
+          title="목록 펼치기"
+          className="press grid h-10 w-10 shrink-0 place-items-center rounded-full text-muted hover:bg-surface-2 hover:text-ink"
+        >
+          <PanelLeftOpen size={20} />
+        </button>
+        <button
+          onClick={() => setCollapsed(false)}
+          aria-label="목록 펼치기"
+          className="press flex-1 text-[14px] text-muted hover:text-ink"
+          style={{ writingMode: 'vertical-rl' }}
+        >
+          친구들의 작품
+        </button>
+      </aside>
 
       {/* 오른쪽: 미리보기 */}
       <section
