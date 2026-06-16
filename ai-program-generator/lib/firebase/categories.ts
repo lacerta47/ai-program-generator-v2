@@ -5,7 +5,6 @@ import {
   onSnapshot,
   addDoc,
   updateDoc,
-  deleteDoc,
   doc,
   getDocs,
   where,
@@ -13,6 +12,7 @@ import {
 } from 'firebase/firestore';
 import { db } from './client';
 import type { Category } from './types';
+import { descendantIds } from '@/lib/board/categoryTree';
 
 const COL = 'categories';
 
@@ -31,8 +31,19 @@ export function subscribeCategories(
   );
 }
 
-export async function addCategory(name: string, order: number): Promise<void> {
-  await addDoc(collection(db, COL), { name: name.trim(), order, createdAt: Date.now() });
+export async function addCategory(
+  name: string,
+  order: number,
+  parentId: string | null = null,
+): Promise<void> {
+  const data: { name: string; order: number; createdAt: number; parentId?: string } = {
+    name: name.trim(),
+    order,
+    createdAt: Date.now(),
+  };
+  // root는 parentId 필드 자체를 생략 → 규칙의 !('parentId' in data) 분기 + 기존 평면 문서와 동일
+  if (parentId) data.parentId = parentId;
+  await addDoc(collection(db, COL), data);
 }
 
 export async function renameCategory(id: string, name: string): Promise<void> {
@@ -47,14 +58,25 @@ export async function swapCategoryOrder(a: Category, b: Category): Promise<void>
   await batch.commit();
 }
 
-/** 카테고리 + 하위 게시물 일괄 삭제 (배치, 450건 단위로 분할) */
-export async function deleteCategoryWithPosts(id: string): Promise<void> {
-  const postsSnap = await getDocs(query(collection(db, 'posts'), where('categoryId', '==', id)));
-  const docs = postsSnap.docs;
-  for (let i = 0; i < docs.length; i += 450) {
+/**
+ * 카테고리 + 모든 후손 카테고리 + 그 하위 게시물 일괄 삭제.
+ * descendantIds로 자기+후손 id를 모아, 각 카테고리의 게시물을 450건 배치로 지우고,
+ * 마지막에 카테고리 문서들을 배치 삭제한다. (Firestore엔 컬렉션 cascade가 없음.)
+ */
+export async function deleteCategoryTree(id: string, all: Category[]): Promise<void> {
+  const ids = descendantIds(id, all);
+  for (const cid of ids) {
+    const postsSnap = await getDocs(query(collection(db, 'posts'), where('categoryId', '==', cid)));
+    const docs = postsSnap.docs;
+    for (let i = 0; i < docs.length; i += 450) {
+      const batch = writeBatch(db);
+      docs.slice(i, i + 450).forEach((d) => batch.delete(d.ref));
+      await batch.commit();
+    }
+  }
+  for (let i = 0; i < ids.length; i += 450) {
     const batch = writeBatch(db);
-    docs.slice(i, i + 450).forEach((d) => batch.delete(d.ref));
+    ids.slice(i, i + 450).forEach((cid) => batch.delete(doc(db, COL, cid)));
     await batch.commit();
   }
-  await deleteDoc(doc(db, COL, id));
 }

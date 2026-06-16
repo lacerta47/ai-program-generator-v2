@@ -6,6 +6,8 @@ export interface Category {
   name: string;
   order: number;
   createdAt: number;
+  /** 부모 카테고리 id. 없거나 null = 최상위(root). 인접 리스트로 3단 트리 구성. */
+  parentId?: string | null;
 }
 
 /** 계획서 5필드 — 생성기 입력이자 게시물에 개별 저장(편집 시 폼 복원용) */

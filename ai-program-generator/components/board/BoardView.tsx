@@ -7,8 +7,9 @@ import { subscribeCategories } from '@/lib/firebase/categories';
 import { fetchPosts, getPost, deletePost, type PostCursor } from '@/lib/firebase/posts';
 import { downloadProgram } from '@/lib/client/postActions';
 import type { Category, Post } from '@/lib/firebase/types';
-import { CloudOff, RotateCcw } from 'lucide-react';
-import CategoryBar from './CategoryBar';
+import { CloudOff, RotateCcw, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import CategoryTree from './CategoryTree';
+import { leafPaths, hasChildren } from '@/lib/board/categoryTree';
 import PostList from './PostList';
 import PostPreview from './PostPreview';
 import LoginDialog from '@/components/auth/LoginDialog';
@@ -36,6 +37,8 @@ export default function BoardView() {
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [loadError, setLoadError] = useState(false);
   const [loginOpen, setLoginOpen] = useState(false);
+  // 데스크탑에서 좌측 목록 패널을 접어 미리보기를 넓히는 상태(세션 로컬)
+  const [collapsed, setCollapsed] = useState(false);
   // 공유 링크 ?post= 의 카테고리가 정해지기 전에는 "첫 카테고리 자동선택"을 보류
   // (categoryId 없이 들어온 딥링크가 엉뚱한 카테고리 목록을 띄우는 레이스 방지)
   const [deepLinkResolving, setDeepLinkResolving] = useState(
@@ -54,22 +57,25 @@ export default function BoardView() {
     [],
   );
 
-  // 선택된 카테고리가 없으면 첫 번째로 (딥링크 글 해결 중이면 대기)
+  // 선택된 카테고리가 없으면 첫 잎새로 (딥링크 글 해결 중이면 대기)
   useEffect(() => {
     if (!selectedCategoryId && !deepLinkResolving && categories.length > 0) {
-      setSelectedCategoryId(categories[0].id);
+      const firstLeaf = leafPaths(categories)[0];
+      if (firstLeaf) setSelectedCategoryId(firstLeaf.id);
     }
   }, [categories, selectedCategoryId, deepLinkResolving]);
 
-  // 보던 카테고리가 삭제되면 첫 카테고리로 되돌림 (빈 화면에 갇히지 않게).
-  // categories가 아직 비어 있으면(로딩 전) 건드리지 않아 URL의 ?category= 가 살아 있게 둔다.
+  // 보던 카테고리가 사라졌거나(삭제) 폴더(잎새 아님)를 가리키면 첫 잎새로 되돌림.
+  // 폴더 딥링크(?category=<folder>)가 빈 목록을 조용히 띄우는 것 방지. 글 딥링크 해결 중이면 대기.
   useEffect(() => {
-    if (!selectedCategoryId || categories.length === 0) return;
-    if (!categories.some((c) => c.id === selectedCategoryId)) {
-      setSelectedCategoryId(categories[0].id);
+    if (!selectedCategoryId || categories.length === 0 || deepLinkResolving) return;
+    const exists = categories.some((c) => c.id === selectedCategoryId);
+    if (!exists || hasChildren(selectedCategoryId, categories)) {
+      const firstLeaf = leafPaths(categories)[0];
+      setSelectedCategoryId(firstLeaf?.id ?? null);
       setSelectedPost(null);
     }
-  }, [categories, selectedCategoryId]);
+  }, [categories, selectedCategoryId, deepLinkResolving]);
 
   // 선택 게시물을 ref로도 들고 있어, loadFirst가 목록을 채울 때 딥링크 글을 끼워 넣을 수 있게 한다.
   useEffect(() => {
@@ -212,15 +218,32 @@ export default function BoardView() {
   }
 
   return (
-    <div className="mx-auto grid max-w-7xl gap-5 p-4 sm:p-6 lg:grid-cols-[minmax(320px,2fr)_3fr]">
-      {/* 왼쪽: 카테고리 + 목록 */}
-      <section className="anim-pop-in flex max-h-[80vh] flex-col gap-4 rounded-[var(--r-lg)] border-2 border-line bg-surface p-5">
-        <h2 className="text-[21px]">친구들의 작품</h2>
-        <CategoryBar
+    <div
+      className={`mx-auto grid max-w-7xl gap-5 p-4 sm:p-6 ${
+        collapsed ? 'lg:grid-cols-[3rem_1fr]' : 'lg:grid-cols-[minmax(320px,2fr)_3fr]'
+      }`}
+    >
+      {/* 왼쪽: 카테고리 + 목록 (접히는 전체 패널) */}
+      <section
+        className={`anim-pop-in flex max-h-[80vh] flex-col gap-4 rounded-[var(--r-lg)] border-2 border-line bg-surface p-5 ${
+          collapsed ? 'lg:hidden' : ''
+        }`}
+      >
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="text-[21px]">친구들의 작품</h2>
+          <button
+            onClick={() => setCollapsed(true)}
+            aria-label="목록 접기"
+            title="목록 접기"
+            className="press hidden h-10 w-10 place-items-center rounded-full text-muted hover:bg-surface-2 hover:text-ink lg:grid"
+          >
+            <PanelLeftClose size={20} />
+          </button>
+        </div>
+        <CategoryTree
           categories={categories}
           selectedId={selectedCategoryId}
           onSelect={selectCategory}
-          isAdmin={isAdmin}
         />
         <div className="min-h-0 flex-1 overflow-y-auto">
           {loading ? (
@@ -261,6 +284,30 @@ export default function BoardView() {
           )}
         </div>
       </section>
+
+      {/* 접힌 띠 (데스크탑에서만 보임; 클릭하면 다시 펼침) */}
+      <aside
+        className={`anim-pop-in max-h-[80vh] flex-col items-center gap-3 rounded-[var(--r-lg)] border-2 border-line bg-surface py-4 ${
+          collapsed ? 'hidden lg:flex' : 'hidden'
+        }`}
+      >
+        <button
+          onClick={() => setCollapsed(false)}
+          aria-label="목록 펼치기"
+          title="목록 펼치기"
+          className="press grid h-10 w-10 shrink-0 place-items-center rounded-full text-muted hover:bg-surface-2 hover:text-ink"
+        >
+          <PanelLeftOpen size={20} />
+        </button>
+        <button
+          onClick={() => setCollapsed(false)}
+          aria-label="목록 펼치기"
+          className="press flex-1 text-[14px] text-muted hover:text-ink"
+          style={{ writingMode: 'vertical-rl' }}
+        >
+          친구들의 작품
+        </button>
+      </aside>
 
       {/* 오른쪽: 미리보기 */}
       <section

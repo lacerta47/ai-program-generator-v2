@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { PartyPopper, LayoutGrid, X } from 'lucide-react';
 import { useAuth } from '@/components/auth/AuthProvider';
 import { subscribeCategories } from '@/lib/firebase/categories';
+import { leafPaths } from '@/lib/board/categoryTree';
 import { createPost, incrementForkCount } from '@/lib/firebase/posts';
 import { getUserProfile, claimNickname, NicknameError } from '@/lib/firebase/users';
 import { ProfanityError } from '@/lib/moderation';
@@ -61,11 +62,11 @@ export default function UploadDialog({ open, onClose, code, plan, prompt, defaul
 
   useEffect(() => {
     if (!categories.length || categoryId) return;
-    // fork면 원본 카테고리를 기본 선택, 아니면 첫 카테고리
+    const leaves = leafPaths(categories);
     const preferred =
-      defaultCategoryId && categories.some((c) => c.id === defaultCategoryId)
+      defaultCategoryId && leaves.some((l) => l.id === defaultCategoryId)
         ? defaultCategoryId
-        : categories[0].id;
+        : leaves[0]?.id ?? '';
     setCategoryId(preferred);
   }, [categories, categoryId, defaultCategoryId]);
 
@@ -159,9 +160,9 @@ export default function UploadDialog({ open, onClose, code, plan, prompt, defaul
             </Button>
           </div>
 
-          {categories.length === 0 ? (
+          {leafPaths(categories).length === 0 ? (
             <p className="text-[15px] text-muted">
-              아직 게시판이 없어요. 관리자 선생님이 게시판을 먼저 만들어야 해요.
+              아직 작품을 올릴 게시판(반)이 없어요. 관리자 선생님이 먼저 만들어야 해요.
             </p>
           ) : (
             <form onSubmit={submit} className="flex flex-col gap-4">
@@ -190,9 +191,9 @@ export default function UploadDialog({ open, onClose, code, plan, prompt, defaul
               </Label>
               <Label text="어느 게시판에 올릴까요?">
                 <Select value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
-                  {categories.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
+                  {leafPaths(categories).map((l) => (
+                    <option key={l.id} value={l.id}>
+                      {l.path}
                     </option>
                   ))}
                 </Select>
