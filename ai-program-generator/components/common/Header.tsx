@@ -1,9 +1,9 @@
-import { Wand2, LayoutGrid } from 'lucide-react';
+import { Wand2, LayoutGrid, MousePointerClick } from 'lucide-react';
 import ThemeToggle from './ThemeToggle';
 import GlowNavLink from './GlowNavLink';
 import AuthButton from '@/components/auth/AuthButton';
 
-export default function Header({ active }: { active?: 'creator' | 'board' }) {
+export default function Header({ active }: { active?: 'creator' | 'board' | 'survey' }) {
   return (
     <header className="sticky top-0 z-30 border-b-2 border-line bg-bg/90 backdrop-blur-sm">
       <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-x-3 gap-y-2 px-4 py-3 sm:px-6">
@@ -24,6 +24,12 @@ export default function Header({ active }: { active?: 'creator' | 'board' }) {
               <Wand2 size={17} />
             </span>
             만들기
+          </GlowNavLink>
+          <GlowNavLink href="/easy" active={active === 'survey'}>
+            <span className="hover-wiggle grid place-items-center" aria-hidden>
+              <MousePointerClick size={17} />
+            </span>
+            골라서 만들기
           </GlowNavLink>
           <GlowNavLink href="/board" active={active === 'board'}>
             <span className="hover-wiggle grid place-items-center" aria-hidden>
