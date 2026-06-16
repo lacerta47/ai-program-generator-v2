@@ -32,7 +32,7 @@ export default function SurveyWizard() {
   const [type, setType] = useState<ProgramType | null>(null);
   const [answers, setAnswers] = useState<SurveyAnswers>({});
   const [stepIdx, setStepIdx] = useState(0);
-  const [editing, setEditing] = useState(false);
+  const [editReturn, setEditReturn] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
   const [buildMsg, setBuildMsg] = useState(BUILD_MESSAGES[0]);
   const [code, setCode] = useState<GeneratedCode>(EMPTY_CODE);
@@ -51,24 +51,25 @@ export default function SurveyWizard() {
     setType(t);
     setAnswers({});
     setStepIdx(0);
-    setEditing(false);
+    setEditReturn(null);
     setCode(EMPTY_CODE);
   }
   function backToTypes() {
     setType(null);
     setAnswers({});
     setStepIdx(0);
-    setEditing(false);
+    setEditReturn(null);
   }
   function goToStep(i: number) {
+    // 요약 칩으로 특정 단계 수정 — 원래 위치를 기억해 수정 후 그대로 복귀
+    setEditReturn((r) => (r === null ? stepIdx : r));
     setStepIdx(i);
-    setEditing(true);
   }
   function advance() {
-    // 수정 중이었으면 끝(만들기 화면)으로 복귀, 아니면 다음 단계
-    if (editing) {
-      setEditing(false);
-      setStepIdx(steps.length);
+    // 수정 중이었으면 원래 위치로 복귀, 아니면 다음 단계
+    if (editReturn !== null) {
+      setStepIdx(editReturn);
+      setEditReturn(null);
     } else {
       setStepIdx((i) => i + 1);
     }
@@ -93,14 +94,14 @@ export default function SurveyWizard() {
       backToTypes();
       return;
     }
-    setEditing(false);
+    setEditReturn(null);
     setStepIdx((i) => Math.max(0, i - 1));
   }
   function reset() {
     setType(null);
     setAnswers({});
     setStepIdx(0);
-    setEditing(false);
+    setEditReturn(null);
     setCode(EMPTY_CODE);
   }
 
