@@ -9,7 +9,7 @@ import { downloadProgram } from '@/lib/client/postActions';
 import type { Category, Post } from '@/lib/firebase/types';
 import { CloudOff, RotateCcw } from 'lucide-react';
 import CategoryTree from './CategoryTree';
-import { leafPaths } from '@/lib/board/categoryTree';
+import { leafPaths, hasChildren } from '@/lib/board/categoryTree';
 import PostList from './PostList';
 import PostPreview from './PostPreview';
 import LoginDialog from '@/components/auth/LoginDialog';
@@ -63,16 +63,17 @@ export default function BoardView() {
     }
   }, [categories, selectedCategoryId, deepLinkResolving]);
 
-  // 보던 카테고리가 삭제되면 첫 카테고리로 되돌림 (빈 화면에 갇히지 않게).
-  // categories가 아직 비어 있으면(로딩 전) 건드리지 않아 URL의 ?category= 가 살아 있게 둔다.
+  // 보던 카테고리가 사라졌거나(삭제) 폴더(잎새 아님)를 가리키면 첫 잎새로 되돌림.
+  // 폴더 딥링크(?category=<folder>)가 빈 목록을 조용히 띄우는 것 방지. 글 딥링크 해결 중이면 대기.
   useEffect(() => {
-    if (!selectedCategoryId || categories.length === 0) return;
-    if (!categories.some((c) => c.id === selectedCategoryId)) {
+    if (!selectedCategoryId || categories.length === 0 || deepLinkResolving) return;
+    const exists = categories.some((c) => c.id === selectedCategoryId);
+    if (!exists || hasChildren(selectedCategoryId, categories)) {
       const firstLeaf = leafPaths(categories)[0];
       setSelectedCategoryId(firstLeaf?.id ?? null);
       setSelectedPost(null);
     }
-  }, [categories, selectedCategoryId]);
+  }, [categories, selectedCategoryId, deepLinkResolving]);
 
   // 선택 게시물을 ref로도 들고 있어, loadFirst가 목록을 채울 때 딥링크 글을 끼워 넣을 수 있게 한다.
   useEffect(() => {

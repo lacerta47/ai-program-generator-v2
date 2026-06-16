@@ -54,7 +54,7 @@ app/
   api/generate/route.ts AI 호출 (서버 전용)
 components/
   creator/  생성기 UI
-  board/    게시판 UI (CategoryBar, PostList, PostPreview, UploadDialog)
+  board/    게시판 UI (CategoryTree, PostList, PostPreview, UploadDialog)
   auth/     AuthProvider, LoginDialog, AuthButton
   common/   Header, ThemeProvider, ThemeToggle
 lib/
