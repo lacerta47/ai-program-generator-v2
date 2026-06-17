@@ -174,7 +174,7 @@ export default function PostPreview({
             <Download size={18} aria-hidden />
           </Button>
           {canEdit && (
-            <Button variant="ghost" size="icon" onClick={() => router.push(`/?edit=${post.id}`)} aria-label="고치기" title="고치기" className="rounded-full">
+            <Button variant="ghost" size="icon" onClick={() => router.push(`/create?edit=${post.id}`)} aria-label="고치기" title="고치기" className="rounded-full">
               <Pencil size={18} aria-hidden />
             </Button>
           )}

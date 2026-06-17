@@ -9,8 +9,8 @@ const jua = Jua({ weight: '400', subsets: ['latin'], variable: '--font-jua', dis
 const gowun = Gowun_Dodum({ weight: '400', subsets: ['latin'], variable: '--font-gowun', display: 'swap' });
 
 export const metadata: Metadata = {
-  title: 'AI 프로그램 생성기',
-  description: '계획서를 쓰면 AI가 프로그램을 만들어줘요',
+  title: 'LUN — Logic Unfold Next',
+  description: '논리를 펼치면, 마법이 시작돼요. 계획을 쓰거나 골라서 AI로 프로그램을 만들어요.',
 };
 
 // 하이드레이션 전에 테마 클래스를 적용해 깜빡임(FOUC) 방지

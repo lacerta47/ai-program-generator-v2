@@ -40,12 +40,12 @@ export function useCreatorSource(applyLoaded: (d: Loaded) => void) {
     getPost(editId).then((p) => {
       if (!p) {
         toast('고칠 작품을 찾지 못했어요.');
-        router.replace('/');
+        router.replace('/create');
         return;
       }
       if (!isAdmin && p.ownerUid !== user?.uid) {
         toast('이 작품은 내 작품이 아니라서 고칠 수 없어요.');
-        router.replace('/');
+        router.replace('/create');
         return;
       }
       setEditing({ id: p.id, title: p.title, authorName: p.authorName || '' });
@@ -62,7 +62,7 @@ export function useCreatorSource(applyLoaded: (d: Loaded) => void) {
     getPost(forkId).then((p) => {
       if (!p) {
         toast('이어 만들 작품을 찾지 못했어요.');
-        router.replace('/');
+        router.replace('/create');
         return;
       }
       const srcPlan = p.plan ?? EMPTY_PLAN;
@@ -77,7 +77,7 @@ export function useCreatorSource(applyLoaded: (d: Loaded) => void) {
 
   // 새로 만들기 시 소스 모드 해제 — 상태·가드 초기화 + URL 정리.
   function clearSource() {
-    if (editing || forkSource) router.replace('/');
+    if (editing || forkSource) router.replace('/create');
     setEditing(null);
     loadedEditId.current = null;
     setForkSource(null);

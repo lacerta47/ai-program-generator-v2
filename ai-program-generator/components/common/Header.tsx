@@ -15,11 +15,10 @@ export default function Header({ active }: { active?: 'creator' | 'board' | 'sur
           <span className="hover-wiggle grid h-11 w-11 place-items-center rounded-[14px] bg-brand text-brand-ink">
             <Wand2 size={22} strokeWidth={2.2} />
           </span>
-          <span className="hidden sm:inline">AI 프로그램 생성기</span>
-          <span className="sm:hidden">AI 생성기</span>
+          <span>LUN</span>
         </a>
         <nav className="flex shrink-0 items-center gap-1.5 sm:gap-2">
-          <GlowNavLink href="/" active={active === 'creator'}>
+          <GlowNavLink href="/create" active={active === 'creator'}>
             <span className="hover-wiggle grid place-items-center" aria-hidden>
               <Wand2 size={17} />
             </span>
