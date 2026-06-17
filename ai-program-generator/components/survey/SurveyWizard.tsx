@@ -7,7 +7,9 @@ import type { ProgramType, SurveyAnswers, SurveyStep } from '@/lib/survey/types'
 import { AI_PICK } from '@/lib/survey/types';
 import { PROGRAM_TYPES } from '@/lib/survey/programs';
 import { visibleSteps, assemblePrompt, surveyToPlan } from '@/lib/survey/assemble';
+import { buildFixRequest } from '@/lib/survey/fixes';
 import { requestGenerate } from '@/lib/client/generate';
+import { buildModifyPrompt } from '@/components/creator/prompts';
 import { useAuth } from '@/components/auth/AuthProvider';
 import LoginDialog from '@/components/auth/LoginDialog';
 import UploadDialog from '@/components/board/UploadDialog';
@@ -18,6 +20,7 @@ import { useToast } from '@/components/ui/Toast';
 import TypePicker from './TypePicker';
 import StepScreen from './StepScreen';
 import SurveySummary from './SurveySummary';
+import FixPanel from './FixPanel';
 
 const EMPTY_CODE: GeneratedCode = { html: '', css: '', javascript: '' };
 
@@ -32,6 +35,14 @@ const BUILD_MESSAGES = [
   '거의 다 됐어요!',
 ];
 
+const FIX_MESSAGES = [
+  '어디를 고칠지 찾는 중…',
+  '코드를 살펴보고 있어요…',
+  '말한 대로 고치는 중…',
+  '새 모습을 입히는 중…',
+  '거의 다 됐어요!',
+];
+
 export default function SurveyWizard() {
   const [type, setType] = useState<ProgramType | null>(null);
   const [answers, setAnswers] = useState<SurveyAnswers>({});
@@ -43,6 +54,9 @@ export default function SurveyWizard() {
   const [previewKey, setPreviewKey] = useState(0);
   const [uploadOpen, setUploadOpen] = useState(false);
   const [loginOpen, setLoginOpen] = useState(false);
+  // 결과 화면 '고치기' — 고른 빠른수정 id들 + 직접 입력문
+  const [fixPicks, setFixPicks] = useState<string[]>([]);
+  const [fixText, setFixText] = useState('');
   // 로그인 전에 고른 종류 — 로그인 끝나면 이 종류로 자동 진입
   const [pendingType, setPendingType] = useState<ProgramType | null>(null);
   // 생성 취소용 — busy 화면에서 '그만 만들기'를 누르면 진행 중 요청을 중단
@@ -146,6 +160,19 @@ export default function SurveyWizard() {
     setStepIdx(0);
     setEditReturn(null);
     setCode(EMPTY_CODE);
+    setFixPicks([]);
+    setFixText('');
+  }
+
+  // busy 화면 메시지를 2.5초마다 순환 — 시작 후 멈춤 함수를 돌려준다
+  function startBuildMessages(messages: string[]) {
+    let i = 0;
+    setBuildMsg(messages[0]);
+    const id = window.setInterval(() => {
+      i = (i + 1) % messages.length;
+      setBuildMsg(messages[i]);
+    }, 2500);
+    return () => window.clearInterval(id);
   }
 
   async function generate() {
@@ -159,12 +186,7 @@ export default function SurveyWizard() {
     setBusy(true);
     const ctrl = new AbortController();
     abortRef.current = ctrl;
-    let i = 0;
-    setBuildMsg(BUILD_MESSAGES[0]);
-    const tick = window.setInterval(() => {
-      i = (i + 1) % BUILD_MESSAGES.length;
-      setBuildMsg(BUILD_MESSAGES[i]);
-    }, 2500);
+    const stop = startBuildMessages(BUILD_MESSAGES);
     try {
       const prompt = assemblePrompt(type, answers);
       const result = await requestGenerate(prompt, 'generate', 'survey', ctrl.signal);
@@ -177,10 +199,49 @@ export default function SurveyWizard() {
         toast(e instanceof Error ? e.message : '만들다가 문제가 생겼어요. 다시 해볼까요?');
       }
     } finally {
-      window.clearInterval(tick);
+      stop();
       abortRef.current = null;
       setBusy(false);
     }
+  }
+
+  // 결과 화면 '고치기' — 고른 칩 + 직접 입력문을 합쳐 한 번의 modify 생성으로 반영
+  async function handleSurveyModify() {
+    if (!type || !hasCode) return;
+    if (authLoading) return toast('잠깐만요, 준비 중이에요…');
+    if (!user) {
+      toast('로그인하면 고칠 수 있어요!');
+      setLoginOpen(true);
+      return;
+    }
+    const request = buildFixRequest(fixPicks, fixText);
+    if (!request) return toast('고치고 싶은 점을 고르거나 적어 주세요!');
+
+    setBusy(true);
+    const ctrl = new AbortController();
+    abortRef.current = ctrl;
+    const stop = startBuildMessages(FIX_MESSAGES);
+    try {
+      const prompt = buildModifyPrompt(surveyToPlan(type, answers), code, request);
+      const result = await requestGenerate(prompt, 'modify', 'survey', ctrl.signal);
+      setCode(result);
+      setPreviewKey((k) => k + 1);
+      setFixPicks([]);
+      setFixText('');
+      toast('원하는 대로 고쳐봤어요!', 'success');
+    } catch (e) {
+      if (!ctrl.signal.aborted && !(e instanceof Error && e.name === 'AbortError')) {
+        toast(e instanceof Error ? e.message : '고치다가 문제가 생겼어요. 다시 해볼까요?');
+      }
+    } finally {
+      stop();
+      abortRef.current = null;
+      setBusy(false);
+    }
+  }
+
+  function toggleFixPick(id: string) {
+    setFixPicks((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
   }
 
   // busy 화면에서 '그만 만들기' — 진행 중 생성 요청을 중단하고 설문으로 복귀
@@ -221,6 +282,13 @@ export default function SurveyWizard() {
           code={code}
           title={type.label}
           className="h-[78vh] w-full overflow-hidden rounded-[var(--r-md)] border-2 border-line"
+        />
+        <FixPanel
+          picks={fixPicks}
+          onTogglePick={toggleFixPick}
+          text={fixText}
+          onTextChange={setFixText}
+          onFix={handleSurveyModify}
         />
         <UploadDialog
           open={uploadOpen}
