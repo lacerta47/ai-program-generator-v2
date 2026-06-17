@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, RotateCcw, Wand2, X } from 'lucide-react';
+import { ArrowLeft, HelpCircle, RotateCcw, Wand2, X } from 'lucide-react';
 import type { GeneratedCode } from '@/lib/ai/types';
 import type { ProgramType, SurveyAnswers, SurveyStep } from '@/lib/survey/types';
 import { AI_PICK } from '@/lib/survey/types';
@@ -21,6 +21,9 @@ import TypePicker from './TypePicker';
 import StepScreen from './StepScreen';
 import SurveySummary from './SurveySummary';
 import FixPanel from './FixPanel';
+import GuideModal from './GuideModal';
+
+const GUIDE_SEEN_KEY = 'easy-guide-seen';
 
 const EMPTY_CODE: GeneratedCode = { html: '', css: '', javascript: '' };
 
@@ -59,6 +62,8 @@ export default function SurveyWizard() {
   // 결과 화면 '고치기' — 고른 빠른수정 id들 + 직접 입력문
   const [fixPicks, setFixPicks] = useState<string[]>([]);
   const [fixText, setFixText] = useState('');
+  // 가이드 모달 — 첫 방문 자동 + 도움말 버튼 재오픈
+  const [guideOpen, setGuideOpen] = useState(false);
   // 로그인 전에 고른 종류 — 로그인 끝나면 이 종류로 자동 진입
   const [pendingType, setPendingType] = useState<ProgramType | null>(null);
   // 생성 취소용 — busy 화면에서 '그만 만들기'를 누르면 진행 중 요청을 중단
@@ -89,6 +94,24 @@ export default function SurveyWizard() {
     }
     enterType(t);
   }
+  // 첫 방문이면 가이드를 자동으로 한 번 보여준다(이후엔 도움말 버튼으로만)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      if (!localStorage.getItem(GUIDE_SEEN_KEY)) setGuideOpen(true);
+    } catch {
+      /* localStorage 차단 환경은 그냥 건너뜀 */
+    }
+  }, []);
+  function closeGuide() {
+    setGuideOpen(false);
+    try {
+      localStorage.setItem(GUIDE_SEEN_KEY, '1');
+    } catch {
+      /* 저장 실패해도 닫기는 동작 */
+    }
+  }
+
   // 로그인 다이얼로그에서 로그인에 성공하면, 고르려던 종류로 자동 진입
   useEffect(() => {
     if (user && pendingType) {
@@ -348,6 +371,14 @@ export default function SurveyWizard() {
   if (!type) {
     return (
       <div className="mx-auto max-w-3xl">
+        <div className="mb-4 flex justify-end">
+          <button
+            onClick={() => setGuideOpen(true)}
+            className="press inline-flex items-center gap-1.5 rounded-full border-2 border-line bg-surface px-4 py-2 text-[14.5px] text-muted hover:border-brand/50 hover:text-brand-strong dark:hover:text-brand"
+          >
+            <HelpCircle size={17} aria-hidden /> 어떻게 만들어요?
+          </button>
+        </div>
         {!authLoading && !user && (
           <button
             onClick={() => setLoginOpen(true)}
@@ -364,6 +395,7 @@ export default function SurveyWizard() {
             setPendingType(null);
           }}
         />
+        <GuideModal open={guideOpen} onClose={closeGuide} />
       </div>
     );
   }
