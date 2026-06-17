@@ -51,6 +51,8 @@ export default function SurveyWizard() {
   const [busy, setBusy] = useState(false);
   const [buildMsg, setBuildMsg] = useState(BUILD_MESSAGES[0]);
   const [code, setCode] = useState<GeneratedCode>(EMPTY_CODE);
+  // 저장/공유용 프롬프트 — 생성 시 조립 프롬프트로 시작, '고치기'마다 요청을 누적
+  const [genPrompt, setGenPrompt] = useState('');
   const [previewKey, setPreviewKey] = useState(0);
   const [uploadOpen, setUploadOpen] = useState(false);
   const [loginOpen, setLoginOpen] = useState(false);
@@ -75,6 +77,7 @@ export default function SurveyWizard() {
     setStepIdx(0);
     setEditReturn(null);
     setCode(EMPTY_CODE);
+    setGenPrompt('');
   }
   function pickType(t: ProgramType) {
     // 종류 선택(1번)에서 먼저 로그인 요청 — 끝까지 다 고른 뒤 막혀서 실망하지 않게.
@@ -115,10 +118,25 @@ export default function SurveyWizard() {
     const i = forSteps.findIndex((s) => s.id === editReturn);
     return i === -1 ? forSteps.length : i;
   }
-  function advance(nextSteps: SurveyStep[]) {
+  function isAnswered(step: SurveyStep, ans: SurveyAnswers): boolean {
+    const a = ans[step.id];
+    return Array.isArray(a) ? a.length > 0 : !!a;
+  }
+  function advance(nextSteps: SurveyStep[], nextAnswers: SurveyAnswers = answers) {
     // 수정 중이었으면 원래 위치로 복귀(새 steps 기준), 아니면 다음 단계
     if (editReturn !== null) {
-      setStepIdx(returnIndex(nextSteps));
+      const ret = returnIndex(nextSteps);
+      // 이 수정으로 새로 노출된(이전엔 없던) 미답 단계가 현재~복귀 지점 사이에 있으면
+      // 건너뛰지 말고 거기부터 마저 답하게 한다(조건부 분기를 놓치지 않도록).
+      const oldIds = new Set(steps.map((s) => s.id));
+      const detour = nextSteps.findIndex(
+        (s, i) => i > stepIdx && i < ret && !oldIds.has(s.id) && !isAnswered(s, nextAnswers),
+      );
+      if (detour !== -1) {
+        setStepIdx(detour); // editReturn 유지 — 새 단계까지 답하면 다시 복귀
+        return;
+      }
+      setStepIdx(ret);
       setEditReturn(null);
     } else {
       setStepIdx((i) => i + 1);
@@ -139,7 +157,7 @@ export default function SurveyWizard() {
     // 단일: 새 답 기준으로 다음 노출 단계를 계산해 진행/복귀(조건부 분기 즉시 반영)
     const nextAnswers = { ...answers, [step.id]: optionId };
     setAnswers(nextAnswers);
-    advance(visibleSteps(type, nextAnswers));
+    advance(visibleSteps(type, nextAnswers), nextAnswers);
   }
   function back() {
     if (stepIdx === 0) {
@@ -160,6 +178,7 @@ export default function SurveyWizard() {
     setStepIdx(0);
     setEditReturn(null);
     setCode(EMPTY_CODE);
+    setGenPrompt('');
     setFixPicks([]);
     setFixText('');
   }
@@ -189,6 +208,7 @@ export default function SurveyWizard() {
     const stop = startBuildMessages(BUILD_MESSAGES);
     try {
       const prompt = assemblePrompt(type, answers);
+      setGenPrompt(prompt);
       const result = await requestGenerate(prompt, 'generate', 'survey', ctrl.signal);
       setCode(result);
       setPreviewKey((k) => k + 1);
@@ -217,6 +237,8 @@ export default function SurveyWizard() {
     const request = buildFixRequest(fixPicks, fixText);
     if (!request) return toast('고치고 싶은 점을 고르거나 적어 주세요!');
 
+    // 저장/공유 프롬프트에 고치기 요청을 누적(게시물 prompt 한도 대비 클램프)
+    setGenPrompt((prev) => `${prev}\n\n[고치기 요청]: ${request}`.slice(-40000));
     setBusy(true);
     const ctrl = new AbortController();
     abortRef.current = ctrl;
@@ -295,7 +317,7 @@ export default function SurveyWizard() {
           onClose={() => setUploadOpen(false)}
           code={code}
           plan={surveyToPlan(type, answers)}
-          prompt={assemblePrompt(type, answers)}
+          prompt={genPrompt || assemblePrompt(type, answers)}
           defaultTitle={type.buildName(answers)}
         />
       </div>
