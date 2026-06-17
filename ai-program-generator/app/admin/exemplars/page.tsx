@@ -6,6 +6,7 @@ import { auth } from '@/lib/firebase/client';
 import Header from '@/components/common/Header';
 import AdminGate from '@/components/admin/AdminGate';
 import Button from '@/components/ui/Button';
+import LoadingDots from '@/components/ui/LoadingDots';
 import { useToast } from '@/components/ui/Toast';
 
 type Variant = 'default' | 'survey';
@@ -40,9 +41,9 @@ async function authedFetch(path: string, init?: RequestInit) {
   const res = await fetch(path, {
     ...init,
     headers: {
+      ...(init?.headers ?? {}),
       'Content-Type': 'application/json',
       Authorization: `Bearer ${idToken}`,
-      ...(init?.headers ?? {}),
     },
   });
   const data = await res.json().catch(() => ({}));
@@ -67,7 +68,7 @@ function ExemplarsContent() {
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(() => {
-    authedFetch('/api/admin/exemplars')
+    return authedFetch('/api/admin/exemplars')
       .then((d) => setData(d as ExemplarsData))
       .catch((e) => toast(e instanceof Error ? e.message : '불러오기 실패'));
   }, [toast]);
@@ -84,7 +85,7 @@ function ExemplarsContent() {
         body: JSON.stringify({ sourcePostId, variant }),
       });
       toast(`${VARIANT_LABEL[variant]} 예시로 지정했어요.`, 'success');
-      load();
+      await load();
     } catch (e) {
       toast(e instanceof Error ? e.message : '지정 실패');
     } finally {
@@ -97,13 +98,19 @@ function ExemplarsContent() {
     try {
       await authedFetch(`/api/admin/exemplars?variant=${variant}`, { method: 'DELETE' });
       toast(`${VARIANT_LABEL[variant]} 예시를 비웠어요.`, 'success');
-      load();
+      await load();
     } catch (e) {
       toast(e instanceof Error ? e.message : '비우기 실패');
     } finally {
       setBusy(false);
     }
   }
+
+  if (!data) return (
+    <div className="py-10">
+      <LoadingDots label="불러오는 중…" />
+    </div>
+  );
 
   return (
     <div className="mx-auto max-w-2xl p-4 sm:p-6">
