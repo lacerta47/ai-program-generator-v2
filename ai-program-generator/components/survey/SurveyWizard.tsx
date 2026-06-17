@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft, RotateCcw, Wand2, X } from 'lucide-react';
 import type { GeneratedCode } from '@/lib/ai/types';
 import type { ProgramType, SurveyAnswers, SurveyStep } from '@/lib/survey/types';
+import { AI_PICK } from '@/lib/survey/types';
 import { PROGRAM_TYPES } from '@/lib/survey/programs';
 import { visibleSteps, assemblePrompt, surveyToPlan } from '@/lib/survey/assemble';
 import { requestGenerate } from '@/lib/client/generate';
@@ -187,6 +188,19 @@ export default function SurveyWizard() {
     abortRef.current?.abort();
   }
 
+  // '나머지는 AI가 알아서!' — 남은(안 답한) 단일선택 단계를 AI에게 위임하고 만들기 화면으로
+  function aiFillRest() {
+    setAnswers((prev) => {
+      const next = { ...prev };
+      for (const s of steps) {
+        if (!s.multi && !next[s.id]) next[s.id] = AI_PICK;
+      }
+      return next;
+    });
+    setEditReturn(null);
+    setStepIdx(steps.length);
+  }
+
   // 결과 화면
   if (hasCode && type) {
     return (
@@ -308,6 +322,12 @@ export default function SurveyWizard() {
                 다음
               </Button>
             )}
+            <button
+              onClick={aiFillRest}
+              className="press inline-flex w-fit items-center gap-1.5 self-center rounded-full border-2 border-dashed border-line px-4 py-2 text-[14.5px] text-muted hover:border-brand/50 hover:text-brand-strong dark:hover:text-brand"
+            >
+              🤖 나머지는 AI가 알아서 만들어줘!
+            </button>
           </>
         )}
       </div>

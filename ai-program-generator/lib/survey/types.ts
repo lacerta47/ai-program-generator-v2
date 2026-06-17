@@ -1,5 +1,11 @@
 export type SurveyAnswers = Record<string, string | string[]>;
 
+/**
+ * 예약 옵션 id — "아무거나 좋아!(AI가 그 부분을 알아서 정함)".
+ * 종류 설정엔 넣지 않고, 단일선택 단계의 선택지 끝에 UI가 자동으로 붙인다.
+ */
+export const AI_PICK = 'aichoose';
+
 export interface SurveyOption {
   id: string;
   label: string;

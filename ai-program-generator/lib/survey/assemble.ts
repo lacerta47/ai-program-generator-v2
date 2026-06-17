@@ -1,5 +1,6 @@
 import type { PlanFields } from '@/lib/firebase/types';
 import type { ProgramType, SurveyAnswers, SurveyStep } from './types';
+import { AI_PICK } from './types';
 
 /** showIf를 적용해 현재 답 기준 실제 노출 단계 */
 export function visibleSteps(type: ProgramType, answers: SurveyAnswers): SurveyStep[] {
@@ -16,6 +17,11 @@ function selectedOptions(step: SurveyStep, answers: SurveyAnswers) {
 export function assemblePrompt(type: ProgramType, answers: SurveyAnswers): string {
   const parts: string[] = [type.basePrompt];
   for (const step of visibleSteps(type, answers)) {
+    if (answers[step.id] === AI_PICK) {
+      // "아무거나 좋아!" — 그 부분은 AI가 어울리게 알아서 정하게 위임
+      parts.push(`'${step.question}' 부분은 가장 어울리게 알아서 정해줘.`);
+      continue;
+    }
     for (const opt of selectedOptions(step, answers)) {
       if (opt.promptFragment) parts.push(opt.promptFragment);
     }
@@ -26,7 +32,9 @@ export function assemblePrompt(type: ProgramType, answers: SurveyAnswers): strin
 /** 게시판 저장/호환용 PlanFields. name=buildName, etc=선택 요약. */
 export function surveyToPlan(type: ProgramType, answers: SurveyAnswers): PlanFields {
   const chosen = visibleSteps(type, answers).flatMap((s) =>
-    selectedOptions(s, answers).map((o) => `${s.question} → ${o.label}`),
+    answers[s.id] === AI_PICK
+      ? [`${s.question} → 아무거나 (AI)`]
+      : selectedOptions(s, answers).map((o) => `${s.question} → ${o.label}`),
   );
   return {
     name: type.buildName(answers),
