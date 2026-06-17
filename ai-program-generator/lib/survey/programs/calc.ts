@@ -88,6 +88,7 @@ export const calc: ProgramType = {
         { id: 'sub', label: '빼기 －', icon: '➖', promptFragment: '빼기 기능을 넣어.' },
         { id: 'mul', label: '곱하기 ×', icon: '✖️', promptFragment: '곱하기 기능을 넣어.' },
         { id: 'div', label: '나누기 ÷', icon: '➗', promptFragment: '나누기 기능을 넣어.' },
+        { id: 'pct', label: '퍼센트 ％', icon: '💯', promptFragment: '퍼센트 기능을 넣어.' },
       ],
     },
 
@@ -100,6 +101,7 @@ export const calc: ProgramType = {
         { id: 'square', label: '네모 버튼', icon: '🟦', promptFragment: '버튼을 네모나게 만들어.' },
         { id: 'big', label: '아주 큰 버튼', icon: '🆙', promptFragment: '버튼을 손가락으로 누르기 쉽게 아주 크게 만들어.' },
         { id: 'pill', label: '길쭉 둥근', icon: '🟢', promptFragment: '버튼을 길쭉하고 양쪽이 둥근 모양으로 만들어.' },
+        { id: 'pillold', label: '알약 모양', icon: '💊', promptFragment: '버튼을 알약처럼 양쪽이 둥근 모양으로 만들어.' },
       ],
     },
 
@@ -162,6 +164,8 @@ export const calc: ProgramType = {
         { id: 'clear', label: '지우기 버튼', icon: '🗑️', promptFragment: '입력한 숫자를 한 번에 지우는 C 버튼을 넣어.' },
         { id: 'back', label: '뒤로 지우기', icon: '⬅️', promptFragment: '마지막 숫자 하나만 지우는 ← 버튼을 넣어.' },
         { id: 'mute', label: '소리 끄기', icon: '🔕', promptFragment: '소리를 켜고 끌 수 있는 버튼을 넣어.' },
+        { id: 'history', label: '계산 기록', icon: '📜', promptFragment: '이전에 계산한 내용을 아래에 목록으로 보여줘.' },
+        { id: 'copy', label: '복사 버튼', icon: '📋', promptFragment: '결과값을 클립보드에 복사하는 버튼을 넣어.' },
       ],
     },
 
@@ -174,6 +178,7 @@ export const calc: ProgramType = {
         { id: 'bignum', label: '큰 숫자', icon: '🔠', promptFragment: '결과 숫자를 화면에 아주 크게 표시해.' },
         { id: 'cute', label: '귀여운 글씨', icon: '🖋️', promptFragment: '결과 숫자를 둥글둥글 귀여운 글씨체로 표시해.' },
         { id: 'led', label: '게임 점수판처럼', icon: '🕹️', promptFragment: '결과 숫자를 게임 점수판처럼 보여줘.' },
+        { id: 'ledold', label: 'LED 숫자판', icon: '🔴', promptFragment: '결과 숫자를 LED 전광판처럼 보여줘.' },
         { id: 'bubble', label: '말풍선', icon: '💬', promptFragment: '결과 숫자를 말풍선 안에 보여줘.' },
       ],
     },

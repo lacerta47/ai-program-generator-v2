@@ -167,6 +167,12 @@ export const game: ProgramType = {
           icon: '🕹️',
           promptFragment: '방향키와 마우스 클릭·터치 모두 사용해 주인공을 이동(또는 점프)시켜.',
         },
+        {
+          id: 'tilt',
+          label: '화면 기울이기',
+          icon: '📱',
+          promptFragment: '기기를 기울여 움직이되, 기울이기가 안 되는 기기에서는 방향키·화면 버튼으로도 움직일 수 있게 해.',
+        },
       ],
     },
     // STEP 6 — 배경
@@ -455,6 +461,12 @@ export const game: ProgramType = {
           label: '풍선 날아오르기',
           icon: '🎈',
           promptFragment: '게임 오버 화면에 풍선들이 하늘로 날아오르는 귀여운 애니메이션과 함께 점수와 다시하기 버튼을 보여줘.',
+        },
+        {
+          id: 'replay',
+          label: '이번 판 최고 점수 크게 보기',
+          icon: '🔁',
+          promptFragment: '게임 오버 화면에 이번 판 최고 점수를 크게 보여주고 다시하기 버튼을 넣어.',
         },
       ],
     },

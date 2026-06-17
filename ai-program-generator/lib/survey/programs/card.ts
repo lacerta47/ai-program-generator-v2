@@ -470,40 +470,90 @@ export const card: ProgramType = {
       ],
     },
 
-    // Step 14 — 배경 (무늬+색 통합)
+    // Step 14 — 배경 무늬
     {
-      id: 'background',
-      question: '배경은 어떻게 할까?',
+      id: 'pattern',
+      question: '카드 배경 무늬는?',
       options: [
         {
-          id: 'pink_polka',
-          label: '분홍 물방울',
-          icon: '🌸',
-          promptFragment: '카드 배경을 따뜻한 분홍 계열에 귀여운 물방울 무늬(폴카닷)로 꾸며.',
+          id: 'polka',
+          label: '물방울 무늬',
+          icon: '🔵',
+          promptFragment: '카드 배경에 귀여운 물방울 무늬(폴카닷)를 넣어.',
         },
         {
-          id: 'blue_stripe',
-          label: '파란 줄무늬',
-          icon: '💙',
-          promptFragment: '카드 배경을 시원한 파랑 계열에 예쁜 줄무늬 패턴으로 꾸며.',
+          id: 'stripe',
+          label: '줄무늬',
+          icon: '🟧',
+          promptFragment: '카드 배경에 예쁜 줄무늬 패턴을 넣어.',
         },
         {
-          id: 'yellow_gradient',
-          label: '노란 그러데이션',
-          icon: '☀️',
-          promptFragment: '카드 배경을 밝은 노랑 계열의 부드러운 그러데이션으로 해.',
+          id: 'gradient',
+          label: '그러데이션',
+          icon: '🌅',
+          promptFragment: '카드 배경을 두 가지 색이 부드럽게 섞인 그러데이션으로 해.',
         },
         {
-          id: 'plain',
-          label: '단색 깔끔하게',
-          icon: '⬜',
-          promptFragment: '카드 배경은 깔끔한 단색으로 해.',
+          id: 'check',
+          label: '체크 무늬',
+          icon: '🏁',
+          promptFragment: '카드 배경에 귀여운 체크 무늬를 넣어.',
         },
         {
           id: 'star_bg',
           label: '별이 가득',
           icon: '🌟',
           promptFragment: '카드 배경에 반짝이는 별이 가득한 패턴을 넣어.',
+        },
+        {
+          id: 'plain',
+          label: '무늬 없이 단색',
+          icon: '⬜',
+          promptFragment: '카드 배경은 깔끔한 단색으로 해.',
+        },
+      ],
+    },
+
+    // Step 15 — 배경 색
+    {
+      id: 'bgcolor',
+      question: '카드 배경 색은 어떤 게 좋아?',
+      options: [
+        {
+          id: 'pink',
+          label: '분홍',
+          icon: '🌸',
+          promptFragment: '카드 배경 색을 따뜻한 분홍 계열로 해.',
+        },
+        {
+          id: 'blue',
+          label: '파랑',
+          icon: '💙',
+          promptFragment: '카드 배경 색을 시원한 파랑 계열로 해.',
+        },
+        {
+          id: 'yellow',
+          label: '노랑',
+          icon: '💛',
+          promptFragment: '카드 배경 색을 밝은 노랑 계열로 해.',
+        },
+        {
+          id: 'green',
+          label: '초록',
+          icon: '💚',
+          promptFragment: '카드 배경 색을 싱그러운 초록 계열로 해.',
+        },
+        {
+          id: 'purple',
+          label: '보라',
+          icon: '💜',
+          promptFragment: '카드 배경 색을 예쁜 보라 계열로 해.',
+        },
+        {
+          id: 'auto',
+          label: '분위기에 맞게',
+          icon: '🎨',
+          promptFragment: '카드 배경 색을 전체 분위기에 잘 어울리는 색으로 골라줘.',
         },
       ],
     },

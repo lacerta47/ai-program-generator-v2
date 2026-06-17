@@ -45,6 +45,12 @@ export const paint: ProgramType = {
           icon: '🩷',
           promptFragment: '캔버스 배경은 연한 분홍색.',
         },
+        {
+          id: 'dot',
+          label: '점선 노트',
+          icon: '📓',
+          promptFragment: '캔버스 배경은 흰색이고 연한 점선 격자무늬가 깔려 있어.',
+        },
       ],
     },
     // STEP 2 — 붓 종류
@@ -69,6 +75,12 @@ export const paint: ProgramType = {
           label: '스프레이',
           icon: '💨',
           promptFragment: '기본 붓은 랜덤 점이 퍼지는 스프레이 효과야.',
+        },
+        {
+          id: 'marker',
+          label: '굵은 마커',
+          icon: '✏️',
+          promptFragment: '기본 붓은 굵고 선명한 마커야.',
         },
         {
           id: 'watercolor',
@@ -205,7 +217,33 @@ export const paint: ProgramType = {
         },
       ],
     },
-    // STEP 7 — 도장 (multi)
+    // STEP 7 — 기본 굵기 (size=slider일 때만) [Conditional]
+    {
+      id: 'default_size',
+      question: '처음 시작할 때 기본 굵기는?',
+      showIf: (a) => a.size === 'slider',
+      options: [
+        {
+          id: 'thin',
+          label: '가늘게 시작',
+          icon: '🪡',
+          promptFragment: '슬라이더 초기값을 가는 굵기(5px)로 설정해.',
+        },
+        {
+          id: 'medium',
+          label: '보통으로 시작',
+          icon: '✏️',
+          promptFragment: '슬라이더 초기값을 보통 굵기(15px)로 설정해.',
+        },
+        {
+          id: 'thick',
+          label: '굵게 시작',
+          icon: '🖍️',
+          promptFragment: '슬라이더 초기값을 굵은 굵기(30px)로 설정해.',
+        },
+      ],
+    },
+    // STEP 8 — 도장 (multi)
     {
       id: 'stamp',
       question: '도장 찍기도 넣을까? (여러 개 골라도 돼)',
@@ -382,6 +420,12 @@ export const paint: ProgramType = {
           label: '메시지로 보내기',
           icon: '📤',
           promptFragment: '캔버스 이미지를 클립보드에 복사해서 메시지로 보낼 수 있는 버튼을 넣어.',
+        },
+        {
+          id: 'clipboard',
+          label: '복사해서 붙여넣기',
+          icon: '📋',
+          promptFragment: '캔버스 이미지를 클립보드에 복사하는 버튼을 넣어.',
         },
         {
           id: 'both',

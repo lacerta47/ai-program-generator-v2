@@ -159,6 +159,7 @@ export const fortune: ProgramType = {
       options: [
         { id: 'one', label: '하나', icon: '1️⃣', promptFragment: '한 번에 메시지 하나를 뽑아 크게 보여줘.' },
         { id: 'three', label: '세 개 중 고르기', icon: '3️⃣', promptFragment: '한 번에 세 개의 메시지를 보여주고 마음에 드는 걸 고르게 해줘.' },
+        { id: 'five', label: '다섯 개 중 고르기', icon: '5️⃣', promptFragment: '한 번에 다섯 개의 메시지를 보여주고 마음에 드는 걸 고르게 해줘.' },
       ],
     },
 
@@ -178,7 +179,9 @@ export const fortune: ProgramType = {
       question: '뽑은 메시지를 어떻게 할까?',
       options: [
         { id: 'show', label: '친구한테 크게 보여주기', icon: '📺', promptFragment: '뽑은 메시지를 화면에 크게 펼쳐 보여주는 버튼을 넣어.' },
-        { id: 'nothing', label: '그냥 보기', icon: '🙂', promptFragment: '' },
+        { id: 'save', label: '이미지로 저장', icon: '💾', promptFragment: '뽑은 메시지를 이미지 파일로 저장할 수 있는 버튼을 넣어.' },
+        { id: 'copy', label: '복사하기', icon: '📋', promptFragment: '뽑은 메시지를 클립보드에 복사하는 버튼을 넣어.' },
+        { id: 'nothing', label: '그냥 보기만', icon: '👀', promptFragment: '' },
       ],
     },
 

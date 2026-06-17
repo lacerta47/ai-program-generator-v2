@@ -16,6 +16,12 @@ export const maze: ProgramType = {
       question: '미로 테마는?',
       options: [
         {
+          id: 'classic',
+          label: '클래식 미로',
+          icon: '🧱',
+          promptFragment: '회색 벽돌 느낌의 클래식한 미로.',
+        },
+        {
           id: 'jungle',
           label: '정글 미로',
           icon: '🌴',
@@ -126,6 +132,12 @@ export const maze: ProgramType = {
           label: '방향키 + 화면 버튼',
           icon: '🎮',
           promptFragment: '키보드 방향키와 화면 방향 버튼 두 가지 모두로 조작할 수 있게 해.',
+        },
+        {
+          id: 'swipe',
+          label: '손가락 스와이프',
+          icon: '👆',
+          promptFragment: '손가락으로 스와이프하거나 화면의 방향 버튼으로도 움직일 수 있게 해.',
         },
       ],
     },

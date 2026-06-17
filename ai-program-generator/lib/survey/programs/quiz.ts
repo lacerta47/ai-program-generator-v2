@@ -292,7 +292,39 @@ export const quiz: ProgramType = {
         },
       ],
     },
-    // STEP 9 — 목숨 여부
+    // STEP 9 — 제한 시간 경고 (timer≠no일 때) [Conditional]
+    {
+      id: 'timer_warn',
+      question: '시간이 얼마 남았을 때 경고를 줄까?',
+      showIf: (a) => a.timer !== 'no',
+      options: [
+        {
+          id: 'red',
+          label: '빨간색으로 바뀌어요',
+          icon: '🔴',
+          promptFragment: '남은 시간이 5초 이하가 되면 시간 막대가 빨간색으로 바뀌게 해.',
+        },
+        {
+          id: 'blink',
+          label: '깜빡깜빡해요',
+          icon: '⚡',
+          promptFragment: '남은 시간이 5초 이하가 되면 시간 막대가 깜빡이게 해.',
+        },
+        {
+          id: 'beep',
+          label: '삐삐 소리가 나요',
+          icon: '🔔',
+          promptFragment: '남은 시간이 5초 이하가 되면 1초마다 삐 소리가 나게 Web Audio로 넣어.',
+        },
+        {
+          id: 'none',
+          label: '경고 없이 그냥',
+          icon: '✅',
+          promptFragment: '',
+        },
+      ],
+    },
+    // STEP 10 — 목숨 여부
     {
       id: 'lives',
       question: '틀리면 목숨이 줄어들게 할까?',
