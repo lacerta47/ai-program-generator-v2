@@ -294,7 +294,7 @@ textarea {
   background-clip: text;
   color: transparent;
   -webkit-text-fill-color: transparent;
-  animation: lun-shine 5s linear infinite;
+  animation: lun-shine 10s linear infinite;
 }
 @media (prefers-reduced-motion: reduce) {
   .lun-shiny {

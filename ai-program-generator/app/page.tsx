@@ -12,12 +12,12 @@ export default function Home() {
         <h1 className="font-display text-[84px] leading-none tracking-tight sm:text-[136px]">
           <span className="lun-shiny">LUN</span>
         </h1>
-        <p className="mt-3 -translate-y-1 text-[13px] font-medium uppercase tracking-[0.4em] text-brand-strong opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100 dark:text-brand">
+        <p className="mt-3 -translate-y-1 text-[13px] font-medium uppercase tracking-[0.4em] text-brand-strong opacity-0 transition-all duration-[600ms] group-hover:translate-y-0 group-hover:opacity-100 dark:text-brand">
           Logic&nbsp;·&nbsp;Unfold&nbsp;·&nbsp;Next
         </p>
       </div>
 
-      <footer className="absolute inset-x-0 bottom-6 text-center text-[15px] text-muted">
+      <footer className="absolute inset-x-0 bottom-6 text-center text-[12.5px] text-muted/60">
         논리를 펼치면, 마법이 시작돼요
       </footer>
     </main>
