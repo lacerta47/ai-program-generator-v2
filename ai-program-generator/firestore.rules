@@ -190,5 +190,10 @@ service cloud.firestore {
         && request.resource.data.createdAt is number;
       allow delete: if isAdmin();
     }
+
+    // few-shot 참고 예시(생성 품질용) — 서버 Admin SDK 전용. 클라이언트 접근 전면 차단(usage와 동일 정책).
+    match /exemplars/{docId} {
+      allow read, write: if false;
+    }
   }
 }
