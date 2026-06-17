@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, RotateCcw, Wand2 } from 'lucide-react';
 import type { GeneratedCode } from '@/lib/ai/types';
 import type { ProgramType, SurveyAnswers, SurveyStep } from '@/lib/survey/types';
@@ -42,6 +42,8 @@ export default function SurveyWizard() {
   const [previewKey, setPreviewKey] = useState(0);
   const [uploadOpen, setUploadOpen] = useState(false);
   const [loginOpen, setLoginOpen] = useState(false);
+  // 로그인 전에 고른 종류 — 로그인 끝나면 이 종류로 자동 진입
+  const [pendingType, setPendingType] = useState<ProgramType | null>(null);
 
   const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
@@ -50,13 +52,32 @@ export default function SurveyWizard() {
   const hasCode = Boolean(code.html || code.css || code.javascript);
   const onLastDone = stepIdx >= steps.length;
 
-  function pickType(t: ProgramType) {
+  function enterType(t: ProgramType) {
     setType(t);
     setAnswers({});
     setStepIdx(0);
     setEditReturn(null);
     setCode(EMPTY_CODE);
   }
+  function pickType(t: ProgramType) {
+    // 종류 선택(1번)에서 먼저 로그인 요청 — 끝까지 다 고른 뒤 막혀서 실망하지 않게.
+    if (!authLoading && !user) {
+      setPendingType(t);
+      toast('로그인하면 만들 수 있어요! 먼저 로그인해 주세요.');
+      setLoginOpen(true);
+      return;
+    }
+    enterType(t);
+  }
+  // 로그인 다이얼로그에서 로그인에 성공하면, 고르려던 종류로 자동 진입
+  useEffect(() => {
+    if (user && pendingType) {
+      const t = pendingType;
+      setPendingType(null);
+      setLoginOpen(false);
+      enterType(t);
+    }
+  }, [user, pendingType]);
   function backToTypes() {
     setType(null);
     setAnswers({});
@@ -207,7 +228,22 @@ export default function SurveyWizard() {
   if (!type) {
     return (
       <div className="mx-auto max-w-3xl">
+        {!authLoading && !user && (
+          <button
+            onClick={() => setLoginOpen(true)}
+            className="press anim-pop-in mb-5 flex w-full items-center justify-center gap-2 rounded-[var(--r-lg)] border-2 border-brand/40 bg-brand-soft px-4 py-3 text-[15.5px] font-medium text-brand-strong dark:text-brand"
+          >
+            🔑 로그인하면 바로 만들 수 있어요 — 먼저 로그인할까요?
+          </button>
+        )}
         <TypePicker types={PROGRAM_TYPES} onPick={pickType} />
+        <LoginDialog
+          open={loginOpen}
+          onClose={() => {
+            setLoginOpen(false);
+            setPendingType(null);
+          }}
+        />
       </div>
     );
   }
