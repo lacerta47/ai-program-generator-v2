@@ -7,6 +7,7 @@ export async function requestGenerate(
   prompt: string,
   mode: GenerateMode,
   variant: SystemPromptVariant = 'default',
+  signal?: AbortSignal,
 ): Promise<GeneratedCode> {
   const user = auth.currentUser;
   if (!user) {
@@ -18,6 +19,7 @@ export async function requestGenerate(
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
     body: JSON.stringify({ prompt, mode, variant }),
+    signal,
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {

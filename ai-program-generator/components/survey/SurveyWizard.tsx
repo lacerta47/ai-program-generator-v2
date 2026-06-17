@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, RotateCcw, Wand2 } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { ArrowLeft, RotateCcw, Wand2, X } from 'lucide-react';
 import type { GeneratedCode } from '@/lib/ai/types';
 import type { ProgramType, SurveyAnswers, SurveyStep } from '@/lib/survey/types';
 import { PROGRAM_TYPES } from '@/lib/survey/programs';
@@ -44,6 +44,8 @@ export default function SurveyWizard() {
   const [loginOpen, setLoginOpen] = useState(false);
   // 로그인 전에 고른 종류 — 로그인 끝나면 이 종류로 자동 진입
   const [pendingType, setPendingType] = useState<ProgramType | null>(null);
+  // 생성 취소용 — busy 화면에서 '그만 만들기'를 누르면 진행 중 요청을 중단
+  const abortRef = useRef<AbortController | null>(null);
 
   const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
@@ -154,6 +156,8 @@ export default function SurveyWizard() {
       return;
     }
     setBusy(true);
+    const ctrl = new AbortController();
+    abortRef.current = ctrl;
     let i = 0;
     setBuildMsg(BUILD_MESSAGES[0]);
     const tick = window.setInterval(() => {
@@ -162,16 +166,25 @@ export default function SurveyWizard() {
     }, 2500);
     try {
       const prompt = assemblePrompt(type, answers);
-      const result = await requestGenerate(prompt, 'generate', 'survey');
+      const result = await requestGenerate(prompt, 'generate', 'survey', ctrl.signal);
       setCode(result);
       setPreviewKey((k) => k + 1);
       toast('우와! 멋진 걸 만들었어요!', 'success');
     } catch (e) {
-      toast(e instanceof Error ? e.message : '만들다가 문제가 생겼어요. 다시 해볼까요?');
+      // 사용자가 '그만 만들기'로 취소한 경우는 에러 토스트 없이 조용히 설문으로 복귀
+      if (!ctrl.signal.aborted && !(e instanceof Error && e.name === 'AbortError')) {
+        toast(e instanceof Error ? e.message : '만들다가 문제가 생겼어요. 다시 해볼까요?');
+      }
     } finally {
       window.clearInterval(tick);
+      abortRef.current = null;
       setBusy(false);
     }
+  }
+
+  // busy 화면에서 '그만 만들기' — 진행 중 생성 요청을 중단하고 설문으로 복귀
+  function cancelGenerate() {
+    abortRef.current?.abort();
   }
 
   // 결과 화면
@@ -218,6 +231,9 @@ export default function SurveyWizard() {
           <div className="flex flex-col items-center gap-5 text-center">
             <BuilderBot />
             <p className="text-[18px] text-muted">{buildMsg}</p>
+            <Button variant="soft" onClick={cancelGenerate}>
+              <X size={17} aria-hidden /> 그만 만들기
+            </Button>
           </div>
         </div>
       </div>
