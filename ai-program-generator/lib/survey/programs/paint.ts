@@ -6,9 +6,11 @@ export const paint: ProgramType = {
   icon: '🎨',
   basePrompt:
     '마우스(또는 손가락)로 자유롭게 그림을 그릴 수 있는 그림판 웹 프로그램을 만들어줘. ' +
-    '색 팔레트, 붓 선택, 지우개, 전체 지우기 버튼을 포함해. 켜자마자 바로 그릴 수 있게 완성형으로 만들어.',
+    '색 팔레트, 붓 선택, 지우개, 전체 지우기 버튼을 포함해. ' +
+    '켜자마자 바로 그릴 수 있는 완성형으로 만들어.',
   buildName: () => '나의 그림판',
   steps: [
+    // STEP 1 — 배경
     {
       id: 'bg',
       question: '어떤 종이에 그릴까?',
@@ -17,7 +19,7 @@ export const paint: ProgramType = {
           id: 'white',
           label: '하얀 종이',
           icon: '🤍',
-          promptFragment: '캔버스 배경은 깨끗한 하얀색.',
+          promptFragment: '캔버스 배경은 깨끗한 흰색.',
         },
         {
           id: 'board',
@@ -38,6 +40,12 @@ export const paint: ProgramType = {
           promptFragment: '캔버스 배경은 따뜻한 연한 노란색.',
         },
         {
+          id: 'pink',
+          label: '분홍 도화지',
+          icon: '🩷',
+          promptFragment: '캔버스 배경은 연한 분홍색.',
+        },
+        {
           id: 'dot',
           label: '점선 노트',
           icon: '📓',
@@ -45,6 +53,7 @@ export const paint: ProgramType = {
         },
       ],
     },
+    // STEP 2 — 붓 종류
     {
       id: 'brush',
       question: '어떤 붓으로 그릴까?',
@@ -73,8 +82,27 @@ export const paint: ProgramType = {
           icon: '✏️',
           promptFragment: '기본 붓은 굵고 선명한 마커야.',
         },
+        {
+          id: 'watercolor',
+          label: '수채화 붓',
+          icon: '🖌️',
+          promptFragment: '기본 붓은 반투명하고 번지는 수채화 붓이야.',
+        },
+        {
+          id: 'glitter',
+          label: '반짝이 펜',
+          icon: '✨',
+          promptFragment: '기본 붓은 그릴 때 별·반짝이 입자가 흩어지는 글리터 펜이야.',
+        },
+        {
+          id: 'magic',
+          label: '마법 붓',
+          icon: '🪄',
+          promptFragment: '기본 붓은 그릴 때 별가루가 쏟아지는 마법 붓이야. 선을 그으면 반짝이는 파티클이 따라오게 해.',
+        },
       ],
     },
+    // STEP 3 — 무지개 모드 (brush=crayon일 때만) [Chain Level 1]
     {
       id: 'rainbow',
       question: '그릴 때 색이 무지개처럼 바뀌는 모드를 넣을까?',
@@ -94,6 +122,33 @@ export const paint: ProgramType = {
         },
       ],
     },
+    // STEP 4 — 무지개 빠르기 (rainbow=yes일 때만) [Chain Level 2]
+    {
+      id: 'rainbow_speed',
+      question: '무지개 색이 얼마나 빠르게 바뀔까?',
+      showIf: (a) => a.rainbow === 'yes',
+      options: [
+        {
+          id: 'slow',
+          label: '천천히',
+          icon: '🐢',
+          promptFragment: '무지개 모드에서 색이 천천히 부드럽게 바뀌게 해.',
+        },
+        {
+          id: 'normal',
+          label: '보통',
+          icon: '🚶',
+          promptFragment: '무지개 모드에서 색이 적당한 속도로 바뀌게 해.',
+        },
+        {
+          id: 'fast',
+          label: '빠르게!',
+          icon: '⚡',
+          promptFragment: '무지개 모드에서 색이 빠르게 빙빙 바뀌어서 화려하게 보이게 해.',
+        },
+      ],
+    },
+    // STEP 5 — 색 팔레트 (multi)
     {
       id: 'palette',
       question: '어떤 색들을 쓸까? (여러 개 골라도 돼)',
@@ -124,13 +179,20 @@ export const paint: ProgramType = {
           promptFragment: '흙·나뭇잎·하늘처럼 자연에서 온 색 팔레트를 넣어.',
         },
         {
+          id: 'galaxy',
+          label: '우주 색',
+          icon: '🌌',
+          promptFragment: '보라·남색·하늘 등 우주 분위기 색 팔레트를 넣어.',
+        },
+        {
           id: 'custom',
-          label: '색 직접 고르기',
-          icon: '🎛️',
+          label: '내가 색 골라!',
+          icon: '🌈',
           promptFragment: '색상 피커(color input)를 추가해서 원하는 색을 자유롭게 고를 수 있게 해.',
         },
       ],
     },
+    // STEP 6 — 붓 굵기
     {
       id: 'size',
       question: '붓 굵기를 조절할 수 있게 할까?',
@@ -155,6 +217,33 @@ export const paint: ProgramType = {
         },
       ],
     },
+    // STEP 7 — 기본 굵기 (size=slider일 때만) [Conditional]
+    {
+      id: 'default_size',
+      question: '처음 시작할 때 기본 굵기는?',
+      showIf: (a) => a.size === 'slider',
+      options: [
+        {
+          id: 'thin',
+          label: '가늘게 시작',
+          icon: '🪡',
+          promptFragment: '슬라이더 초기값을 가는 굵기(5px)로 설정해.',
+        },
+        {
+          id: 'medium',
+          label: '보통으로 시작',
+          icon: '✏️',
+          promptFragment: '슬라이더 초기값을 보통 굵기(15px)로 설정해.',
+        },
+        {
+          id: 'thick',
+          label: '굵게 시작',
+          icon: '🖍️',
+          promptFragment: '슬라이더 초기값을 굵은 굵기(30px)로 설정해.',
+        },
+      ],
+    },
+    // STEP 8 — 도장 (multi)
     {
       id: 'stamp',
       question: '도장 찍기도 넣을까? (여러 개 골라도 돼)',
@@ -179,6 +268,18 @@ export const paint: ProgramType = {
           promptFragment: '클릭하면 꽃 모양이 찍히는 도장 버튼을 추가해.',
         },
         {
+          id: 'dino',
+          label: '공룡 도장',
+          icon: '🦕',
+          promptFragment: '클릭하면 귀여운 공룡 실루엣이 찍히는 도장 버튼을 추가해.',
+        },
+        {
+          id: 'unicorn',
+          label: '유니콘 도장',
+          icon: '🦄',
+          promptFragment: '클릭하면 귀여운 유니콘 실루엣이 찍히는 도장 버튼을 추가해.',
+        },
+        {
           id: 'none',
           label: '없어도 돼',
           icon: '🚫',
@@ -186,6 +287,67 @@ export const paint: ProgramType = {
         },
       ],
     },
+    // STEP 9 — 도장 크기 (stamp에 none이 없고 선택이 있을 때) [Conditional]
+    {
+      id: 'stamp_size',
+      question: '도장은 얼마나 크게 찍힐까?',
+      showIf: (a) => {
+        const s = a.stamp;
+        if (Array.isArray(s)) return s.length > 0 && !s.includes('none');
+        return false;
+      },
+      options: [
+        {
+          id: 'small',
+          label: '작게',
+          icon: '🐣',
+          promptFragment: '도장 크기를 작게(30px)로 설정해.',
+        },
+        {
+          id: 'medium',
+          label: '보통',
+          icon: '🐥',
+          promptFragment: '도장 크기를 보통(60px)으로 설정해.',
+        },
+        {
+          id: 'big',
+          label: '크게!',
+          icon: '🐘',
+          promptFragment: '도장 크기를 크게(100px)로 설정해.',
+        },
+        {
+          id: 'random',
+          label: '매번 달라요',
+          icon: '🎲',
+          promptFragment: '도장을 찍을 때마다 크기가 랜덤하게 달라지게 해.',
+        },
+      ],
+    },
+    // STEP 10 — 이름 도장 (stamp에 none이 없고 선택이 있을 때) [Conditional]
+    {
+      id: 'name_stamp',
+      question: '내 이름을 도장처럼 찍는 기능도 넣을까?',
+      showIf: (a) => {
+        const s = a.stamp;
+        if (Array.isArray(s)) return s.length > 0 && !s.includes('none');
+        return false;
+      },
+      options: [
+        {
+          id: 'yes',
+          label: '응, 이름 도장!',
+          icon: '✏️',
+          promptFragment: '이름을 입력하면 그 이름을 도장처럼 캔버스에 찍을 수 있는 텍스트 도장 기능을 추가해.',
+        },
+        {
+          id: 'no',
+          label: '아니, 그냥 도장만',
+          icon: '🚫',
+          promptFragment: '',
+        },
+      ],
+    },
+    // STEP 11 — 배경 음악
     {
       id: 'music',
       question: '그림 그리는 동안 배경 음악을 넣을까?',
@@ -194,7 +356,13 @@ export const paint: ProgramType = {
           id: 'yes',
           label: '응, 신나는 음악',
           icon: '🎵',
-          promptFragment: '웹 오디오(Web Audio API)로 가볍고 밝은 배경 멜로디를 내보내고 음악 켜기·끄기 버튼을 넣어.',
+          promptFragment: 'Web Audio API로 밝고 경쾌한 배경 멜로디를 내보내고 음악 켜기·끄기 버튼을 넣어.',
+        },
+        {
+          id: 'calm',
+          label: '조용하고 잔잔하게',
+          icon: '🎶',
+          promptFragment: 'Web Audio API로 잔잔하고 느린 배경 멜로디를 내보내고 음악 켜기·끄기 버튼을 넣어.',
         },
         {
           id: 'draw_sound',
@@ -210,6 +378,33 @@ export const paint: ProgramType = {
         },
       ],
     },
+    // STEP 12 — 음악 분위기 (music=yes일 때만) [Conditional]
+    {
+      id: 'music_mood',
+      question: '음악 느낌은 어떻게 할까?',
+      showIf: (a) => a.music === 'yes',
+      options: [
+        {
+          id: 'happy',
+          label: '신나고 밝게',
+          icon: '😄',
+          promptFragment: '배경 멜로디는 빠르고 신나는 장조 느낌으로 만들어.',
+        },
+        {
+          id: 'dreamy',
+          label: '몽글몽글 꿈나라',
+          icon: '💭',
+          promptFragment: '배경 멜로디는 천천히 흐르는 몽환적인 느낌으로 만들어.',
+        },
+        {
+          id: 'adventure',
+          label: '탐험가처럼',
+          icon: '🗺️',
+          promptFragment: '배경 멜로디는 모험심 넘치는 씩씩한 느낌으로 만들어.',
+        },
+      ],
+    },
+    // STEP 13 — 저장
     {
       id: 'save',
       question: '내 그림을 저장하거나 공유하는 버튼을 넣을까?',
@@ -222,9 +417,21 @@ export const paint: ProgramType = {
         },
         {
           id: 'copy',
+          label: '메시지로 보내기',
+          icon: '📤',
+          promptFragment: '캔버스 이미지를 클립보드에 복사해서 메시지로 보낼 수 있는 버튼을 넣어.',
+        },
+        {
+          id: 'clipboard',
           label: '복사해서 붙여넣기',
           icon: '📋',
           promptFragment: '캔버스 이미지를 클립보드에 복사하는 버튼을 넣어.',
+        },
+        {
+          id: 'both',
+          label: '저장 + 복사 둘 다',
+          icon: '🗂️',
+          promptFragment: '그림을 PNG로 다운로드하는 버튼과 클립보드에 복사하는 버튼 두 가지를 모두 넣어.',
         },
         {
           id: 'no',
