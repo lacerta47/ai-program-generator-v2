@@ -1,6 +1,7 @@
 'use client';
 
 import type { ProgramType, SurveyAnswers, SurveyStep } from '@/lib/survey/types';
+import { AI_PICK } from '@/lib/survey/types';
 
 export default function SurveySummary({
   type,
@@ -19,6 +20,7 @@ export default function SurveySummary({
 }) {
   const labelOf = (step: SurveyStep): string => {
     const a = answers[step.id];
+    if (a === AI_PICK) return '아무거나 🎲';
     const ids = Array.isArray(a) ? a : a ? [a] : [];
     return step.options
       .filter((o) => ids.includes(o.id))

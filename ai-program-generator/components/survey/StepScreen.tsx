@@ -1,6 +1,7 @@
 'use client';
 
 import type { SurveyStep } from '@/lib/survey/types';
+import { AI_PICK } from '@/lib/survey/types';
 
 export default function StepScreen({
   step,
@@ -51,6 +52,24 @@ export default function StepScreen({
             <span className="text-[18px] font-medium">{o.label}</span>
           </button>
         ))}
+
+        {/* 단일선택 단계엔 '아무거나 좋아!'(AI가 그 부분을 알아서 정함)를 자동으로 붙인다 */}
+        {!step.multi && (
+          <button
+            onClick={() => onChoose(AI_PICK)}
+            className={`press flex items-center gap-3 rounded-[var(--r-lg)] border-2 border-dashed p-4 text-left sm:col-span-2 ${
+              selected(AI_PICK)
+                ? 'border-brand bg-brand-soft'
+                : 'border-line bg-surface-2 hover:border-brand/50'
+            }`}
+          >
+            <span className="text-[34px] leading-none" aria-hidden>🎲</span>
+            <span className="text-[18px] font-medium">
+              아무거나 좋아!{' '}
+              <span className="text-[14px] font-normal text-muted">(AI가 골라줘)</span>
+            </span>
+          </button>
+        )}
       </div>
     </div>
   );
