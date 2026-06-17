@@ -50,10 +50,10 @@ export const aquarium: ProgramType = {
       options: [
         { id: 'fish', label: '물고기', icon: '🐟', promptFragment: '색깔 물고기들이 유유히 헤엄쳐 다니게 해.' },
         { id: 'jellyfish', label: '해파리', icon: '🪼', promptFragment: '반투명 해파리가 둥둥 위아래로 떠다니게 해.' },
-        { id: 'star', label: '별', icon: '⭐', promptFragment: '반짝이는 별들이 천천히 떠다니게 해.' },
-        { id: 'bubble', label: '거품', icon: '🫧', promptFragment: '투명한 거품들이 아래에서 위로 올라가게 해.' },
         { id: 'turtle', label: '거북이', icon: '🐢', promptFragment: '느릿느릿 헤엄치는 거북이가 떠다니게 해.' },
-        { id: 'crab', label: '게', icon: '🦀', promptFragment: '바닥을 옆으로 기어다니는 게를 넣어줘.' },
+        { id: 'shark', label: '상어', icon: '🦈', promptFragment: '크고 위풍당당한 상어가 천천히 헤엄쳐 다니게 해.' },
+        { id: 'dolphin', label: '돌고래', icon: '🐬', promptFragment: '빠르고 귀여운 돌고래가 곡선을 그리며 헤엄치게 해.' },
+        { id: 'bubble', label: '거품', icon: '🫧', promptFragment: '투명한 거품들이 아래에서 위로 올라가게 해.' },
       ],
     },
 
@@ -75,7 +75,17 @@ export const aquarium: ProgramType = {
       ],
     },
 
-    // Step 5 — 마릿수
+    // Step 5 — 바닥 장식
+    {
+      id: 'decor',
+      question: '바닥에 산호와 해초 장식을 넣을까?',
+      options: [
+        { id: 'yes', label: '응, 예쁘게 넣어줘!', icon: '🪸', promptFragment: '수족관 바닥에 산호(🪸)와 해초를 SVG로 그려서 넣어.' },
+        { id: 'no', label: '깔끔하게', icon: '🫧', promptFragment: '' },
+      ],
+    },
+
+    // Step 6 — 마릿수
     {
       id: 'count',
       question: '얼마나 많이 떠다닐까?',
@@ -90,25 +100,20 @@ export const aquarium: ProgramType = {
     // Step 6 — 움직임 속도
     {
       id: 'speed',
-      question: '움직임 속도는 어떻게 할까?',
+      question: '생물들을 빠르게 움직이게 할까?',
       options: [
-        { id: 'slow', label: '천천히', icon: '🐢', promptFragment: '생물들이 느릿느릿 천천히 움직이게 해.' },
-        { id: 'normal', label: '보통', icon: '🐠', promptFragment: '생물들이 자연스러운 속도로 움직이게 해.' },
-        { id: 'fast', label: '신나게 빠르게', icon: '🐟', promptFragment: '생물들이 빠르게 신나게 움직이게 해.' },
-        { id: 'mixed', label: '각자 다르게', icon: '🎲', promptFragment: '생물마다 속도가 조금씩 다르게 해.' },
+        { id: 'yes', label: '응, 신나게 빠르게!', icon: '🐟', promptFragment: '생물들이 빠르고 신나게 움직이게 해.' },
+        { id: 'no', label: '아니, 느릿느릿', icon: '🐢', promptFragment: '생물들이 느릿느릿 천천히 움직이게 해.' },
       ],
     },
 
     // Step 7 — 배경 색
     {
       id: 'bgcolor',
-      question: '배경 색은 어떻게 할까?',
+      question: '배경을 밝게 할까, 어둡게 할까?',
       options: [
-        { id: 'deep', label: '깊은 파란색', icon: '💙', promptFragment: '배경을 깊은 바다 같은 진한 파란색으로 해.' },
-        { id: 'light', label: '연한 하늘색', icon: '🩵', promptFragment: '배경을 연한 하늘색으로 밝게 해.' },
-        { id: 'dark', label: '어두운 밤색', icon: '🌑', promptFragment: '배경을 어두운 밤 색으로 해.' },
-        { id: 'gradient', label: '그라데이션', icon: '🌅', promptFragment: '배경을 위아래가 색이 다른 그라데이션으로 해.' },
-        { id: 'teal', label: '청록색', icon: '🟢', promptFragment: '배경을 청록색 계열로 해.' },
+        { id: 'light', label: '밝게', icon: '🩵', promptFragment: '배경을 연한 하늘색으로 밝게 해.' },
+        { id: 'dark', label: '어둡게', icon: '🌊', promptFragment: '배경을 깊은 바다 같은 진한 파란색으로 어둡게 해.' },
       ],
     },
 
@@ -121,6 +126,7 @@ export const aquarium: ProgramType = {
         { id: 'spawn', label: '한 마리 늘기', icon: '➕', promptFragment: '화면을 클릭하면 그 자리에서 새 생물 하나가 생겨나게 해.' },
         { id: 'flash', label: '반짝 빛나기', icon: '✨', promptFragment: '화면을 클릭하면 그 자리에서 반짝이는 빛 효과가 나게 해.' },
         { id: 'ripple', label: '물결 퍼지기', icon: '🌊', promptFragment: '화면을 클릭하면 그 자리에서 물결이 퍼지는 효과가 나게 해.' },
+        { id: 'nametag', label: '이름 붙이기', icon: '🏷️', promptFragment: '물고기를 클릭하면 이름을 입력할 수 있고, 정해진 이름표가 그 물고기 위에 따라다니게 해.' },
       ],
     },
 
@@ -154,28 +160,22 @@ export const aquarium: ProgramType = {
       showIf: (a) => a.sound === 'yes',
       options: [
         { id: 'wave', label: '물 흐르는 소리', icon: '🌊', promptFragment: '배경에 Web Audio로 조용한 물 흐르는 소리를 넣어.' },
-        { id: 'bubble', label: '거품 소리', icon: '🫧', promptFragment: '배경에 Web Audio로 거품 올라오는 소리를 넣어.' },
+        { id: 'bubble', label: '물고기 뽀글뽀글', icon: '🫧', promptFragment: '배경에 Web Audio로 물고기가 뽀글뽀글 거품 내는 소리를 합성해서 넣어.' },
         { id: 'soft', label: '조용한 음악', icon: '🎵', promptFragment: '배경에 Web Audio로 조용한 멜로디 음악을 넣어.' },
         { id: 'nature', label: '자연 소리', icon: '🌿', promptFragment: '배경에 Web Audio로 새소리·바람 소리 같은 자연 소리를 합성해서 넣어.' },
       ],
     },
 
-    // Step 12 — 낮밤 바뀜
+    // Step 12 — 낮밤 바꾸기
     {
       id: 'daynight',
-      question: '시간이 지나면 낮밤이 바뀌게 할까?',
+      question: '낮과 밤을 버튼으로 바꿀 수 있게 할까?',
       options: [
-        {
-          id: 'yes',
-          label: '응, 바꿔줘!',
-          icon: '🌙',
-          promptFragment: '시간이 지나면 배경이 낮(밝음)에서 밤(어두움)으로 천천히 바뀌는 낮밤 전환 효과를 넣어.',
-        },
         {
           id: 'button',
           label: '버튼으로 바꾸기',
-          icon: '🔘',
-          promptFragment: '버튼을 눌러 낮과 밤 배경을 직접 바꿀 수 있게 해.',
+          icon: '🌗',
+          promptFragment: '🌗 버튼을 눌러 낮과 밤 배경을 직접 바꿀 수 있게 해.',
         },
         {
           id: 'no',

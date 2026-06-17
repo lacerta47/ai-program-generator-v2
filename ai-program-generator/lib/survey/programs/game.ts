@@ -167,12 +167,6 @@ export const game: ProgramType = {
           icon: '🕹️',
           promptFragment: '방향키와 마우스 클릭·터치 모두 사용해 주인공을 이동(또는 점프)시켜.',
         },
-        {
-          id: 'tilt',
-          label: '화면 기울이기',
-          icon: '📱',
-          promptFragment: '기기를 기울여서(DeviceOrientation API) 주인공을 좌우로 이동시켜.',
-        },
       ],
     },
     // STEP 6 — 배경
@@ -350,7 +344,90 @@ export const game: ProgramType = {
         },
       ],
     },
-    // STEP 12 — 게임 오버
+    // STEP 12 — 두더지 종류 (genre=mole일 때만) [Conditional]
+    {
+      id: 'mole_type',
+      question: '어떤 두더지가 나올까?',
+      showIf: (a) => a.genre === 'mole',
+      options: [
+        {
+          id: 'ghost',
+          label: '귀신 두더지',
+          icon: '👻',
+          promptFragment: '가끔 귀신 두더지가 나타나는데, 잡으면 점수가 2배로 올라가.',
+        },
+        {
+          id: 'gold',
+          label: '황금 두더지',
+          icon: '🥇',
+          promptFragment: '황금 두더지가 나타나면 잡을 때 보너스 점수를 줘.',
+        },
+        {
+          id: 'baby',
+          label: '아기 두더지',
+          icon: '🐹',
+          promptFragment: '아기 두더지는 작고 빠르게 움직여. 잡으면 더 높은 점수를 줘.',
+        },
+        {
+          id: 'fast',
+          label: '빠른 두더지',
+          icon: '⚡',
+          promptFragment: '빠른 두더지가 가끔 등장해서 순식간에 사라져.',
+        },
+      ],
+    },
+    // STEP 13 — 피할 것 / 넘을 것 (genre=dodge||run일 때만) [Conditional]
+    {
+      id: 'obstacle_type',
+      question: '무엇을 피할까?',
+      showIf: (a) => a.genre === 'dodge' || a.genre === 'run',
+      options: [
+        {
+          id: 'meteor',
+          label: '운석',
+          icon: '☄️',
+          promptFragment: '장애물은 하늘에서 떨어지는 운석이야.',
+        },
+        {
+          id: 'bomb',
+          label: '폭탄',
+          icon: '💣',
+          promptFragment: '장애물은 폭탄이야. 닿으면 펑! 터지는 효과를 넣어.',
+        },
+        {
+          id: 'snowball',
+          label: '눈덩이',
+          icon: '⛄',
+          promptFragment: '장애물은 굴러오는 눈덩이야.',
+        },
+        {
+          id: 'puddle',
+          label: '웅덩이',
+          icon: '🕳️',
+          promptFragment: '달리기 게임에서 웅덩이나 구멍을 뛰어넘어야 해.',
+        },
+      ],
+    },
+    // STEP 14 — 이름 등록
+    {
+      id: 'scorename',
+      question: '점수판에 내 이름을 넣을까?',
+      options: [
+        {
+          id: 'yes',
+          label: '응, 이름 넣어!',
+          icon: '✏️',
+          promptFragment: '게임 시작 전 이름을 입력하고, 점수판(localStorage)에 이름과 함께 최고 점수를 기록해.',
+        },
+        {
+          id: 'no',
+          label: '아니, 그냥 점수만',
+          icon: '📊',
+          promptFragment: '',
+        },
+      ],
+    },
+    // STEP 15 — 게임 오버
     {
       id: 'gameover',
       question: '게임 오버 화면은 어떻게 할까?',
@@ -374,10 +451,10 @@ export const game: ProgramType = {
           promptFragment: '게임 오버 화면에 점수에 따라 다른 칭찬 메시지와 다시하기 버튼을 보여줘.',
         },
         {
-          id: 'replay',
-          label: '짧은 리플레이',
-          icon: '🔁',
-          promptFragment: '게임 오버 화면에 마지막 5초 동안의 플레이를 빠르게 되감아 보여줘.',
+          id: 'balloon',
+          label: '풍선 날아오르기',
+          icon: '🎈',
+          promptFragment: '게임 오버 화면에 풍선들이 하늘로 날아오르는 귀여운 애니메이션과 함께 점수와 다시하기 버튼을 보여줘.',
         },
       ],
     },

@@ -30,7 +30,7 @@ export const quiz: ProgramType = {
         {
           id: '숫자',
           label: '숫자·계산',
-          icon: '➕',
+          icon: '🔢',
           promptFragment: '한 자리 수 더하기·빼기 같은 쉬운 수학 퀴즈로 채워줘.',
         },
         {
@@ -38,6 +38,12 @@ export const quiz: ProgramType = {
           label: '우주·별',
           icon: '🚀',
           promptFragment: '행성·달·별자리에 대한 쉬운 우주 퀴즈로 채워줘.',
+        },
+        {
+          id: '공룡',
+          label: '공룡',
+          icon: '🦕',
+          promptFragment: '공룡 이름·크기·먹이·시대에 대한 쉬운 퀴즈로 채워줘.',
         },
         {
           id: '이것저것',
@@ -173,6 +179,12 @@ export const quiz: ProgramType = {
           icon: '⌨️',
           promptFragment: '각 문제는 답을 직접 입력하고 확인 버튼을 눌러 제출해.',
         },
+        {
+          id: 'picture',
+          label: '그림 보고 맞히기',
+          icon: '🖼️',
+          promptFragment: '각 문제는 이모지를 크게 보여주고 그게 무엇인지 보기 중에 골라 답해.',
+        },
       ],
     },
     // STEP 6 — 정답 반응 (multi)
@@ -280,39 +292,7 @@ export const quiz: ProgramType = {
         },
       ],
     },
-    // STEP 9 — 제한 시간 경고 (timer≠no일 때) [Conditional]
-    {
-      id: 'timer_warn',
-      question: '시간이 얼마 남았을 때 경고를 줄까?',
-      showIf: (a) => a.timer !== 'no',
-      options: [
-        {
-          id: 'red',
-          label: '빨간색으로 바뀌어요',
-          icon: '🔴',
-          promptFragment: '남은 시간이 5초 이하가 되면 시간 막대가 빨간색으로 바뀌게 해.',
-        },
-        {
-          id: 'blink',
-          label: '깜빡깜빡해요',
-          icon: '⚡',
-          promptFragment: '남은 시간이 5초 이하가 되면 시간 막대가 깜빡이게 해.',
-        },
-        {
-          id: 'beep',
-          label: '삐삐 소리가 나요',
-          icon: '🔔',
-          promptFragment: '남은 시간이 5초 이하가 되면 1초마다 삐 소리가 나게 Web Audio로 넣어.',
-        },
-        {
-          id: 'none',
-          label: '경고 없이 그냥',
-          icon: '✅',
-          promptFragment: '',
-        },
-      ],
-    },
-    // STEP 10 — 목숨 여부
+    // STEP 9 — 목숨 여부
     {
       id: 'lives',
       question: '틀리면 목숨이 줄어들게 할까?',
@@ -357,7 +337,26 @@ export const quiz: ProgramType = {
         },
       ],
     },
-    // STEP 12 — 끝 보상
+    // STEP 12 — 혼자 또는 친구랑
+    {
+      id: 'playmode',
+      question: '퀴즈를 혼자 풀까, 친구랑 번갈아 풀까?',
+      options: [
+        {
+          id: 'solo',
+          label: '혼자',
+          icon: '🙋',
+          promptFragment: '혼자 풀 수 있는 1인 퀴즈 모드로 만들어.',
+        },
+        {
+          id: 'friend',
+          label: '친구랑 번갈아',
+          icon: '👫',
+          promptFragment: '두 사람이 번갈아 문제를 푸는 2인 대전 모드를 추가해. 각자 점수를 따로 세어 마지막에 누가 이겼는지 보여줘.',
+        },
+      ],
+    },
+    // STEP 13 — 끝 보상
     {
       id: 'end',
       question: '다 풀면 무엇을 보여줄까?',

@@ -12,6 +12,7 @@ export const calc: ProgramType = {
       guess: '숫자 맞히기 게임',
       times: '구구단 연습기',
       speed: '빠른 셈 게임',
+      animal: '동물 세기 게임',
     };
     const mode = a.mode;
     return typeof mode === 'string' && labels[mode] ? labels[mode] : '나의 숫자놀이';
@@ -26,6 +27,7 @@ export const calc: ProgramType = {
         { id: 'guess', label: '숫자 맞히기 게임', icon: '🎯', promptFragment: '컴퓨터가 숫자를 하나 정하면 내가 맞혀야 하는 숫자 맞히기 게임을 만들어. 더 큰지 작은지 힌트를 줘.' },
         { id: 'times', label: '구구단 연습', icon: '✖️', promptFragment: '구구단 문제를 하나씩 내고 답을 맞히면 점수가 올라가는 구구단 연습 프로그램을 만들어.' },
         { id: 'speed', label: '빠른 셈 게임', icon: '⚡', promptFragment: '제한 시간 안에 간단한 덧셈·뺄셈 문제를 최대한 많이 맞히는 빠른 셈 게임을 만들어.' },
+        { id: 'animal', label: '동물 세기 게임', icon: '🐶', promptFragment: '화면에 동물이 나타나면 개수를 세어 맞히는 동물 세기 게임을 만들어.' },
       ],
     },
 
@@ -53,6 +55,7 @@ export const calc: ProgramType = {
         { id: 'warm', label: '뜨겁다/차갑다', icon: '🔥', promptFragment: '정답에 가까울수록 "뜨거워요!", 멀면 "차가워요!" 힌트를 줘.' },
         { id: 'steps', label: '몇 단계나 남았는지', icon: '🪜', promptFragment: '정답까지 10단위 혹은 5단위 등 범위로 힌트를 줘. (예: 50~60 사이에 있어요)' },
         { id: 'count', label: '시도 횟수만 알려줘', icon: '🔢', promptFragment: '힌트 없이 지금까지 몇 번 시도했는지만 보여줘.' },
+        { id: 'emoji', label: '이모지로 알려줘', icon: '😱', promptFragment: '정답에서 멀면 😱, 가까울수록 😄 이모지로 힌트를 줘.' },
       ],
     },
 
@@ -85,7 +88,6 @@ export const calc: ProgramType = {
         { id: 'sub', label: '빼기 －', icon: '➖', promptFragment: '빼기 기능을 넣어.' },
         { id: 'mul', label: '곱하기 ×', icon: '✖️', promptFragment: '곱하기 기능을 넣어.' },
         { id: 'div', label: '나누기 ÷', icon: '➗', promptFragment: '나누기 기능을 넣어.' },
-        { id: 'pct', label: '퍼센트 ％', icon: '💯', promptFragment: '퍼센트 기능을 넣어.' },
       ],
     },
 
@@ -97,7 +99,7 @@ export const calc: ProgramType = {
         { id: 'round', label: '둥근 버튼', icon: '🔵', promptFragment: '버튼을 동그랗게 만들어.' },
         { id: 'square', label: '네모 버튼', icon: '🟦', promptFragment: '버튼을 네모나게 만들어.' },
         { id: 'big', label: '아주 큰 버튼', icon: '🆙', promptFragment: '버튼을 손가락으로 누르기 쉽게 아주 크게 만들어.' },
-        { id: 'pill', label: '알약 모양', icon: '💊', promptFragment: '버튼을 알약처럼 양쪽이 둥근 모양으로 만들어.' },
+        { id: 'pill', label: '길쭉 둥근', icon: '🟢', promptFragment: '버튼을 길쭉하고 양쪽이 둥근 모양으로 만들어.' },
       ],
     },
 
@@ -138,7 +140,19 @@ export const calc: ProgramType = {
       ],
     },
 
-    // Step 10 — 추가 기능 (mode !== 'times', multi)
+    // Step 10 — 틀렸을 때 (게임 모드)
+    {
+      id: 'wrongfx',
+      question: '틀렸을 때 어떻게 할까?',
+      showIf: (a) => a.mode === 'guess' || a.mode === 'times' || a.mode === 'speed',
+      options: [
+        { id: 'funny', label: '웃긴 소리', icon: '🤣', promptFragment: '오답일 때 Web Audio로 웃긴 효과음이 나게 해.' },
+        { id: 'cheer', label: '응원 메시지', icon: '💪', promptFragment: '오답일 때 "잘 할 수 있어!" 같은 응원 메시지를 보여줘.' },
+        { id: 'retry', label: '다시 해봐!', icon: '🔁', promptFragment: '오답일 때 "다시 해봐!" 메시지와 함께 바로 재도전할 수 있게 해.' },
+      ],
+    },
+
+    // Step 11 — 추가 기능 (mode !== 'times', multi)
     {
       id: 'extra',
       showIf: (a) => a.mode !== 'times',
@@ -148,12 +162,10 @@ export const calc: ProgramType = {
         { id: 'clear', label: '지우기 버튼', icon: '🗑️', promptFragment: '입력한 숫자를 한 번에 지우는 C 버튼을 넣어.' },
         { id: 'back', label: '뒤로 지우기', icon: '⬅️', promptFragment: '마지막 숫자 하나만 지우는 ← 버튼을 넣어.' },
         { id: 'mute', label: '소리 끄기', icon: '🔕', promptFragment: '소리를 켜고 끌 수 있는 버튼을 넣어.' },
-        { id: 'history', label: '계산 기록', icon: '📜', promptFragment: '이전에 계산한 내용을 아래에 목록으로 보여줘.' },
-        { id: 'copy', label: '복사 버튼', icon: '📋', promptFragment: '결과값을 클립보드에 복사하는 버튼을 넣어.' },
       ],
     },
 
-    // Step 11 — 화면 (mode !== 'times')
+    // Step 12 — 화면 (mode !== 'times')
     {
       id: 'display',
       showIf: (a) => a.mode !== 'times',
@@ -161,12 +173,12 @@ export const calc: ProgramType = {
       options: [
         { id: 'bignum', label: '큰 숫자', icon: '🔠', promptFragment: '결과 숫자를 화면에 아주 크게 표시해.' },
         { id: 'cute', label: '귀여운 글씨', icon: '🖋️', promptFragment: '결과 숫자를 둥글둥글 귀여운 글씨체로 표시해.' },
-        { id: 'led', label: 'LED 숫자판', icon: '🔴', promptFragment: '결과 숫자를 LED 전광판처럼 보여줘.' },
+        { id: 'led', label: '게임 점수판처럼', icon: '🕹️', promptFragment: '결과 숫자를 게임 점수판처럼 보여줘.' },
         { id: 'bubble', label: '말풍선', icon: '💬', promptFragment: '결과 숫자를 말풍선 안에 보여줘.' },
       ],
     },
 
-    // Step 12 — 배경
+    // Step 13 — 배경
     {
       id: 'bg',
       question: '배경은 어떻게 할까?',

@@ -16,10 +16,10 @@ export const maze: ProgramType = {
       question: '미로 테마는?',
       options: [
         {
-          id: 'classic',
-          label: '클래식 미로',
-          icon: '🧱',
-          promptFragment: '회색 벽돌 느낌의 클래식한 미로.',
+          id: 'jungle',
+          label: '정글 미로',
+          icon: '🌴',
+          promptFragment: '빽빽한 정글 속 나무와 덩굴로 이루어진 초록 정글 미로.',
         },
         {
           id: 'forest',
@@ -127,12 +127,6 @@ export const maze: ProgramType = {
           icon: '🎮',
           promptFragment: '키보드 방향키와 화면 방향 버튼 두 가지 모두로 조작할 수 있게 해.',
         },
-        {
-          id: 'swipe',
-          label: '손가락 스와이프',
-          icon: '👆',
-          promptFragment: '화면을 손가락으로 스와이프해서 그 방향으로 캐릭터를 이동시켜.',
-        },
       ],
     },
     // STEP 5 — 주인공
@@ -165,10 +159,16 @@ export const maze: ProgramType = {
           promptFragment: '주인공은 날렵한 고양이야.',
         },
         {
-          id: 'bear',
-          label: '곰',
-          icon: '🐻',
-          promptFragment: '주인공은 귀여운 곰이야.',
+          id: 'dino',
+          label: '공룡',
+          icon: '🦕',
+          promptFragment: '주인공은 귀여운 공룡이야.',
+        },
+        {
+          id: 'unicorn',
+          label: '유니콘',
+          icon: '🦄',
+          promptFragment: '주인공은 반짝이는 유니콘이야.',
         },
       ],
     },
@@ -237,9 +237,9 @@ export const maze: ProgramType = {
       options: [
         {
           id: 'glow',
-          label: '가까우면 빛나요',
+          label: '가까울수록 화살표가 커져요',
           icon: '✨',
-          promptFragment: '보물 가까이 다가가면 벽이 살짝 빛나는 힌트를 줘.',
+          promptFragment: '보물에 가까울수록 화면에 표시되는 방향 화살표가 커지고 밝아지는 힌트를 줘.',
         },
         {
           id: 'arrow',
@@ -255,7 +255,39 @@ export const maze: ProgramType = {
         },
       ],
     },
-    // STEP 9 — 함정 (multi)
+    // STEP 9 — 보물 종류 (goal=treasure일 때만) [Conditional]
+    {
+      id: 'treasure_type',
+      question: '어떤 보물을 찾을까?',
+      showIf: (a) => a.goal === 'treasure',
+      options: [
+        {
+          id: 'gem',
+          label: '보석',
+          icon: '💎',
+          promptFragment: '찾아야 할 보물은 반짝이는 보석이야.',
+        },
+        {
+          id: 'pizza',
+          label: '피자',
+          icon: '🍕',
+          promptFragment: '찾아야 할 보물은 맛있어 보이는 피자야.',
+        },
+        {
+          id: 'dino_egg',
+          label: '공룡알',
+          icon: '🥚',
+          promptFragment: '찾아야 할 보물은 신비로운 공룡알이야.',
+        },
+        {
+          id: 'star',
+          label: '별',
+          icon: '⭐',
+          promptFragment: '찾아야 할 보물은 빛나는 별이야.',
+        },
+      ],
+    },
+    // STEP 10 — 함정 (multi)
     {
       id: 'trap',
       question: '함정을 넣을까? (여러 개 골라도 돼)',
@@ -330,19 +362,19 @@ export const maze: ProgramType = {
       options: [
         {
           id: 'yes60',
-          label: '응, 60초',
+          label: '짧게(60초)⏱️',
           icon: '⏱️',
           promptFragment: '60초 안에 클리어해야 하는 시간 제한을 넣어. 시간이 다 되면 게임 오버.',
         },
         {
           id: 'yes120',
-          label: '응, 2분',
+          label: '보통(2분)⏰',
           icon: '⏰',
           promptFragment: '120초 안에 클리어해야 하는 시간 제한을 넣어. 시간이 다 되면 게임 오버.',
         },
         {
           id: 'yes180',
-          label: '응, 3분',
+          label: '여유롭게(3분)🕰️',
           icon: '🕰️',
           promptFragment: '180초 안에 클리어해야 하는 시간 제한을 넣어. 시간이 다 되면 게임 오버.',
         },
@@ -382,6 +414,12 @@ export const maze: ProgramType = {
           label: '다 같이!',
           icon: '✨',
           promptFragment: '클리어하면 색종이 폭죽·승리 멜로디·걸린 시간 트로피를 모두 보여줘.',
+        },
+        {
+          id: 'newmaze',
+          label: '새 미로 또 만들기',
+          icon: '🔄',
+          promptFragment: '클리어 화면에 새 미로를 자동으로 다시 생성하는 "새 미로 도전!" 버튼을 넣어.',
         },
       ],
     },

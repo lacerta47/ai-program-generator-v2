@@ -45,12 +45,6 @@ export const paint: ProgramType = {
           icon: '🩷',
           promptFragment: '캔버스 배경은 연한 분홍색.',
         },
-        {
-          id: 'dot',
-          label: '점선 노트',
-          icon: '📓',
-          promptFragment: '캔버스 배경은 흰색이고 연한 점선 격자무늬가 깔려 있어.',
-        },
       ],
     },
     // STEP 2 — 붓 종류
@@ -77,12 +71,6 @@ export const paint: ProgramType = {
           promptFragment: '기본 붓은 랜덤 점이 퍼지는 스프레이 효과야.',
         },
         {
-          id: 'marker',
-          label: '굵은 마커',
-          icon: '✏️',
-          promptFragment: '기본 붓은 굵고 선명한 마커야.',
-        },
-        {
           id: 'watercolor',
           label: '수채화 붓',
           icon: '🖌️',
@@ -93,6 +81,12 @@ export const paint: ProgramType = {
           label: '반짝이 펜',
           icon: '✨',
           promptFragment: '기본 붓은 그릴 때 별·반짝이 입자가 흩어지는 글리터 펜이야.',
+        },
+        {
+          id: 'magic',
+          label: '마법 붓',
+          icon: '🪄',
+          promptFragment: '기본 붓은 그릴 때 별가루가 쏟아지는 마법 붓이야. 선을 그으면 반짝이는 파티클이 따라오게 해.',
         },
       ],
     },
@@ -180,8 +174,8 @@ export const paint: ProgramType = {
         },
         {
           id: 'custom',
-          label: '색 직접 고르기',
-          icon: '🎛️',
+          label: '내가 색 골라!',
+          icon: '🌈',
           promptFragment: '색상 피커(color input)를 추가해서 원하는 색을 자유롭게 고를 수 있게 해.',
         },
       ],
@@ -211,33 +205,7 @@ export const paint: ProgramType = {
         },
       ],
     },
-    // STEP 7 — 기본 굵기 (size=slider일 때만) [Conditional]
-    {
-      id: 'default_size',
-      question: '처음 시작할 때 기본 굵기는?',
-      showIf: (a) => a.size === 'slider',
-      options: [
-        {
-          id: 'thin',
-          label: '가늘게 시작',
-          icon: '🪡',
-          promptFragment: '슬라이더 초기값을 가는 굵기(5px)로 설정해.',
-        },
-        {
-          id: 'medium',
-          label: '보통으로 시작',
-          icon: '✏️',
-          promptFragment: '슬라이더 초기값을 보통 굵기(15px)로 설정해.',
-        },
-        {
-          id: 'thick',
-          label: '굵게 시작',
-          icon: '🖍️',
-          promptFragment: '슬라이더 초기값을 굵은 굵기(30px)로 설정해.',
-        },
-      ],
-    },
-    // STEP 8 — 도장 (multi)
+    // STEP 7 — 도장 (multi)
     {
       id: 'stamp',
       question: '도장 찍기도 넣을까? (여러 개 골라도 돼)',
@@ -266,6 +234,12 @@ export const paint: ProgramType = {
           label: '공룡 도장',
           icon: '🦕',
           promptFragment: '클릭하면 귀여운 공룡 실루엣이 찍히는 도장 버튼을 추가해.',
+        },
+        {
+          id: 'unicorn',
+          label: '유니콘 도장',
+          icon: '🦄',
+          promptFragment: '클릭하면 귀여운 유니콘 실루엣이 찍히는 도장 버튼을 추가해.',
         },
         {
           id: 'none',
@@ -311,7 +285,31 @@ export const paint: ProgramType = {
         },
       ],
     },
-    // STEP 10 — 배경 음악
+    // STEP 10 — 이름 도장 (stamp에 none이 없고 선택이 있을 때) [Conditional]
+    {
+      id: 'name_stamp',
+      question: '내 이름을 도장처럼 찍는 기능도 넣을까?',
+      showIf: (a) => {
+        const s = a.stamp;
+        if (Array.isArray(s)) return s.length > 0 && !s.includes('none');
+        return false;
+      },
+      options: [
+        {
+          id: 'yes',
+          label: '응, 이름 도장!',
+          icon: '✏️',
+          promptFragment: '이름을 입력하면 그 이름을 도장처럼 캔버스에 찍을 수 있는 텍스트 도장 기능을 추가해.',
+        },
+        {
+          id: 'no',
+          label: '아니, 그냥 도장만',
+          icon: '🚫',
+          promptFragment: '',
+        },
+      ],
+    },
+    // STEP 11 — 배경 음악
     {
       id: 'music',
       question: '그림 그리는 동안 배경 음악을 넣을까?',
@@ -342,7 +340,7 @@ export const paint: ProgramType = {
         },
       ],
     },
-    // STEP 11 — 음악 분위기 (music=yes일 때만) [Conditional]
+    // STEP 12 — 음악 분위기 (music=yes일 때만) [Conditional]
     {
       id: 'music_mood',
       question: '음악 느낌은 어떻게 할까?',
@@ -368,7 +366,7 @@ export const paint: ProgramType = {
         },
       ],
     },
-    // STEP 12 — 저장
+    // STEP 13 — 저장
     {
       id: 'save',
       question: '내 그림을 저장하거나 공유하는 버튼을 넣을까?',
@@ -381,9 +379,9 @@ export const paint: ProgramType = {
         },
         {
           id: 'copy',
-          label: '복사해서 붙여넣기',
-          icon: '📋',
-          promptFragment: '캔버스 이미지를 클립보드에 복사하는 버튼을 넣어.',
+          label: '메시지로 보내기',
+          icon: '📤',
+          promptFragment: '캔버스 이미지를 클립보드에 복사해서 메시지로 보낼 수 있는 버튼을 넣어.',
         },
         {
           id: 'both',

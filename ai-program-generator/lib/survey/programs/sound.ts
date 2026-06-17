@@ -58,6 +58,13 @@ export const sound: ProgramType = {
           promptFragment:
             '누를 때마다 맑은 벨 소리가 나는 마법 벨 버튼들을 만들어. Web Audio API로 맑은 사인파 벨 소리를 합성해줘.',
         },
+        {
+          id: 'animal',
+          label: '동물 소리 버튼',
+          icon: '🐸',
+          promptFragment:
+            '버튼마다 동물 소리가 나는 동물 소리판을 만들어. 🐄 소 울음·🐸 개구리·🦊 여우·🐧 펭귄 등 다양한 동물 버튼을 넣고, Web Audio API로 각 동물 특유의 음색을 합성해줘. 버튼에 동물 이모지를 크게 표시해.',
+        },
       ],
     },
 
@@ -101,22 +108,22 @@ export const sound: ProgramType = {
           promptFragment: '따라치기 곡으로 "반짝반짝 작은 별" 음계를 넣어줘.',
         },
         {
-          id: 'doremi',
-          label: '도레미 송',
-          icon: '🎼',
-          promptFragment: '따라치기 곡으로 "도레미 송" 음계를 넣어줘.',
+          id: 'nabiya',
+          label: '나비야',
+          icon: '🦋',
+          promptFragment: '따라치기 곡으로 "나비야" 음계를 넣어줘.',
         },
         {
-          id: 'birthday',
-          label: '생일 축하해',
-          icon: '🎂',
-          promptFragment: '따라치기 곡으로 "생일 축하합니다" 음계를 넣어줘.',
+          id: 'threebears',
+          label: '곰 세 마리',
+          icon: '🐻',
+          promptFragment: '따라치기 곡으로 "곰 세 마리" 음계를 넣어줘.',
         },
         {
           id: 'all',
           label: '여러 곡 고르게',
           icon: '🎵',
-          promptFragment: '따라치기 곡을 여러 개(반짝반짝 작은 별·도레미 송·생일 축하합니다) 넣고 선택해서 연습하게 해줘.',
+          promptFragment: '따라치기 곡을 여러 개(반짝반짝 작은 별·나비야·곰 세 마리) 넣고 선택해서 연습하게 해줘.',
         },
       ],
     },
@@ -156,6 +163,7 @@ export const sound: ProgramType = {
         { id: 'bounce', label: '통통 튀게', icon: '🏀', promptFragment: '건반·버튼을 누를 때 통통 튀는 애니메이션을 넣어.' },
         { id: 'ripple', label: '물결 퍼지게', icon: '🌊', promptFragment: '건반·버튼을 누를 때 물결이 퍼지는 효과를 넣어.' },
         { id: 'star', label: '별 튀어나오게', icon: '⭐', promptFragment: '건반·버튼을 누를 때 별이 튀어나오는 효과를 넣어.' },
+        { id: 'animemoji', label: '동물 이모지 튀어나오기', icon: '🐸', promptFragment: '건반·버튼을 누를 때 🐸🐶🐱🐰 같은 동물 이모지가 팡 하고 튀어나왔다 사라지는 효과를 넣어.' },
       ],
     },
 
@@ -164,8 +172,7 @@ export const sound: ProgramType = {
       id: 'volume',
       question: '소리 크기를 조절하는 버튼을 넣을까?',
       options: [
-        { id: 'slider', label: '슬라이더로 조절', icon: '🎚️', promptFragment: '소리 크기를 조절할 수 있는 슬라이더를 넣어.' },
-        { id: 'buttons', label: '크게·작게 버튼', icon: '🔊', promptFragment: '소리를 크게·작게 바꾸는 버튼을 넣어.' },
+        { id: 'buttons', label: '크게/작게 버튼', icon: '🔊', promptFragment: '🔊 크게·🔉 작게 버튼 두 개로 소리를 조절할 수 있게 넣어.' },
         { id: 'no', label: '그냥 크게', icon: '📢', promptFragment: '' },
       ],
     },
@@ -183,25 +190,13 @@ export const sound: ProgramType = {
       ],
     },
 
-    // Step 9 — 녹음 기능 (E in E→F chain)
+    // Step 9 — 녹음 기능
     {
       id: 'record',
-      question: '연주를 녹음하는 기능을 넣을까?',
+      question: '내 연주를 다시 들어볼까?',
       options: [
-        { id: 'yes', label: '응, 넣어줘!', icon: '⏺️', promptFragment: '내가 연주한 걸 녹음했다가 다시 들을 수 있는 기능을 넣어.' },
-        { id: 'no', label: '아니, 괜찮아', icon: '🎵', promptFragment: '' },
-      ],
-    },
-
-    // Step 10 — 재생 방식 (F: 2-level chain — shows when record===yes)
-    {
-      id: 'playback',
-      question: '녹음한 걸 어떻게 다시 들을까?',
-      showIf: (a) => a.record === 'yes',
-      options: [
-        { id: 'auto', label: '자동으로 다시 재생', icon: '▶️', promptFragment: '녹음이 끝나면 자동으로 바로 다시 재생해줘.' },
-        { id: 'button', label: '재생 버튼 누르면', icon: '🔘', promptFragment: '별도의 재생 버튼을 눌렀을 때만 녹음을 다시 재생해줘.' },
-        { id: 'loop', label: '반복 재생', icon: '🔁', promptFragment: '녹음된 연주를 반복해서 재생하는 루프 기능을 넣어줘.' },
+        { id: 'yes', label: '응, 다시 들려줘!', icon: '▶️', promptFragment: '내가 연주한 걸 녹음했다가 ▶️ 버튼 하나로 다시 들을 수 있는 기능을 넣어.' },
+        { id: 'no', label: '괜찮아', icon: '🎵', promptFragment: '' },
       ],
     },
 
@@ -216,15 +211,14 @@ export const sound: ProgramType = {
       ],
     },
 
-    // Step 12 — 추가 기능 (multi)
+    // Step 11 (renumbered) — 추가 기능 (multi)
     {
       id: 'extra',
       question: '더 재미있는 기능을 넣을까? (여러 개 OK)',
       multi: true,
       options: [
         { id: 'echo', label: '메아리 효과', icon: '🌀', promptFragment: '소리에 메아리(딜레이) 효과를 넣는 버튼을 추가해.' },
-        { id: 'keyboard', label: '키보드로도 연주', icon: '⌨️', promptFragment: '마우스뿐 아니라 키보드 자판으로도 연주할 수 있게 해.' },
-        { id: 'tempo', label: '빠르기 조절', icon: '🏃', promptFragment: '연주 빠르기(템포)를 조절할 수 있는 버튼을 넣어.' },
+        { id: 'clap', label: '박수 챌린지 — 빛나는 리듬 따라 두드리기', icon: '👏', promptFragment: '화면에 빛나는 리듬 패턴이 표시되고 박수(클릭/탭)로 따라 치는 박수 챌린지 모드를 넣어.' },
         { id: 'nothing', label: '없어도 돼', icon: '👍', promptFragment: '' },
       ],
     },
