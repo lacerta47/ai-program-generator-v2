@@ -5,8 +5,9 @@ import { ArrowLeft, ArrowRight, Wand2, X } from 'lucide-react';
 import Modal from '@/components/ui/Modal';
 import Button from '@/components/ui/Button';
 
-// 페이지마다 파스텔 분위기를 바꿔 아기자기하게(라이트/다크 모두 토큰이 적응)
-const ACCENTS = ['bg-brand-soft', 'bg-mint-soft', 'bg-sunshine-soft'];
+// 페이지마다 파스텔 분위기를 바꿔 아기자기하게(라이트/다크 모두 토큰이 적응).
+// 3장: 라이트는 밝은 노랑(완성 축하 느낌), 다크는 노랑이 저명도에서 갈색이 되어 grape(plum)로 교체.
+const ACCENTS = ['bg-brand-soft', 'bg-mint-soft', 'bg-sunshine-soft dark:bg-grape-soft'];
 const TOTAL = 3;
 
 // 둥둥 떠다니는 모션(전역 keyframes 재사용; prefers-reduced-motion 가드는 globals.css가 처리)
