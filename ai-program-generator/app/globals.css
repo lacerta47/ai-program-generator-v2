@@ -282,6 +282,29 @@ textarea {
 }
 .lift:hover { transform: translateY(-2px); }
 
+/* LUN 워드마크 반짝임 — 잉크색 글자 위로 브랜드색 빛줄기가 흐름(background-clip: text) */
+@keyframes lun-shine {
+  to { background-position: -150% center; }
+}
+.lun-shiny {
+  background: linear-gradient(110deg, var(--ink) 42%, var(--brand) 50%, var(--ink) 58%);
+  background-size: 250% 100%;
+  background-position: 150% center;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  animation: lun-shine 10s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .lun-shiny {
+    animation: none;
+    background: none;
+    color: var(--ink);
+    -webkit-text-fill-color: var(--ink);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;

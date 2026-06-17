@@ -177,7 +177,7 @@ export default function BoardView() {
       setLoginOpen(true);
       return;
     }
-    router.push(`/?fork=${post.id}`);
+    router.push(`/create?fork=${post.id}`);
   }
 
   // 좋아요 토글 시 목록·선택 게시물의 likeCount를 즉시 동기화

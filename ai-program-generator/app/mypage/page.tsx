@@ -261,7 +261,7 @@ function MyWorks({ uid }: { uid: string }) {
             아직 만든 작품이 없어요.
             <br />첫 작품을 만들어 볼까요?
           </p>
-          <Link href="/" className="press rounded-full bg-brand px-4 py-2 text-[14px] text-white">
+          <Link href="/create" className="press rounded-full bg-brand px-4 py-2 text-[14px] text-white">
             만들러 가기
           </Link>
         </div>
@@ -297,7 +297,7 @@ function MyWorks({ uid }: { uid: string }) {
               </div>
               <div className="mt-auto flex flex-wrap justify-end gap-1.5">
                 <Link
-                  href={`/?edit=${post.id}`}
+                  href={`/create?edit=${post.id}`}
                   className="press inline-flex items-center gap-1 rounded-full border-2 border-line px-2.5 py-1 text-[13px] hover:border-brand/50"
                 >
                   <Pencil size={14} aria-hidden /> 고치기
