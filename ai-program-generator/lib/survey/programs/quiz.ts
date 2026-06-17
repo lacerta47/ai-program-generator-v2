@@ -1,4 +1,5 @@
 import type { ProgramType } from '../types';
+import { AI_PICK } from '../types';
 
 export const quiz: ProgramType = {
   id: 'quiz',
@@ -8,7 +9,8 @@ export const quiz: ProgramType = {
     '문제를 하나씩 보여주고 보기 중에 답을 고르면 맞았는지 알려주는 퀴즈 게임 웹 프로그램을 만들어줘. ' +
     '점수를 세고 마지막에 결과를 보여줘. 문제는 예시로 충분히 채워 넣어. ' +
     '켜자마자 바로 시작할 수 있는 완성형으로 만들어.',
-  buildName: (a) => (typeof a.topic === 'string' ? `${a.topic} 퀴즈` : '나의 퀴즈'),
+  buildName: (a) =>
+    typeof a.topic === 'string' && a.topic !== AI_PICK ? `${a.topic} 퀴즈` : '나의 퀴즈',
   steps: [
     // STEP 1 — 주제
     {
