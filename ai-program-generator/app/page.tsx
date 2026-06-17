@@ -1,5 +1,6 @@
 import { Chakra_Petch } from 'next/font/google';
 import LandingNav from '@/components/landing/LandingNav';
+import LandingGuards from '@/components/landing/LandingGuards';
 
 // LUN 워드마크 글꼴(각진 테크 느낌)
 const chakra = Chakra_Petch({ weight: '700', subsets: ['latin'] });
@@ -7,6 +8,8 @@ const chakra = Chakra_Petch({ weight: '700', subsets: ['latin'] });
 export default function Home() {
   return (
     <main className="relative flex min-h-screen flex-col items-center justify-center px-6 text-center">
+      <LandingGuards />
+
       <div className="absolute right-4 top-4 z-20">
         <LandingNav />
       </div>
