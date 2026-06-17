@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAIProvider } from '@/lib/ai/provider';
-import { SYSTEM_PROMPTS, type SystemPromptVariant } from '@/lib/ai/prompts';
+import { SYSTEM_PROMPTS, MODIFY_SYSTEM_SUFFIX, type SystemPromptVariant } from '@/lib/ai/prompts';
 import type { GenerateMode } from '@/lib/ai/types';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { todayKeyKST } from '@/lib/usageDay';
@@ -97,7 +97,12 @@ export async function POST(req: NextRequest) {
   // 4) 생성 — 실패 시 선점한 한도를 환불
   try {
     const provider = getAIProvider();
-    const code = await provider.generate({ prompt, system: SYSTEM_PROMPTS[promptVariant], mode });
+    // 수정 모드에서는 "요청한 부분만 바꾸고 나머지는 보존하라"는 지시를 시스템 프롬프트에 덧붙인다.
+    const system =
+      mode === 'modify'
+        ? SYSTEM_PROMPTS[promptVariant] + MODIFY_SYSTEM_SUFFIX
+        : SYSTEM_PROMPTS[promptVariant];
+    const code = await provider.generate({ prompt, system, mode });
     return NextResponse.json(code);
   } catch (e) {
     console.error('[/api/generate] 실패:', e);
