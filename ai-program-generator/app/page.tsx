@@ -1,4 +1,5 @@
 import ThemeToggle from '@/components/common/ThemeToggle';
+import LandingParticles from '@/components/fx/LandingParticles';
 
 // 기능으로 가는 깔끔한 링크(아이콘 없이). 전체 새로고침 위해 일반 <a>.
 const LINK =
@@ -6,12 +7,14 @@ const LINK =
 
 export default function Home() {
   return (
-    <main className="relative flex min-h-screen flex-col items-center justify-center px-6 text-center">
-      <div className="absolute right-4 top-4">
+    <main className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden px-6 text-center">
+      <LandingParticles />
+
+      <div className="absolute right-4 top-4 z-20">
         <ThemeToggle />
       </div>
 
-      <div className="anim-pop-in flex flex-col items-center">
+      <div className="anim-pop-in relative z-10 flex flex-col items-center">
         <h1 className="font-display text-[84px] leading-none tracking-tight text-ink sm:text-[136px]">
           LUN
         </h1>
