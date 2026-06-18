@@ -23,6 +23,26 @@ export async function putPreview(doc: string): Promise<string> {
   return id;
 }
 
+/**
+ * 만료된 미리보기 문서를 일괄 삭제(스케줄 cron용). 한 번에 최대 maxDocs건까지 배치 삭제.
+ * putPreview의 기회적 청소(쓰기당 20건)만으로는 한산할 때 만료분이 쌓이므로, 주기적 정리로 보강.
+ * exp 단일필드 범위쿼리라 자동 인덱스 사용(복합 인덱스 불필요).
+ */
+export async function deleteExpiredPreviews(maxDocs = 5000): Promise<number> {
+  const now = Date.now();
+  let deleted = 0;
+  while (deleted < maxDocs) {
+    const snap = await adminDb.collection(COL).where('exp', '<', now).limit(450).get();
+    if (snap.empty) break;
+    const batch = adminDb.batch();
+    snap.docs.forEach((d) => batch.delete(d.ref));
+    await batch.commit();
+    deleted += snap.size;
+    if (snap.size < 450) break; // 마지막 배치
+  }
+  return deleted;
+}
+
 export async function getPreview(id: string): Promise<string | null> {
   if (!/^[0-9a-f-]{36}$/.test(id)) return null;
   const snap = await adminDb.collection(COL).doc(id).get();
