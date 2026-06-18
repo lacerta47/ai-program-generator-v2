@@ -11,12 +11,12 @@ import {
   updateDoc,
   deleteDoc,
   doc,
-  increment,
   type QueryDocumentSnapshot,
   type DocumentData,
 } from 'firebase/firestore';
 import { db } from './client';
 import { assertClean } from '@/lib/moderation';
+import { forkPost } from '@/lib/client/postCount';
 import type { Post, NewPost, PostEdit } from './types';
 
 const COL = 'posts';
@@ -92,7 +92,7 @@ export async function deletePost(id: string): Promise<void> {
   await deleteDoc(doc(db, COL, id));
 }
 
-/** 이어 만들기 저장 시 원본의 forkCount +1 */
+/** 이어 만들기 저장 시 원본의 forkCount +1 — 서버 API로(클라 직접 쓰기는 규칙 차단) */
 export async function incrementForkCount(postId: string): Promise<void> {
-  await updateDoc(doc(db, COL, postId), { forkCount: increment(1) });
+  await forkPost(postId);
 }
