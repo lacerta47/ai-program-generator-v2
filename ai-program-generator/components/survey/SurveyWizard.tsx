@@ -307,8 +307,9 @@ export default function SurveyWizard() {
     setStepIdx(steps.length);
   }
 
-  // 결과 화면
-  if (hasCode && type) {
+  // 결과 화면 — 단, 고치는 중(busy)이면 건너뛰고 아래 busy 화면을 보여준다.
+  // (modify는 hasCode가 이미 true라, !busy 가드 없으면 로딩 피드백이 안 떠 '안 눌린 것'처럼 보임)
+  if (hasCode && type && !busy) {
     return (
       <div className="mx-auto max-w-4xl">
         <div className="mb-3 flex items-center justify-between gap-2">
