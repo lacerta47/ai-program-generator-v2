@@ -10,12 +10,12 @@ export default function Header({ active }: { active?: 'creator' | 'board' | 'sur
         {/* 일반 <a>로 전체 새로고침 (Link는 클라이언트 라우팅이라 새로고침이 안 됨) */}
         <a
           href="/"
-          className="group flex items-center gap-2.5 font-display text-[22px] text-ink sm:text-[24px]"
+          className="group flex items-center gap-2.5 text-[24px] sm:text-[27px]"
         >
           <span className="hover-wiggle grid h-11 w-11 place-items-center rounded-[14px] bg-brand text-brand-ink">
             <Wand2 size={22} strokeWidth={2.2} />
           </span>
-          <span>LUN</span>
+          <span className="lun-shiny font-wordmark">LUN</span>
         </a>
         <nav className="flex shrink-0 items-center gap-1.5 sm:gap-2">
           <GlowNavLink href="/create" active={active === 'creator'}>

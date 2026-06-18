@@ -1,9 +1,5 @@
-import { Chakra_Petch } from 'next/font/google';
 import LandingNav from '@/components/landing/LandingNav';
 import LandingGuards from '@/components/landing/LandingGuards';
-
-// LUN 워드마크 글꼴(각진 테크 느낌)
-const chakra = Chakra_Petch({ weight: '700', subsets: ['latin'] });
 
 export default function Home() {
   return (
@@ -17,7 +13,7 @@ export default function Home() {
       {/* LUN — 반짝임 + 호버하면 아래로 확장 문구 표시 */}
       <div className="group anim-pop-in flex flex-col items-center">
         <h1 className="text-[125px] leading-none sm:text-[216px]">
-          <span className={`lun-shiny ${chakra.className}`}>LUN</span>
+          <span className="lun-shiny font-wordmark">LUN</span>
         </h1>
         <p className="mt-3 -translate-y-1 text-[13px] font-medium uppercase tracking-[0.4em] text-brand-strong opacity-0 transition-all duration-[600ms] group-hover:translate-y-0 group-hover:opacity-100 dark:text-brand">
           Logic&nbsp;·&nbsp;Unfold&nbsp;·&nbsp;Next
