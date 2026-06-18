@@ -8,7 +8,8 @@ import { AI_PICK } from '@/lib/survey/types';
 import { PROGRAM_TYPES } from '@/lib/survey/programs';
 import { visibleSteps, assemblePrompt, surveyToPlan } from '@/lib/survey/assemble';
 import { buildFixRequest } from '@/lib/survey/fixes';
-import { requestGenerate } from '@/lib/client/generate';
+import { requestGenerateStream } from '@/lib/client/generate';
+import { currentStage, STAGE_LABEL_EASY } from '@/lib/ai/streamStages';
 import { buildModifyPrompt } from '@/components/creator/prompts';
 import { useAuth } from '@/components/auth/AuthProvider';
 import LoginDialog from '@/components/auth/LoginDialog';
@@ -30,29 +31,13 @@ const EMPTY_CODE: GeneratedCode = { html: '', css: '', javascript: '' };
 // 수정 후 복귀 지점을 '마지막 만들기 화면'으로 나타내는 센티넬(단계 id와 겹치지 않음)
 const FINISH = '__finish__';
 
-const BUILD_MESSAGES = [
-  '고른 걸 읽고 있어요…',
-  '어떻게 만들지 생각하는 중…',
-  '화면을 그리고 있어요…',
-  '버튼에 마법을 거는 중…',
-  '거의 다 됐어요!',
-];
-
-const FIX_MESSAGES = [
-  '어디를 고칠지 찾는 중…',
-  '코드를 살펴보고 있어요…',
-  '말한 대로 고치는 중…',
-  '새 모습을 입히는 중…',
-  '거의 다 됐어요!',
-];
-
 export default function SurveyWizard() {
   const [type, setType] = useState<ProgramType | null>(null);
   const [answers, setAnswers] = useState<SurveyAnswers>({});
   const [stepIdx, setStepIdx] = useState(0);
   const [editReturn, setEditReturn] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [buildMsg, setBuildMsg] = useState(BUILD_MESSAGES[0]);
+  const [buildMsg, setBuildMsg] = useState('AI가 준비하고 있어요…');
   const [code, setCode] = useState<GeneratedCode>(EMPTY_CODE);
   // 저장/공유용 프롬프트 — 생성 시 조립 프롬프트로 시작, '고치기'마다 요청을 누적
   const [genPrompt, setGenPrompt] = useState('');
@@ -206,15 +191,10 @@ export default function SurveyWizard() {
     setFixText('');
   }
 
-  // busy 화면 메시지를 2.5초마다 순환 — 시작 후 멈춤 함수를 돌려준다
-  function startBuildMessages(messages: string[]) {
-    let i = 0;
-    setBuildMsg(messages[0]);
-    const id = window.setInterval(() => {
-      i = (i + 1) % messages.length;
-      setBuildMsg(messages[i]);
-    }, 2500);
-    return () => window.clearInterval(id);
+  // 스트리밍 도착 필드 → 저학년용 단계 문구(타이머 아님, 진짜 진행)
+  function onStageDelta(p: Partial<{ html: string; css: string; javascript: string }>) {
+    const s = currentStage(p);
+    if (s) setBuildMsg(STAGE_LABEL_EASY[s]);
   }
 
   async function generate() {
@@ -226,13 +206,16 @@ export default function SurveyWizard() {
       return;
     }
     setBusy(true);
+    setBuildMsg('AI가 준비하고 있어요…');
     const ctrl = new AbortController();
     abortRef.current = ctrl;
-    const stop = startBuildMessages(BUILD_MESSAGES);
     try {
       const prompt = assemblePrompt(type, answers);
       setGenPrompt(prompt);
-      const result = await requestGenerate(prompt, 'generate', 'survey', ctrl.signal);
+      const result = await requestGenerateStream(prompt, 'generate', 'survey', {
+        signal: ctrl.signal,
+        onDelta: onStageDelta,
+      });
       setCode(result);
       setPreviewKey((k) => k + 1);
       toast('우와! 멋진 걸 만들었어요!', 'success');
@@ -242,7 +225,6 @@ export default function SurveyWizard() {
         toast(e instanceof Error ? e.message : '만들다가 문제가 생겼어요. 다시 해볼까요?');
       }
     } finally {
-      stop();
       abortRef.current = null;
       setBusy(false);
     }
@@ -263,12 +245,15 @@ export default function SurveyWizard() {
     // 저장/공유 프롬프트에 고치기 요청을 누적(게시물 prompt 한도 대비 클램프)
     setGenPrompt((prev) => `${prev}\n\n[고치기 요청]: ${request}`.slice(-40000));
     setBusy(true);
+    setBuildMsg('AI가 준비하고 있어요…');
     const ctrl = new AbortController();
     abortRef.current = ctrl;
-    const stop = startBuildMessages(FIX_MESSAGES);
     try {
       const prompt = buildModifyPrompt(surveyToPlan(type, answers), code, request);
-      const result = await requestGenerate(prompt, 'modify', 'survey', ctrl.signal);
+      const result = await requestGenerateStream(prompt, 'modify', 'survey', {
+        signal: ctrl.signal,
+        onDelta: onStageDelta,
+      });
       setCode(result);
       setPreviewKey((k) => k + 1);
       setFixPicks([]);
@@ -279,7 +264,6 @@ export default function SurveyWizard() {
         toast(e instanceof Error ? e.message : '고치다가 문제가 생겼어요. 다시 해볼까요?');
       }
     } finally {
-      stop();
       abortRef.current = null;
       setBusy(false);
     }
