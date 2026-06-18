@@ -108,8 +108,9 @@ export default function ResultPanel({
                 {liveCode && stage ? (
                   <CodeView code={liveCode} language={stage} skipFormat className="h-full min-h-[44vh] bg-surface" />
                 ) : (
-                  <div className="flex h-full items-center justify-center">
+                  <div className="flex h-full flex-col items-center justify-center gap-5">
                     <BuilderBot />
+                    <LoadingDots label={stage ? STAGE_LABEL[stage] : 'AI가 준비하고 있어요…'} />
                   </div>
                 )}
               </div>
