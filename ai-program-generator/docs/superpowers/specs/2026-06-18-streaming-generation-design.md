@@ -122,7 +122,7 @@ export async function requestGenerateStream(
 
 ## 의존성
 - 추가: `best-effort-json-parser`(부분-JSON 파싱, 무 transitive, ~1KB).
-- 추가: `prismjs`(구문강조 — `markup`/`css`/`javascript` 컴포넌트만, 차분한 라이트/다크 테마). 누적 코드에 **throttle 재강조**(rAF/≈100ms)로 jank 방지.
+- 구문강조: **신규 의존성 없음.** 기존 `components/ui/CodeView.tsx`(highlight.js + Prettier + 줄번호 + globals.css 토큰색) 재사용. 스트리밍 중엔 Prettier가 미완성 코드에서 실패하므로 `skipFormat` prop으로 정렬만 생략하고 즉시 강조. (구현 중 발견 — 스펙의 prismjs 계획 대체.)
 
 ## 파일별 영향
 | 파일 | 변경 |
@@ -136,8 +136,8 @@ export async function requestGenerateStream(
 | `components/creator/Creator.tsx` | 스트리밍 상태(`streamingPartial`/`streamStage`)·onDelta·취소·탭 전환 |
 | `components/creator/ResultPanel.tsx` | 개념 내레이션 배너 + 구문강조 라이브 코드(throttle·자동 스크롤)·취소 버튼·busy UI |
 | `components/survey/SurveyWizard.tsx` | 공유 `streamStages` 기반 3단계 진행 신호·취소 |
-| `components/ui/CodeBlock.tsx`(또는 ResultPanel 내부) | **신규/확장** — Prism 구문강조 코드 표시(라이트/다크·대비) |
-| `package.json` | `best-effort-json-parser`, `prismjs`(+타입) 추가 |
+| `components/ui/CodeView.tsx` | `skipFormat` prop 추가(스트리밍 즉시 강조) — 기존 highlight.js 재사용 |
+| `package.json` | `best-effort-json-parser` 추가(prismjs 불채택) |
 
 ## 에러 처리 요약
 - **시작 전**(인증/검증/한도): 상태코드 JSON(기존 동일).

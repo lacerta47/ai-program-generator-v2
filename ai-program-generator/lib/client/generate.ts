@@ -61,13 +61,3 @@ export async function requestGenerateStream(
   if (!final) throw new Error('생성 결과를 받지 못했어요. 다시 해볼까요?');
   return final;
 }
-
-/** 하위호환: 스트림을 끝까지 소비해 최종만 반환(부분 표시 없음). */
-export async function requestGenerate(
-  prompt: string,
-  mode: GenerateMode,
-  variant: SystemPromptVariant = 'default',
-  signal?: AbortSignal,
-): Promise<GeneratedCode> {
-  return requestGenerateStream(prompt, mode, variant, { signal });
-}
