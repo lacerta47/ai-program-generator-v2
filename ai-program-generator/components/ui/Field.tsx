@@ -42,7 +42,7 @@ export function Label({
 }) {
   return (
     <label className="flex flex-col gap-1.5">
-      <span className="inline-flex items-center gap-1 text-[20px] font-medium text-muted">
+      <span className="inline-flex items-center gap-1 font-display text-[20px] font-normal text-muted">
         {text} {required && <span className="text-coral">*</span>}
         {tip && <HelpTip>{tip}</HelpTip>}
       </span>
