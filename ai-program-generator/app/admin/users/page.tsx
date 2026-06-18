@@ -24,6 +24,7 @@ import LoadingDots from '@/components/ui/LoadingDots';
 import Modal from '@/components/ui/Modal';
 import { patchUser, deleteUserAccount } from '@/lib/admin/accounts';
 import { useToast } from '@/components/ui/Toast';
+import { useConfirm } from '@/components/ui/ConfirmProvider';
 import { sendPasswordResetEmail } from 'firebase/auth';
 import { auth } from '@/lib/firebase/client';
 
@@ -294,6 +295,7 @@ function UserActionModal({
   onChanged: () => void;
 }) {
   const { toast } = useToast();
+  const confirm = useConfirm();
   const [busy, setBusy] = useState(false);
   const [limitInput, setLimitInput] = useState(
     member.limitOverride !== null ? String(member.limitOverride) : '',
@@ -443,8 +445,16 @@ function UserActionModal({
             variant="primary"
             disabled={busy}
             className="!bg-coral !text-white hover:!brightness-95"
-            onClick={() => {
-              if (!confirm(`'${member.nickname ?? member.email}' 계정과 그 작품을 영구 삭제할까요? 되돌릴 수 없어요.`)) return;
+            onClick={async () => {
+              if (
+                !(await confirm({
+                  title: '계정을 영구 삭제할까요?',
+                  message: `'${member.nickname ?? member.email}' 계정과 그 작품을 영구 삭제해요. 되돌릴 수 없어요.`,
+                  confirmLabel: '영구 삭제',
+                  danger: true,
+                }))
+              )
+                return;
               act(() => deleteUserAccount(member.uid), '계정을 삭제했어요.');
             }}
           >

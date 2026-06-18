@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { Pencil, Download, Link2, Check, Trash2, Heart, Eye, GitFork, Sparkles } from 'lucide-react';
 import { useAuth } from '@/components/auth/AuthProvider';
 import { useToast } from '@/components/ui/Toast';
+import { useConfirm } from '@/components/ui/ConfirmProvider';
 import { auth } from '@/lib/firebase/client';
 import { fetchMyPosts, deletePost } from '@/lib/firebase/posts';
 import {
@@ -206,6 +207,7 @@ function AccountCard({
 
 function MyWorks({ uid }: { uid: string }) {
   const { toast } = useToast();
+  const confirm = useConfirm();
   const [posts, setPosts] = useState<Post[] | null>(null);
   const [error, setError] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
@@ -229,7 +231,7 @@ function MyWorks({ uid }: { uid: string }) {
   }, [uid, reloadKey]);
 
   async function handleDelete(post: Post) {
-    if (!confirm(`'${post.title}' 작품을 삭제할까요? 되돌릴 수 없어요.`)) return;
+    if (!(await confirm({ title: '작품을 삭제할까요?', message: `'${post.title}' 작품을 삭제해요. 되돌릴 수 없어요.`, confirmLabel: '삭제', danger: true }))) return;
     try {
       await deletePost(post.id);
       setPosts((prev) => prev?.filter((p) => p.id !== post.id) ?? null);

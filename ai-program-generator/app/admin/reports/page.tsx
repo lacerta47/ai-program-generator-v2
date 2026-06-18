@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Trash2, Check, ExternalLink } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
+import { useConfirm } from '@/components/ui/ConfirmProvider';
 import { fetchReports, dismissReportsForPost, type Report } from '@/lib/firebase/reports';
 import { deletePost } from '@/lib/firebase/posts';
 import { formatDate } from '@/lib/program';
@@ -49,6 +50,7 @@ export default function ReportsPage() {
 
 function ReportsContent() {
   const { toast } = useToast();
+  const confirm = useConfirm();
   const [reports, setReports] = useState<Report[] | null>(null);
 
   useEffect(() => {
@@ -61,7 +63,7 @@ function ReportsContent() {
   }, []);
 
   async function handleDelete(postId: string) {
-    if (!confirm('이 작품을 삭제할까요? 되돌릴 수 없어요.')) return;
+    if (!(await confirm({ title: '작품을 삭제할까요?', message: '신고된 이 작품을 삭제해요. 되돌릴 수 없어요.', confirmLabel: '삭제', danger: true }))) return;
     try {
       await deletePost(postId);
       await dismissReportsForPost(postId);

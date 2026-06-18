@@ -16,10 +16,12 @@ import LoginDialog from '@/components/auth/LoginDialog';
 import LoadingDots from '@/components/ui/LoadingDots';
 import Button from '@/components/ui/Button';
 import { useToast } from '@/components/ui/Toast';
+import { useConfirm } from '@/components/ui/ConfirmProvider';
 
 export default function BoardView() {
   const { user, isAdmin } = useAuth();
   const { toast } = useToast();
+  const confirm = useConfirm();
   const router = useRouter();
   const params = useSearchParams();
 
@@ -201,7 +203,7 @@ export default function BoardView() {
   }
 
   async function handleDelete(post: Post) {
-    if (!confirm(`'${post.title}' 게시물을 삭제할까요?`)) return;
+    if (!(await confirm({ title: '게시물을 삭제할까요?', message: `'${post.title}' 게시물을 삭제해요. 되돌릴 수 없어요.`, confirmLabel: '삭제', danger: true }))) return;
     try {
       await deletePost(post.id);
       setPosts((prev) => prev.filter((p) => p.id !== post.id));

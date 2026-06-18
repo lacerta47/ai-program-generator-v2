@@ -4,6 +4,7 @@ import './globals.css';
 import { ThemeProvider } from '@/components/common/ThemeProvider';
 import { AuthProvider } from '@/components/auth/AuthProvider';
 import { ToastProvider } from '@/components/ui/Toast';
+import { ConfirmProvider } from '@/components/ui/ConfirmProvider';
 
 const jua = Jua({ weight: '400', subsets: ['latin'], variable: '--font-jua', display: 'swap' });
 const gowun = Gowun_Dodum({ weight: '400', subsets: ['latin'], variable: '--font-gowun', display: 'swap' });
@@ -28,7 +29,9 @@ export default function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
         <ThemeProvider>
           <ToastProvider>
-            <AuthProvider>{children}</AuthProvider>
+            <AuthProvider>
+              <ConfirmProvider>{children}</ConfirmProvider>
+            </AuthProvider>
           </ToastProvider>
         </ThemeProvider>
       </body>
