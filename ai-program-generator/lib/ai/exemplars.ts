@@ -16,6 +16,9 @@ export interface Exemplar {
 /** 참고 예시 코드 각 필드의 최대 길이(자). 초과분은 잘라 생략 마커를 붙인다. */
 export const EXEMPLAR_CODE_CAP = 4000;
 
+/** 참고 예시 계획서 각 필드의 최대 길이(자). 프롬프트 비용을 완전히 bounded로 유지. */
+export const EXEMPLAR_PLAN_CAP = 1000;
+
 /** 한 필드를 상한으로 축약. 잘렸으면 끝에 생략 마커를 붙인다. */
 export function truncateField(s: unknown, cap: number = EXEMPLAR_CODE_CAP): string {
   if (typeof s !== 'string') return '';
@@ -39,16 +42,17 @@ export function truncateCode(code: GeneratedCode, cap: number = EXEMPLAR_CODE_CA
  */
 export function buildExemplarBlock(ex: Exemplar): string {
   const { plan } = ex;
-  // 방어적 축약: 저장 시점에 이미 축약되지만, 혹시 미축약 code가 들어와도 프롬프트가 폭주하지 않게 한 번 더 보장.
+  // 방어적 축약: 저장 시점에 이미 축약되지만, 혹시 미축약 code/plan이 들어와도 프롬프트가 폭주하지 않게 한 번 더 보장.
   const code = truncateCode(ex.code);
+  const p = (s: unknown) => truncateField(s, EXEMPLAR_PLAN_CAP);
   return `아래는 완성도 높은 "참고 예시"입니다. 그대로 베끼지 말고, 이 정도의 완성도·짜임새를 기준으로 삼으세요. (예시 코드는 축약·생략되어 있을 수 있습니다.)
 
 [참고 예시 — 계획서]
-- 이름: ${plan.name}
-- 모습: ${plan.look}
-- 사용법: ${plan.usage}
-- 동작: ${plan.how}
-- 기타: ${plan.etc}
+- 이름: ${p(plan.name)}
+- 모습: ${p(plan.look)}
+- 사용법: ${p(plan.usage)}
+- 동작: ${p(plan.how)}
+- 기타: ${p(plan.etc)}
 
 [참고 예시 — 결과 코드(축약)]
 HTML:
