@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAIProvider } from '@/lib/ai/provider';
-import { SYSTEM_PROMPTS, type SystemPromptVariant } from '@/lib/ai/prompts';
+import { SYSTEM_PROMPTS, MODIFY_SYSTEM_SUFFIX, type SystemPromptVariant } from '@/lib/ai/prompts';
+import { getExemplar } from '@/lib/admin/exemplars';
+import { buildExemplarBlock } from '@/lib/ai/exemplars';
 import type { GenerateMode } from '@/lib/ai/types';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { todayKeyKST } from '@/lib/usageDay';
@@ -97,7 +99,17 @@ export async function POST(req: NextRequest) {
   // 4) 생성 — 실패 시 선점한 한도를 환불
   try {
     const provider = getAIProvider();
-    const code = await provider.generate({ prompt, system: SYSTEM_PROMPTS[promptVariant], mode });
+    let system = SYSTEM_PROMPTS[promptVariant];
+    let finalPrompt = prompt;
+    if (mode === 'modify') {
+      // 수정 모드: 요청한 부분만 바꾸고 나머지 코드·제약을 보존하라는 지시를 덧붙인다.
+      system = SYSTEM_PROMPTS[promptVariant] + MODIFY_SYSTEM_SUFFIX;
+    } else {
+      // 생성 모드: 해당 variant에 승인된 참고 예시가 있으면 프롬프트 앞에 붙여 완성도 floor를 올린다.
+      const exemplar = await getExemplar(promptVariant);
+      if (exemplar) finalPrompt = buildExemplarBlock(exemplar) + prompt;
+    }
+    const code = await provider.generate({ prompt: finalPrompt, system, mode });
     return NextResponse.json(code);
   } catch (e) {
     console.error('[/api/generate] 실패:', e);

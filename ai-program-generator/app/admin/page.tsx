@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { Flag, Users, ChevronRight, UserPlus, FolderTree } from 'lucide-react';
+import { Flag, Users, ChevronRight, UserPlus, FolderTree, Sparkles } from 'lucide-react';
 import { countReports } from '@/lib/firebase/reports';
 import Header from '@/components/common/Header';
 import AdminGate from '@/components/admin/AdminGate';
@@ -54,6 +54,12 @@ function HubContent() {
           icon={<FolderTree size={22} aria-hidden />}
           title="게시판 관리"
           desc="중첩 게시판 만들기·이름·순서·삭제"
+        />
+        <HubCard
+          href="/admin/exemplars"
+          icon={<Sparkles size={22} aria-hidden />}
+          title="생성 예시"
+          desc="생성 품질용 참고 예시 지정"
         />
       </div>
     </div>

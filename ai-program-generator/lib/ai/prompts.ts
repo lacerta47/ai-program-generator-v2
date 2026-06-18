@@ -51,3 +51,14 @@ export const SYSTEM_PROMPTS: Record<SystemPromptVariant, string> = {
   default: DEFAULT_SYSTEM_PROMPT,
   survey: SURVEY_SYSTEM_PROMPT,
 };
+
+// 수정(modify) 모드 전용 지시. 위 시스템 프롬프트는 '새로 만들기' 톤이라,
+// 수정인데도 코드를 통째로 다시 써 요청 안 한 부분까지 바꾸거나 기존 동작을 회귀시킬 수 있다.
+// 그래서 mode === 'modify'일 때만 이 블록을 시스템 프롬프트 뒤에 덧붙인다(route에서 조립).
+export const MODIFY_SYSTEM_SUFFIX = `
+
+**수정 모드 지시 (가장 중요)**:
+- 지금은 '새로 만들기'가 아니라 '기존 코드 수정'입니다. 사용자가 요청한 부분만 바꾸고, 요청과 무관한 HTML/CSS/JavaScript와 기존 동작·구조·디자인은 그대로 보존하세요.
+- 기존 코드를 처음부터 다시 쓰지 말고 꼭 필요한 부분만 최소한으로 고치세요. 멀쩡히 동작하던 기능을 없애거나 망가뜨리지 마세요(회귀 금지).
+- 위의 실행 환경 제약(alert·confirm·prompt 금지, storage는 try-catch, 무한 루프 금지)과 코드 형식·초등 타깃 배려는 수정 후에도 계속 지켜야 합니다.
+- 출력은 동일하게 html·css·javascript 세 키의 순수 JSON이며, 세 항목 모두 수정이 반영된 '완전한 전체 코드'로 반환하세요(생략·부분·diff 출력 금지).`;
