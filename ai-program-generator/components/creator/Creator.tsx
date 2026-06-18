@@ -216,7 +216,7 @@ export default function Creator() {
           <span className="grid h-10 w-10 place-items-center rounded-[12px] bg-brand-soft text-brand-strong dark:text-brand">
             <Lightbulb size={20} aria-hidden />
           </span>
-          <h2 className="text-[21px]">어떤 프로그램을 만들까요?</h2>
+          <h2 className="text-[25px]">어떤 프로그램을 만들까요?</h2>
         </div>
 
         <Label

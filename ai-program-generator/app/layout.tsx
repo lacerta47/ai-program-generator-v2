@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { Jua, Gowun_Dodum } from 'next/font/google';
+import { Jua, Gowun_Dodum, Chakra_Petch } from 'next/font/google';
 import './globals.css';
 import { ThemeProvider } from '@/components/common/ThemeProvider';
 import { AuthProvider } from '@/components/auth/AuthProvider';
@@ -7,6 +7,8 @@ import { ToastProvider } from '@/components/ui/Toast';
 
 const jua = Jua({ weight: '400', subsets: ['latin'], variable: '--font-jua', display: 'swap' });
 const gowun = Gowun_Dodum({ weight: '400', subsets: ['latin'], variable: '--font-gowun', display: 'swap' });
+// LUN 워드마크 글꼴(각진 테크) — 랜딩·헤더 로고 공용
+const chakra = Chakra_Petch({ weight: '700', subsets: ['latin'], variable: '--font-wordmark', display: 'swap' });
 
 export const metadata: Metadata = {
   title: 'LUN — Logic Unfold Next',
@@ -21,7 +23,7 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     // 테마 스크립트가 하이드레이션 전에 .dark를 붙이므로 html 속성 경고는 억제
-    <html lang="ko" suppressHydrationWarning className={`${jua.variable} ${gowun.variable}`}>
+    <html lang="ko" suppressHydrationWarning className={`${jua.variable} ${gowun.variable} ${chakra.variable}`}>
       <body className="antialiased">
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
         <ThemeProvider>

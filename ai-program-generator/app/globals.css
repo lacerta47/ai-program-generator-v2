@@ -32,13 +32,13 @@
 }
 
 .dark {
-  /* 중립 팔레트: MUI 다크 참고(순수 중립 #121212 계열, 흰색 투명도 글자·선) */
-  --bg: oklch(0.16 0 0);
-  --surface: oklch(0.205 0 0);
-  --surface-2: oklch(0.255 0 0);
+  /* 중립 팔레트: MUI 다크 참고. 가독성 위해 순수 검정보다 살짝 들어올린 중립 그레이. */
+  --bg: oklch(0.195 0 0);
+  --surface: oklch(0.245 0 0);
+  --surface-2: oklch(0.29 0 0);
   --ink: oklch(0.985 0 0);
-  --muted: oklch(0.72 0 0);
-  --line: oklch(1 0 0 / 0.12);
+  --muted: oklch(0.73 0 0);
+  --line: oklch(1 0 0 / 0.13);
   --brand: oklch(0.68 0.16 272);
   --brand-strong: oklch(0.74 0.15 272);
   --brand-ink: oklch(0.18 0.03 272);
@@ -80,6 +80,7 @@
   --radius-lg: var(--r-lg);
   --font-display: var(--font-jua);
   --font-body: var(--font-gowun);
+  --font-wordmark: var(--font-wordmark);
 }
 
 body {
