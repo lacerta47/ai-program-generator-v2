@@ -302,6 +302,9 @@ textarea {
   .lun-shiny {
     animation: none;
     background: none;
+    /* background-clip: text도 함께 풀어야 일부 엔진에서 글자가 투명해지지 않음 */
+    -webkit-background-clip: border-box;
+    background-clip: border-box;
     color: var(--ink);
     -webkit-text-fill-color: var(--ink);
   }
