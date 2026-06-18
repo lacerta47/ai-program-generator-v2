@@ -15,6 +15,7 @@ import {
 import Button from '@/components/ui/Button';
 import { TextInput } from '@/components/ui/Field';
 import { useToast } from '@/components/ui/Toast';
+import { useConfirm } from '@/components/ui/ConfirmProvider';
 
 const FAIL = '문제가 생겼어요. 인터넷 연결이나 권한을 확인하고 다시 해볼까요?';
 
@@ -26,6 +27,7 @@ export default function CategoryManager() {
   const [adding, setAdding] = useState<string | 'root' | null>(null); // 부모 id 또는 'root'
   const [addName, setAddName] = useState('');
   const { toast } = useToast();
+  const confirm = useConfirm();
 
   useEffect(() => subscribeCategories(setCategories, () => toast(FAIL)), [toast]);
 
@@ -95,9 +97,12 @@ export default function CategoryManager() {
 
   async function remove(node: CategoryNode) {
     if (
-      !confirm(
-        `'${node.name}'${node.children.length ? '과 그 안의 모든 하위 게시판' : ''}, 그리고 안의 모든 작품을 삭제할까요? 되돌릴 수 없어요.`,
-      )
+      !(await confirm({
+        title: '게시판을 삭제할까요?',
+        message: `'${node.name}'${node.children.length ? '과 그 안의 모든 하위 게시판' : ''}, 그리고 안의 모든 작품을 삭제해요. 되돌릴 수 없어요.`,
+        confirmLabel: '삭제',
+        danger: true,
+      }))
     )
       return;
     try {
