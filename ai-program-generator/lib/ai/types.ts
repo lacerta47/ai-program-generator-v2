@@ -19,6 +19,14 @@ export interface GeneratedCode {
   javascript: string;
 }
 
+/** 스트리밍 청크: 진행 중 부분 코드(delta) → 검증 통과한 최종(done). */
+export type GenerationChunk =
+  | { type: 'delta'; partial: Partial<GeneratedCode> }
+  | { type: 'done'; code: GeneratedCode };
+
 export interface AIProvider {
+  /** 점진 생성: 부분 코드를 delta로 흘리고 마지막에 검증된 최종을 done으로 emit. */
+  generateStream(input: GenerateInput): AsyncIterable<GenerationChunk>;
+  /** 비스트리밍 편의: generateStream을 끝까지 소비해 최종만 반환. */
   generate(input: GenerateInput): Promise<GeneratedCode>;
 }
