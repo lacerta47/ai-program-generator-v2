@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Wand2, Lightbulb, Pencil } from 'lucide-react';
 import type { GeneratedCode } from '@/lib/ai/types';
 import { type PlanFields, EMPTY_PLAN } from '@/lib/firebase/types';
-import { requestGenerate } from '@/lib/client/generate';
+import { requestGenerateStream } from '@/lib/client/generate';
 import { updatePostContent } from '@/lib/firebase/posts';
 import { ProfanityError } from '@/lib/moderation';
 import { downloadProgram } from '@/lib/client/postActions';
@@ -27,27 +27,11 @@ type ResultTab = 'preview' | 'code';
 
 const EMPTY_CODE: GeneratedCode = { html: '', css: '', javascript: '' };
 
-const GENERATE_MESSAGES = [
-  '계획서를 읽고 있어요…',
-  '어떻게 만들지 생각하는 중…',
-  '화면을 그리고 있어요…',
-  '버튼에 마법을 거는 중…',
-  '거의 다 됐어요!',
-];
-
-const MODIFY_MESSAGES = [
-  '어디를 바꿀지 찾고 있어요…',
-  '코드를 살펴보는 중…',
-  '말한 대로 고치는 중…',
-  '새 모습을 입히는 중…',
-  '거의 다 됐어요!',
-];
-
 export default function Creator() {
   const [plan, setPlan] = useState<PlanFields>(EMPTY_PLAN);
   const [code, setCode] = useState<GeneratedCode>(EMPTY_CODE);
   const [loading, setLoading] = useState<'idle' | 'generating' | 'modifying'>('idle');
-  const [loadingMsg, setLoadingMsg] = useState(GENERATE_MESSAGES[0]);
+  const [streamingPartial, setStreamingPartial] = useState<Partial<GeneratedCode>>({});
   const [resultTab, setResultTab] = useState<ResultTab>('preview');
   const [modifyText, setModifyText] = useState('');
   const [exampleIndex, setExampleIndex] = useState(0);
@@ -62,6 +46,7 @@ export default function Creator() {
   const router = useRouter();
   const nameRef = useRef<HTMLInputElement>(null);
   const modifyRef = useRef<HTMLTextAreaElement>(null);
+  const abortRef = useRef<AbortController | null>(null);
   const hasCode = Boolean(code.html || code.css || code.javascript);
   const busy = loading !== 'idle';
 
@@ -104,14 +89,8 @@ export default function Creator() {
   const setField = (key: keyof PlanFields, value: string) =>
     setPlan((prev) => ({ ...prev, [key]: value }));
 
-  function startLoadingMessages(messages: string[]) {
-    let i = 0;
-    setLoadingMsg(messages[0]);
-    const id = window.setInterval(() => {
-      i = (i + 1) % messages.length;
-      setLoadingMsg(messages[i]);
-    }, 2500);
-    return () => window.clearInterval(id);
+  function handleCancel() {
+    abortRef.current?.abort();
   }
 
   async function handleGenerate() {
@@ -131,18 +110,27 @@ export default function Creator() {
     }
     const promptText = buildGeneratePrompt(plan);
     setGenPrompt(promptText);
+    setStreamingPartial({});
+    setResultTab('code'); // 스트림 중 코드 탭에서 라이브 표시
     setLoading('generating');
-    const stop = startLoadingMessages(GENERATE_MESSAGES);
+    const ctrl = new AbortController();
+    abortRef.current = ctrl;
     try {
-      const result = await requestGenerate(promptText, 'generate');
+      const result = await requestGenerateStream(promptText, 'generate', 'default', {
+        signal: ctrl.signal,
+        onDelta: setStreamingPartial,
+      });
       setCode(result);
       setResultTab('preview');
       setPreviewKey((k) => k + 1);
       toast('우와! 멋진 프로그램을 완성했어요!', 'success');
     } catch (e) {
-      toast(e instanceof Error ? e.message : '만들다가 문제가 생겼어요. 다시 해볼까요?');
+      if (!ctrl.signal.aborted && !(e instanceof Error && e.name === 'AbortError')) {
+        toast(e instanceof Error ? e.message : '만들다가 문제가 생겼어요. 다시 해볼까요?');
+      }
     } finally {
-      stop();
+      abortRef.current = null;
+      setStreamingPartial({});
       setLoading('idle');
     }
   }
@@ -165,18 +153,27 @@ export default function Creator() {
     setLoading('modifying');
     // 수정 이력을 누적하되, 게시물 prompt 필드 한도(50,000자, firestore.rules)를 넘지 않게 클램프
     setGenPrompt((prev) => `${prev}\n\n[수정 요청]: ${modifyText}`.slice(-40000));
-    const stop = startLoadingMessages(MODIFY_MESSAGES);
+    setStreamingPartial({});
+    setResultTab('code');
+    const ctrl = new AbortController();
+    abortRef.current = ctrl;
     try {
-      const result = await requestGenerate(buildModifyPrompt(plan, code, modifyText), 'modify');
+      const result = await requestGenerateStream(buildModifyPrompt(plan, code, modifyText), 'modify', 'default', {
+        signal: ctrl.signal,
+        onDelta: setStreamingPartial,
+      });
       setCode(result);
       setModifyText('');
       setResultTab('preview');
       setPreviewKey((k) => k + 1);
       toast('원하는 대로 고쳐봤어요!', 'success');
     } catch (e) {
-      toast(e instanceof Error ? e.message : '고치다가 문제가 생겼어요. 다시 해볼까요?');
+      if (!ctrl.signal.aborted && !(e instanceof Error && e.name === 'AbortError')) {
+        toast(e instanceof Error ? e.message : '고치다가 문제가 생겼어요. 다시 해볼까요?');
+      }
     } finally {
-      stop();
+      abortRef.current = null;
+      setStreamingPartial({});
       setLoading('idle');
     }
   }
@@ -303,7 +300,8 @@ export default function Creator() {
       {/* 오른쪽: 결과 */}
       <ResultPanel
         busy={busy}
-        loadingMsg={loadingMsg}
+        streamingPartial={streamingPartial}
+        onCancel={handleCancel}
         hasCode={hasCode}
         code={code}
         previewKey={previewKey}
