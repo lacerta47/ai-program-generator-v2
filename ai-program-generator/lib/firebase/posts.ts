@@ -52,16 +52,18 @@ export async function fetchPosts(categoryId: string, cursor?: PostCursor): Promi
   };
 }
 
-/** 내가 만든 작품 (ownerUid 기준, 최신순). 복합 인덱스 posts(ownerUid asc, createdAt desc) 필요. */
-export async function fetchMyPosts(uid: string, limitN = 50): Promise<Post[]> {
-  const q = query(
-    collection(db, COL),
-    where('ownerUid', '==', uid),
-    orderBy('createdAt', 'desc'),
-    limit(limitN),
-  );
+/** 내가 만든 작품 페이지 조회 (ownerUid 기준, 최신순, 커서 기반). 인덱스 posts(ownerUid asc, createdAt desc). */
+export async function fetchMyPosts(uid: string, cursor?: PostCursor): Promise<PostsPage> {
+  const base = [where('ownerUid', '==', uid), orderBy('createdAt', 'desc')] as const;
+  const q = cursor
+    ? query(collection(db, COL), ...base, startAfter(cursor), limit(PAGE_SIZE))
+    : query(collection(db, COL), ...base, limit(PAGE_SIZE));
   const snap = await getDocs(q);
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Post);
+  return {
+    posts: snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Post),
+    cursor: snap.docs[snap.docs.length - 1] ?? null,
+    hasMore: snap.docs.length === PAGE_SIZE,
+  };
 }
 
 export async function getPost(id: string): Promise<Post | null> {

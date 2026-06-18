@@ -1,13 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Pencil, Download, Link2, Check, Trash2, Heart, Eye, GitFork, Sparkles } from 'lucide-react';
 import { useAuth } from '@/components/auth/AuthProvider';
 import { useToast } from '@/components/ui/Toast';
 import { auth } from '@/lib/firebase/client';
-import { fetchMyPosts, deletePost } from '@/lib/firebase/posts';
+import { fetchMyPosts, deletePost, type PostCursor } from '@/lib/firebase/posts';
 import {
   getUserProfile,
   claimNickname,
@@ -210,14 +210,27 @@ function MyWorks({ uid }: { uid: string }) {
   const [error, setError] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  // 커서 기반 페이지(이전/다음). startsRef[i] = i페이지를 가져올 시작 커서(0페이지는 undefined).
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
+  const startsRef = useRef<(PostCursor | undefined)[]>([undefined]);
+
+  // uid 바뀌면 1페이지로 리셋
+  useEffect(() => {
+    startsRef.current = [undefined];
+    setPage(0);
+  }, [uid]);
 
   useEffect(() => {
     let alive = true;
     setError(false);
     setPosts(null);
-    fetchMyPosts(uid)
-      .then((p) => {
-        if (alive) setPosts(p);
+    fetchMyPosts(uid, startsRef.current[page])
+      .then((res) => {
+        if (!alive) return;
+        setPosts(res.posts);
+        setHasMore(res.hasMore);
+        startsRef.current[page + 1] = res.cursor ?? undefined; // 다음 페이지 시작 커서 기록
       })
       .catch((e) => {
         console.error('내 작품 불러오기 실패:', e);
@@ -226,7 +239,7 @@ function MyWorks({ uid }: { uid: string }) {
     return () => {
       alive = false;
     };
-  }, [uid, reloadKey]);
+  }, [uid, page, reloadKey]);
 
   async function handleDelete(post: Post) {
     if (!confirm(`'${post.title}' 작품을 삭제할까요? 되돌릴 수 없어요.`)) return;
@@ -266,6 +279,7 @@ function MyWorks({ uid }: { uid: string }) {
           </Link>
         </div>
       ) : (
+        <>
         <div className="grid gap-3 sm:grid-cols-2">
           {posts.map((post) => (
             <div
@@ -345,6 +359,18 @@ function MyWorks({ uid }: { uid: string }) {
             </div>
           ))}
         </div>
+        {(page > 0 || hasMore) && (
+          <div className="mt-4 flex items-center justify-center gap-3">
+            <Button variant="ghost" disabled={page === 0} onClick={() => setPage((p) => Math.max(0, p - 1))}>
+              이전
+            </Button>
+            <span className="text-[14px] text-muted">{page + 1} 페이지</span>
+            <Button variant="ghost" disabled={!hasMore} onClick={() => setPage((p) => p + 1)}>
+              다음
+            </Button>
+          </div>
+        )}
+        </>
       )}
     </section>
   );
