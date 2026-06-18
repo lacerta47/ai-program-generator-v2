@@ -3,11 +3,17 @@
 import { useEffect, useRef, useState } from 'react';
 import { Maximize, Minimize, ZoomIn, ZoomOut } from 'lucide-react';
 import type { GeneratedCode } from '@/lib/ai/types';
+import { auth } from '@/lib/firebase/client';
 import LoadingDots from './LoadingDots';
 
 interface Props {
   code: GeneratedCode;
   title: string;
+  /**
+   * 게시된 작품이면 그 post id. 주면 쓰기 없는 GET /api/preview/post/[id]로 서빙(공개 code 직접).
+   * 없으면(즉석 생성 코드) 로그인 토큰으로 POST /api/preview.
+   */
+  postId?: string;
   /** iframe 강제 리마운트용 key */
   frameKey?: string | number;
   className?: string;
@@ -40,14 +46,20 @@ const previewIdCache = new WeakMap<GeneratedCode, Promise<string>>();
 function requestPreviewId(code: GeneratedCode): Promise<string> {
   const cached = previewIdCache.get(code);
   if (cached) return cached;
-  const p = fetch('/api/preview', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(code),
-  }).then((r) => {
+  const p = (async () => {
+    const user = auth.currentUser;
+    if (!user) throw new Error('AUTH_REQUIRED'); // 로그아웃 상태(예: 직접 ?fork= URL) — 미리보기 POST 불가
+    const token = await user.getIdToken();
+    const r = await fetch('/api/preview', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(code),
+    });
+    if (r.status === 401) throw new Error('AUTH_REQUIRED');
     if (!r.ok) throw new Error(String(r.status));
-    return r.json().then(({ id }) => id as string);
-  });
+    const { id } = await r.json();
+    return id as string;
+  })();
   // 실패한 약속은 캐시에서 빼서 다음 시도가 재요청하도록
   p.catch(() => previewIdCache.delete(code));
   previewIdCache.set(code, p);
@@ -59,12 +71,13 @@ function requestPreviewId(code: GeneratedCode): Promise<string> {
 const FIT_SCALE = 0.5;
 
 /** 생성된 프로그램 미리보기 iframe(프로세스 격리) + 전체화면 토글 + "맞춤" 축소배율 토글 */
-export default function FullscreenFrame({ code, title, frameKey, className = '' }: Props) {
+export default function FullscreenFrame({ code, title, postId, frameKey, className = '' }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [fit, setFit] = useState(false);
   const [src, setSrc] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
+  const [needLogin, setNeedLogin] = useState(false);
 
   useEffect(() => {
     const onChange = () => setIsFullscreen(Boolean(document.fullscreenElement));
@@ -76,15 +89,26 @@ export default function FullscreenFrame({ code, title, frameKey, className = '' 
     let alive = true;
     setSrc(null);
     setFailed(false);
+    setNeedLogin(false);
+    // 게시된 작품: 쓰기 없는 GET 경로(공개 code 직접 서빙) — POST/토큰 불필요
+    if (postId) {
+      setSrc(`${previewOrigin()}/api/preview/post/${postId}`);
+      return;
+    }
+    // 즉석 생성 코드: 로그인 토큰으로 POST
     requestPreviewId(code)
       .then((id) => {
         if (alive) setSrc(`${previewOrigin()}/api/preview/${id}`);
       })
-      .catch(() => alive && setFailed(true));
+      .catch((e) => {
+        if (!alive) return;
+        if (e instanceof Error && e.message === 'AUTH_REQUIRED') setNeedLogin(true);
+        else setFailed(true);
+      });
     return () => {
       alive = false;
     };
-  }, [code, frameKey]);
+  }, [code, postId, frameKey]);
 
   function toggle() {
     if (!document.fullscreenElement) {
@@ -98,7 +122,11 @@ export default function FullscreenFrame({ code, title, frameKey, className = '' 
 
   return (
     <div ref={containerRef} className={`relative overflow-hidden bg-white ${className}`}>
-      {failed ? (
+      {needLogin ? (
+        <p className="grid h-full place-items-center p-6 text-center text-[15px] text-muted">
+          로그인하면 미리보기를 볼 수 있어요.
+        </p>
+      ) : failed ? (
         <p className="grid h-full place-items-center p-6 text-center text-[15px] text-muted">
           미리보기를 불러오지 못했어요. 새로고침해 주세요.
         </p>
