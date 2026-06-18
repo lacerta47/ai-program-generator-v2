@@ -50,6 +50,11 @@ export function useCreatorSource(applyLoaded: (d: Loaded) => void) {
       }
       setEditing({ id: p.id, title: p.title, authorName: p.authorName || '' });
       applyRef.current({ plan: p.plan ?? EMPTY_PLAN, code: p.code, genPrompt: p.prompt ?? '' });
+    }).catch((e) => {
+      console.error('편집 작품 불러오기 실패:', e);
+      loadedEditId.current = null; // 재시도 허용
+      toast('작품을 불러오지 못했어요. 잠시 후 다시 해주세요.');
+      router.replace('/create');
     });
   }, [params, authLoading, user, isAdmin, toast, router]);
 
@@ -72,6 +77,11 @@ export function useCreatorSource(applyLoaded: (d: Loaded) => void) {
         genPrompt: p.plan ? buildGeneratePrompt(srcPlan) : p.prompt ?? '',
       });
       setForkSource({ id: p.id, author: p.authorName || '익명', categoryId: p.categoryId });
+    }).catch((e) => {
+      console.error('이어만들기 작품 불러오기 실패:', e);
+      loadedForkId.current = null; // 재시도 허용
+      toast('작품을 불러오지 못했어요. 잠시 후 다시 해주세요.');
+      router.replace('/create');
     });
   }, [params, toast, router]);
 
