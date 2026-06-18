@@ -206,6 +206,7 @@ export default function PostPreview({
 
       <FullscreenFrame
         frameKey={post.id}
+        postId={post.id}
         code={post.code}
         title={post.title}
         className="min-h-[65vh] w-full flex-1 overflow-hidden rounded-[var(--r-md)] border-2 border-line"
