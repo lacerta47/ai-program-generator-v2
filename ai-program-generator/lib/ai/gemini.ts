@@ -1,5 +1,6 @@
 import { GoogleGenAI, Type } from '@google/genai';
-import type { AIProvider, GeneratedCode, GenerateInput } from './types';
+import type { AIProvider, GeneratedCode, GenerateInput, GenerationChunk } from './types';
+import { parsePartialCode } from './partialJson';
 
 // 제공자별 세부사항(모델 선택, JSON 모드, 파싱, 폴백)을 이 파일 안에 가둔다.
 // 다른 제공자로 교체할 때는 이 파일에 대응하는 구현만 추가하면 된다.
@@ -21,21 +22,22 @@ const RESPONSE_SCHEMA = {
 };
 
 export class GeminiProvider implements AIProvider {
-  async generate(input: GenerateInput): Promise<GeneratedCode> {
+  async *generateStream(input: GenerateInput): AsyncGenerator<GenerationChunk> {
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
       throw new Error('GEMINI_API_KEY 환경변수가 설정되지 않았습니다.');
     }
     const ai = new GoogleGenAI({ apiKey });
 
-    let response;
+    // 초기화 시점에 폴백/재시도 적용(첫 청크 전에 429/503이 표면화됨).
+    let stream;
     try {
-      response = await callModel(ai, PRIMARY_MODEL, input);
+      stream = await startStream(ai, PRIMARY_MODEL, input);
     } catch (e) {
       if (!isQuotaExhausted(e)) throw e;
       console.warn(`[gemini] ${PRIMARY_MODEL} 일일 무료 한도 소진 → ${FALLBACK_MODEL}로 폴백`);
       try {
-        response = await callModel(ai, FALLBACK_MODEL, input);
+        stream = await startStream(ai, FALLBACK_MODEL, input);
       } catch (e2) {
         if (isQuotaExhausted(e2)) {
           throw new Error(
@@ -46,30 +48,48 @@ export class GeminiProvider implements AIProvider {
       }
     }
 
-    const text = response.text;
-    if (!text) {
-      throw new Error('Gemini 응답이 비어 있습니다.');
+    let acc = '';
+    let lastSig = '';
+    for await (const chunk of stream) {
+      const t = chunk.text;
+      if (!t) continue;
+      acc += t;
+      const partial = parsePartialCode(acc);
+      const sig = JSON.stringify(partial);
+      if (sig !== lastSig) {
+        lastSig = sig;
+        yield { type: 'delta', partial };
+      }
     }
 
+    // 최종: 엄격 파싱 + 빈 html 검사(기존 의미 보존 — 빈 결과는 실패로 보고 한도 환불 유도).
     let parsed: unknown;
     try {
-      parsed = JSON.parse(text);
+      parsed = JSON.parse(acc);
     } catch {
       throw new Error('Gemini 응답을 JSON으로 파싱하지 못했습니다.');
     }
-    const result = normalize(parsed);
-    // 스키마상 세 필드가 required지만 모델이 빈 문자열을 줄 수 있다.
-    // html(화면 본문)이 비면 빈 미리보기를 "성공"으로 처리하게 되므로, 실패로 보고 한도를 환불받게 한다.
-    if (!result.html.trim()) {
+    const code = normalize(parsed);
+    if (!code.html.trim()) {
       throw new Error('AI가 빈 결과를 만들었어요. 다시 한 번 만들어 볼까요?');
     }
-    return result;
+    yield { type: 'done', code };
+  }
+
+  async generate(input: GenerateInput): Promise<GeneratedCode> {
+    let final: GeneratedCode | null = null;
+    for await (const chunk of this.generateStream(input)) {
+      if (chunk.type === 'done') final = chunk.code;
+    }
+    if (!final) throw new Error('Gemini 응답이 비어 있습니다.');
+    return final;
   }
 }
 
-function callModel(ai: GoogleGenAI, model: string, input: GenerateInput) {
+/** 모델 스트림 시작(초기화)만 담당 — 503 일시 과부하는 callWithRetry로. */
+function startStream(ai: GoogleGenAI, model: string, input: GenerateInput) {
   return callWithRetry(() =>
-    ai.models.generateContent({
+    ai.models.generateContentStream({
       model,
       contents: input.prompt,
       config: {

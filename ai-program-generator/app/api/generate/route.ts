@@ -96,31 +96,63 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // 4) 생성 — 실패 시 선점한 한도를 환불
-  try {
-    const provider = getAIProvider();
-    let system = SYSTEM_PROMPTS[promptVariant];
-    let finalPrompt = prompt;
-    if (mode === 'modify') {
-      // 수정 모드: 요청한 부분만 바꾸고 나머지 코드·제약을 보존하라는 지시를 덧붙인다.
-      system = SYSTEM_PROMPTS[promptVariant] + MODIFY_SYSTEM_SUFFIX;
-    } else {
-      // 생성 모드: 해당 variant에 승인된 참고 예시가 있으면 프롬프트 앞에 붙여 완성도 floor를 올린다.
-      const exemplar = await getExemplar(promptVariant);
-      if (exemplar) finalPrompt = buildExemplarBlock(exemplar) + prompt;
-    }
-    const code = await provider.generate({ prompt: finalPrompt, system, mode });
-    return NextResponse.json(code);
-  } catch (e) {
-    console.error('[/api/generate] 실패:', e);
-    if (!isAdmin) {
-      await refundQuota(usageRef);
-    }
-    return NextResponse.json(
-      { error: 'AI 생성에 실패했습니다.', detail: e instanceof Error ? e.message : String(e) },
-      { status: 500 },
-    );
+  // 4) 생성(스트리밍) — NDJSON. 실패/취소 시 선점한 한도를 1회 환불.
+  const provider = getAIProvider();
+  let system = SYSTEM_PROMPTS[promptVariant];
+  let finalPrompt = prompt;
+  if (mode === 'modify') {
+    // 수정 모드: 요청한 부분만 바꾸고 나머지 코드·제약을 보존하라는 지시를 덧붙인다.
+    system = SYSTEM_PROMPTS[promptVariant] + MODIFY_SYSTEM_SUFFIX;
+  } else {
+    // 생성 모드: 해당 variant에 승인된 참고 예시가 있으면 프롬프트 앞에 붙여 완성도 floor를 올린다.
+    const exemplar = await getExemplar(promptVariant);
+    if (exemplar) finalPrompt = buildExemplarBlock(exemplar) + prompt;
   }
+
+  const encoder = new TextEncoder();
+  let refunded = false;
+  const refundOnce = async () => {
+    if (refunded || isAdmin) return;
+    refunded = true;
+    await refundQuota(usageRef);
+  };
+
+  const stream = new ReadableStream<Uint8Array>({
+    async start(controller) {
+      const send = (obj: unknown) =>
+        controller.enqueue(encoder.encode(JSON.stringify(obj) + '\n'));
+      try {
+        for await (const chunk of provider.generateStream({ prompt: finalPrompt, system, mode })) {
+          if (req.signal.aborted) throw new Error('ABORTED');
+          send(chunk);
+        }
+        controller.close();
+      } catch (e) {
+        const aborted = req.signal.aborted || (e instanceof Error && e.message === 'ABORTED');
+        await refundOnce();
+        if (!aborted) {
+          console.error('[/api/generate] 스트리밍 실패:', e);
+          try {
+            send({ type: 'error', error: e instanceof Error ? e.message : 'AI 생성에 실패했습니다.' });
+          } catch {}
+        }
+        try {
+          controller.close();
+        } catch {}
+      }
+    },
+    async cancel() {
+      // 클라이언트 연결 끊김(취소) — 한도 환불
+      await refundOnce();
+    },
+  });
+
+  return new Response(stream, {
+    headers: {
+      'Content-Type': 'application/x-ndjson; charset=utf-8',
+      'Cache-Control': 'no-store',
+    },
+  });
 }
 
 /** 생성 실패 시 선점했던 한도 1회를 되돌린다(0 미만으로는 안 내려감). */

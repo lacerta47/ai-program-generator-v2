@@ -13,6 +13,7 @@ import FullscreenFrame from '@/components/ui/FullscreenFrame';
 import CodeView from '@/components/ui/CodeView';
 import EmptyParticles from '@/components/fx/EmptyParticles';
 import { useToast } from '@/components/ui/Toast';
+import { currentStage, STAGE_LABEL, STAGE_CONCEPT, STAGE_ORDER } from '@/lib/ai/streamStages';
 import { Tip } from './Tip';
 
 type CodeTab = 'html' | 'css' | 'javascript';
@@ -20,7 +21,8 @@ type ResultTab = 'preview' | 'code';
 
 interface Props {
   busy: boolean;
-  loadingMsg: string;
+  streamingPartial: Partial<GeneratedCode>;
+  onCancel: () => void;
   hasCode: boolean;
   code: GeneratedCode;
   previewKey: number;
@@ -41,7 +43,8 @@ interface Props {
 /** 생성기 오른쪽 '결과' 패널 — 로딩/빈상태/결과(미리보기·코드·수정요청)를 담당. */
 export default function ResultPanel({
   busy,
-  loadingMsg,
+  streamingPartial,
+  onCancel,
   hasCode,
   code,
   previewKey,
@@ -75,10 +78,47 @@ export default function ResultPanel({
   return (
     <Card animate className="flex min-h-[70vh] flex-col gap-4" style={{ animationDelay: '60ms' }}>
       {busy ? (
-        <div className="flex flex-1 flex-col items-center justify-center gap-7">
-          <BuilderBot />
-          <LoadingDots label={loadingMsg} />
-        </div>
+        (() => {
+          const stage = currentStage(streamingPartial);
+          const liveCode = stage ? streamingPartial[stage] ?? '' : '';
+          return (
+            <div className="flex flex-1 flex-col gap-3">
+              {/* 개념 내레이션 배너 — 지금 만드는 층 */}
+              <div className="flex items-center gap-2.5 rounded-[var(--r-md)] border-2 border-brand/30 bg-brand-soft px-4 py-3">
+                <LoadingDots />
+                <span className="text-[16px] text-brand-strong dark:text-brand">
+                  {stage ? STAGE_LABEL[stage] : 'AI가 준비하고 있어요…'}
+                </span>
+              </div>
+              {/* 3층 개념 칩(구조·스타일·동작) */}
+              <div className="flex gap-1.5">
+                {STAGE_ORDER.map((s) => (
+                  <span
+                    key={s}
+                    className={`rounded-full px-3 py-1 text-[13px] font-medium ${
+                      stage === s ? 'bg-brand text-brand-ink' : 'bg-surface-2 text-muted'
+                    }`}
+                  >
+                    {STAGE_CONCEPT[s]}
+                  </span>
+                ))}
+              </div>
+              {/* 라이브 강조 코드(미완성 → 포맷 생략) */}
+              <div className="min-h-0 flex-1 overflow-hidden rounded-[var(--r-md)] border-2 border-line">
+                {liveCode && stage ? (
+                  <CodeView code={liveCode} language={stage} skipFormat className="h-full min-h-[44vh] bg-surface" />
+                ) : (
+                  <div className="flex h-full items-center justify-center">
+                    <BuilderBot />
+                  </div>
+                )}
+              </div>
+              <Button variant="ghost" onClick={onCancel} className="self-center">
+                그만 만들기
+              </Button>
+            </div>
+          );
+        })()
       ) : !hasCode ? (
         <div className="relative flex flex-1 flex-col items-center justify-center gap-5 overflow-hidden rounded-[var(--r-md)] text-center">
           <EmptyParticles />

@@ -19,23 +19,26 @@ interface Props {
   /** 'html' | 'css' | 'javascript' */
   language: string;
   className?: string;
+  /** 스트리밍 중 등 미완성 코드: Prettier 생략하고 즉시 강조(기본 false). */
+  skipFormat?: boolean;
 }
 
 /** 자동 정렬(Prettier) + 구문 강조 + 줄 번호 코드 뷰어. 토큰 색은 globals.css에서 테마 연동. */
-export default function CodeView({ code, language, className = '' }: Props) {
+export default function CodeView({ code, language, className = '', skipFormat = false }: Props) {
   const [pretty, setPretty] = useState<string | null>(null);
 
   useEffect(() => {
     let alive = true;
     setPretty(null);
-    if (!code) return;
+    // 스트리밍 중(미완성)엔 Prettier가 실패하므로 생략 — 원본을 그대로 강조.
+    if (skipFormat || !code) return;
     formatCode(code, language)
       .then((f) => alive && setPretty(f.trimEnd()))
       .catch(() => alive && setPretty(code)); // 포맷 실패 시 원본 그대로
     return () => {
       alive = false;
     };
-  }, [code, language]);
+  }, [code, language, skipFormat]);
 
   const source = pretty ?? code;
 

@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@google/genai": "^1.29.0",
+    "best-effort-json-parser": "^1.4.1",
     "firebase": "^12.6.0",
     "firebase-admin": "^13.0.0",
     "highlight.js": "^11.11.1",
