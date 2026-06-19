@@ -3,6 +3,7 @@
 import { useEffect, useRef } from 'react';
 import Lenis from 'lenis';
 import LandingFooter from './LandingFooter';
+import LandingNav from './LandingNav';
 
 /**
  * 시안: 묵직한(Lenis 관성) 스크롤 + LUN 워드마크가 스크롤을 따라 머물다(sticky)
@@ -12,6 +13,7 @@ import LandingFooter from './LandingFooter';
 export default function FooterScrollExperience() {
   const lunRef = useRef<HTMLHeadingElement>(null);
   const hintRef = useRef<HTMLParagraphElement>(null);
+  const taglineRef = useRef<HTMLParagraphElement>(null);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -35,9 +37,9 @@ export default function FooterScrollExperience() {
         lunRef.current.style.transform = `scale(${scale})`;
         lunRef.current.style.opacity = String(op);
       }
-      if (hintRef.current) {
-        hintRef.current.style.opacity = String(Math.max(0, 1 - y / (vh * 0.4)));
-      }
+      const fade = String(Math.max(0, 1 - y / (vh * 0.4)));
+      if (hintRef.current) hintRef.current.style.opacity = fade;
+      if (taglineRef.current) taglineRef.current.style.opacity = fade;
     };
 
     let lenis: Lenis | null = null;
@@ -70,6 +72,11 @@ export default function FooterScrollExperience() {
 
   return (
     <>
+      {/* 상단 네비게이션(메인과 동일, 항상 보이게 고정) */}
+      <div className="fixed right-4 top-4 z-30">
+        <LandingNav />
+      </div>
+
       {/* LUN 트랙 — 긴 구간(약 3배) 동안 sticky로 머물며 커지다 페이드 */}
       <div className="relative h-[600vh]">
         <div className="sticky top-0 flex h-screen flex-col items-center justify-center gap-5 overflow-hidden px-6 text-center">
@@ -84,6 +91,10 @@ export default function FooterScrollExperience() {
             className="-translate-y-1 text-[13px] font-medium uppercase tracking-[0.4em] text-brand-strong dark:text-brand"
           >
             Logic&nbsp;·&nbsp;Unfold&nbsp;·&nbsp;Next
+          </p>
+          {/* 기존 메인 하단 문구 — 초기 상태에 노출, 스크롤 시 페이드 */}
+          <p ref={taglineRef} className="absolute inset-x-0 bottom-8 text-[12.5px] text-muted/60">
+            논리를 펼치면, 마법이 시작돼요
           </p>
         </div>
       </div>
