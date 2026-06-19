@@ -8,7 +8,7 @@ import LoginDialog from '@/components/auth/LoginDialog';
 import Dock, { type DockItem } from '@/components/fx/Dock';
 
 /** 랜딩 우측 위 네비 — 기능 + 로그인 + 테마 토글을 dock 하나로 통합. */
-export default function LandingNav() {
+export default function LandingNav({ compact = false }: { compact?: boolean }) {
   const { user } = useAuth();
   const { theme, toggle } = useTheme();
   const [loginOpen, setLoginOpen] = useState(false);
@@ -31,7 +31,7 @@ export default function LandingNav() {
 
   return (
     <>
-      <Dock items={items} />
+      <Dock items={items} compact={compact} />
       <LoginDialog open={loginOpen} onClose={() => setLoginOpen(false)} />
     </>
   );

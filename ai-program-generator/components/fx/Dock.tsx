@@ -14,8 +14,8 @@ export interface DockItem {
 const RANGE = 110; // px — 영향 범위
 const MAX_SCALE = 1.3; // 커서 바로 위 타일 최대 배율
 
-/** 가벼운 자체 구현 dock. prefers-reduced-motion이면 확대 안 함. */
-export default function Dock({ items }: { items: DockItem[] }) {
+/** 가벼운 자체 구현 dock. prefers-reduced-motion이면 확대 안 함. compact면 살짝 작게(툴팁 크기는 유지). */
+export default function Dock({ items, compact = false }: { items: DockItem[]; compact?: boolean }) {
   const ref = useRef<HTMLDivElement>(null);
 
   const reduce = () =>
@@ -42,13 +42,17 @@ export default function Dock({ items }: { items: DockItem[] }) {
       ref={ref}
       onMouseMove={(e) => magnify(e.clientX)}
       onMouseLeave={reset}
-      className="flex items-center gap-2.5 rounded-full border-2 border-line bg-surface/80 px-2.5 py-1.5 backdrop-blur-sm"
+      className={`flex items-center rounded-full border-2 border-line bg-surface/80 backdrop-blur-sm ${
+        compact ? 'gap-1.5 px-2 py-1' : 'gap-2.5 px-2.5 py-1.5'
+      }`}
     >
       {items.map((it) => {
         const tile = (
           <span
             data-tile
-            className="grid h-11 w-11 place-items-center rounded-full text-ink transition-transform duration-150 ease-out hover:bg-brand-soft hover:text-brand-strong dark:hover:text-brand"
+            className={`grid place-items-center rounded-full text-ink transition-transform duration-150 ease-out hover:bg-brand-soft hover:text-brand-strong dark:hover:text-brand ${
+              compact ? 'h-9 w-9' : 'h-11 w-11'
+            }`}
           >
             {it.icon}
           </span>
