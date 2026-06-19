@@ -5,6 +5,7 @@ import { Maximize, Minimize, ZoomIn, ZoomOut } from 'lucide-react';
 import type { GeneratedCode } from '@/lib/ai/types';
 import { auth } from '@/lib/firebase/client';
 import LoadingDots from './LoadingDots';
+import Button from './Button';
 
 interface Props {
   code: GeneratedCode;
@@ -14,6 +15,8 @@ interface Props {
    * 없으면(즉석 생성 코드) 로그인 토큰으로 POST /api/preview.
    */
   postId?: string;
+  /** 로그인이 필요할 때(즉석 미리보기 비로그인) 노출할 로그인 동작 — 주면 안내에 버튼이 생긴다. */
+  onNeedLogin?: () => void;
   /** iframe 강제 리마운트용 key */
   frameKey?: string | number;
   className?: string;
@@ -71,13 +74,14 @@ function requestPreviewId(code: GeneratedCode): Promise<string> {
 const FIT_SCALE = 0.5;
 
 /** 생성된 프로그램 미리보기 iframe(프로세스 격리) + 전체화면 토글 + "맞춤" 축소배율 토글 */
-export default function FullscreenFrame({ code, title, postId, frameKey, className = '' }: Props) {
+export default function FullscreenFrame({ code, title, postId, onNeedLogin, frameKey, className = '' }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [fit, setFit] = useState(false);
   const [src, setSrc] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
   const [needLogin, setNeedLogin] = useState(false);
+  const [retry, setRetry] = useState(0); // "다시 보기"로 재요청
 
   useEffect(() => {
     const onChange = () => setIsFullscreen(Boolean(document.fullscreenElement));
@@ -108,7 +112,7 @@ export default function FullscreenFrame({ code, title, postId, frameKey, classNa
     return () => {
       alive = false;
     };
-  }, [code, postId, frameKey]);
+  }, [code, postId, frameKey, retry]);
 
   function toggle() {
     if (!document.fullscreenElement) {
@@ -123,13 +127,21 @@ export default function FullscreenFrame({ code, title, postId, frameKey, classNa
   return (
     <div ref={containerRef} className={`relative overflow-hidden bg-white ${className}`}>
       {needLogin ? (
-        <p className="grid h-full place-items-center p-6 text-center text-[15px] text-muted">
-          로그인하면 미리보기를 볼 수 있어요.
-        </p>
+        <div className="grid h-full place-items-center gap-3 p-6 text-center">
+          <p className="text-[15px] text-muted">로그인하면 미리보기를 볼 수 있어요.</p>
+          {onNeedLogin && (
+            <Button variant="primary" onClick={onNeedLogin}>
+              로그인하기
+            </Button>
+          )}
+        </div>
       ) : failed ? (
-        <p className="grid h-full place-items-center p-6 text-center text-[15px] text-muted">
-          미리보기를 불러오지 못했어요. 새로고침해 주세요.
-        </p>
+        <div className="grid h-full place-items-center gap-3 p-6 text-center">
+          <p className="text-[15px] text-muted">미리보기를 불러오지 못했어요.</p>
+          <Button variant="primary" onClick={() => setRetry((r) => r + 1)}>
+            다시 보기
+          </Button>
+        </div>
       ) : src ? (
         <iframe
           key={`${frameKey ?? ''}-${src}`}

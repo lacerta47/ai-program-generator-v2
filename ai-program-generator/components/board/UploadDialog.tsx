@@ -118,7 +118,7 @@ export default function UploadDialog({ open, onClose, code, plan, prompt, defaul
       setDone({ postId, categoryId });
     } catch (err) {
       if (err instanceof ProfanityError) {
-        setError('제목에 쓸 수 없는 말이 있어요. 고운 말로 바꿔 주세요.');
+        setError(err.message);
       } else {
         setError(err instanceof Error ? err.message : '올리다가 문제가 생겼어요.');
       }

@@ -48,10 +48,16 @@ export async function requestGenerateStream(
       const line = buf.slice(0, nl).trim();
       buf = buf.slice(nl + 1);
       if (!line) continue;
-      const msg = JSON.parse(line) as
+      let msg:
         | { type: 'delta'; partial: Partial<GeneratedCode> }
         | { type: 'done'; code: GeneratedCode }
         | { type: 'error'; error: string };
+      try {
+        msg = JSON.parse(line);
+      } catch {
+        // 프록시/네트워크가 끼워넣은 비표준 라인은 무시하고 계속(정상 NDJSON만 처리)
+        continue;
+      }
       if (msg.type === 'delta') opts.onDelta?.(msg.partial);
       else if (msg.type === 'done') final = msg.code;
       else if (msg.type === 'error') throw new Error(msg.error);

@@ -247,8 +247,13 @@ function MyWorks({ uid }: { uid: string }) {
     if (!(await confirm({ title: '작품을 삭제할까요?', message: `'${post.title}' 작품을 삭제해요. 되돌릴 수 없어요.`, confirmLabel: '삭제', danger: true }))) return;
     try {
       await deletePost(post.id);
-      setPosts((prev) => prev?.filter((p) => p.id !== post.id) ?? null);
       toast('작품을 삭제했어요.', 'success');
+      // 커서/hasMore 정합을 위해 재조회. 현재 페이지의 마지막 1건이었고 첫 페이지가 아니면 이전 페이지로.
+      if ((posts?.length ?? 0) <= 1 && page > 0) {
+        setPage((p) => Math.max(0, p - 1));
+      } else {
+        setReloadKey((k) => k + 1);
+      }
     } catch (e) {
       console.error('작품 삭제 실패:', e);
       toast('삭제하지 못했어요. 잠시 후 다시 해주세요.');
