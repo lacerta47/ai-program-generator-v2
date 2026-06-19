@@ -74,24 +74,24 @@ export default function FooterScrollExperience() {
 
   return (
     <>
-      {/* 접기/펴기 토글 — 항상 우상단 고정 */}
-      <button
-        onClick={() => setNavOpen((o) => !o)}
-        aria-label={navOpen ? '메뉴 접기' : '메뉴 펴기'}
-        aria-expanded={navOpen}
-        className="press fixed right-4 top-4 z-40 grid h-11 w-11 place-items-center rounded-full border-2 border-line bg-surface/90 text-ink backdrop-blur-sm hover:border-brand/50 hover:text-brand-strong dark:hover:text-brand"
-      >
-        {navOpen ? <X size={19} aria-hidden /> : <Menu size={19} aria-hidden />}
-      </button>
-
-      {/* 네비게이션(토글 왼쪽). 접으면 슬라이드+페이드아웃 */}
-      <div
-        className={`fixed right-[68px] top-4 z-30 transition-all duration-300 ease-out motion-reduce:transition-none ${
-          navOpen ? 'translate-x-0 opacity-100' : 'pointer-events-none translate-x-3 opacity-0'
-        }`}
-        aria-hidden={!navOpen}
-      >
-        <LandingNav />
+      {/* 상단 우측: 네비(토글 왼쪽) + 접기/펴기 토글. items-center로 X와 네비 정렬 */}
+      <div className="fixed right-4 top-4 z-40 flex items-center gap-2">
+        <div
+          className={`transition-all duration-300 ease-out motion-reduce:transition-none ${
+            navOpen ? 'translate-x-0 opacity-100' : 'pointer-events-none translate-x-3 opacity-0'
+          }`}
+          aria-hidden={!navOpen}
+        >
+          <LandingNav compact />
+        </div>
+        <button
+          onClick={() => setNavOpen((o) => !o)}
+          aria-label={navOpen ? '메뉴 접기' : '메뉴 펴기'}
+          aria-expanded={navOpen}
+          className="press grid h-9 w-9 shrink-0 place-items-center rounded-full border-2 border-line bg-surface/90 text-ink backdrop-blur-sm hover:border-brand/50 hover:text-brand-strong dark:hover:text-brand"
+        >
+          {navOpen ? <X size={18} aria-hidden /> : <Menu size={18} aria-hidden />}
+        </button>
       </div>
 
       {/* LUN 트랙 — 긴 구간(약 3배) 동안 sticky로 머물며 커지다 페이드 */}
