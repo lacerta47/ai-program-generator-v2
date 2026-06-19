@@ -86,7 +86,11 @@ export default function ResultPanel({
           return (
             <div className="flex flex-1 flex-col gap-3">
               {/* 개념 내레이션 배너 — 지금 만드는 층 */}
-              <div className="flex items-center gap-2.5 rounded-[var(--r-md)] border-2 border-brand/30 bg-brand-soft px-4 py-3">
+              <div
+                role="status"
+                aria-live="polite"
+                className="flex items-center gap-2.5 rounded-[var(--r-md)] border-2 border-brand/30 bg-brand-soft px-4 py-3"
+              >
                 <LoadingDots />
                 <span className="text-[16px] text-brand-strong dark:text-brand">
                   {stage ? STAGE_LABEL[stage] : 'AI가 준비하고 있어요…'}
@@ -105,8 +109,11 @@ export default function ResultPanel({
                   </span>
                 ))}
               </div>
-              {/* 라이브 강조 코드(미완성 → 포맷 생략) */}
-              <div className="min-h-0 flex-1 overflow-hidden rounded-[var(--r-md)] border-2 border-line">
+              {/* 라이브 강조 코드(미완성 → 포맷 생략). 토큰마다 낭독되지 않게 SR에서 숨김(진행은 위 배너가 안내) */}
+              <div
+                aria-hidden="true"
+                className="min-h-0 flex-1 overflow-hidden rounded-[var(--r-md)] border-2 border-line"
+              >
                 {liveCode && stage ? (
                   <CodeView code={liveCode} language={stage} skipFormat className="h-full min-h-[44vh] bg-surface" />
                 ) : (
@@ -191,7 +198,7 @@ export default function ResultPanel({
                       <button
                         key={t}
                         onClick={() => setCodeTab(t)}
-                        className={`press min-h-9 rounded-full px-3.5 text-[13px] font-medium ${
+                        className={`press min-h-11 rounded-full px-3.5 text-[13px] font-medium ${
                           codeTab === t
                             ? 'bg-brand text-brand-ink'
                             : 'text-muted hover:bg-brand-soft hover:text-brand-strong'

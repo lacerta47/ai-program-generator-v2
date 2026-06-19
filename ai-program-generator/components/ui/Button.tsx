@@ -34,7 +34,7 @@ const Button = forwardRef<HTMLButtonElement, Props>(function Button(
   return (
     <button
       ref={ref}
-      className={`press inline-flex items-center justify-center gap-2 rounded-[var(--r-md)] font-medium disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none disabled:hover:translate-y-0 ${variants[variant]} ${sizes[size]} ${className}`}
+      className={`press inline-flex items-center justify-center gap-2 rounded-[var(--r-md)] font-medium disabled:cursor-not-allowed disabled:bg-surface-2 disabled:text-muted disabled:border-line disabled:shadow-none disabled:hover:translate-y-0 ${variants[variant]} ${sizes[size]} ${className}`}
       {...props}
     />
   );
