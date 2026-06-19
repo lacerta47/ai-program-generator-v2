@@ -7,6 +7,7 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   sendPasswordResetEmail,
+  sendEmailVerification,
 } from 'firebase/auth';
 import { X, Sparkles } from 'lucide-react';
 import { auth } from '@/lib/firebase/client';
@@ -85,10 +86,17 @@ export default function LoginDialog({ open, onClose }: { open: boolean; onClose:
     try {
       if (mode === 'login') {
         await signInWithEmailAndPassword(auth, email, pw);
+        onClose();
       } else {
-        await createUserWithEmailAndPassword(auth, email, pw);
+        const cred = await createUserWithEmailAndPassword(auth, email, pw);
+        try {
+          await sendEmailVerification(cred.user);
+        } catch {
+          /* 메일 발송 실패해도 가입은 됨 — 마이페이지에서 다시 보낼 수 있음 */
+        }
+        // 가입 후 닫지 않고 안내(인증해야 만들기·올리기 사용 가능)
+        setNotice('가입했어요! 메일로 보낸 인증 링크를 눌러 주세요. 인증해야 만들기·게시판 올리기를 쓸 수 있어요.');
       }
-      onClose();
     } catch (err) {
       setError(toMessage(err));
     } finally {

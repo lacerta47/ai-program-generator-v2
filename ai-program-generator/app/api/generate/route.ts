@@ -28,14 +28,24 @@ export async function POST(req: NextRequest) {
 
   let uid: string;
   let isAdmin = false;
+  let emailVerified = false;
   try {
     const decoded = await adminAuth.verifyIdToken(idToken);
     uid = decoded.uid;
     isAdmin = decoded.admin === true;
+    emailVerified = decoded.email_verified === true;
   } catch {
     return NextResponse.json(
       { error: '로그인이 만료됐어요. 다시 로그인해 주세요.' },
       { status: 401 },
+    );
+  }
+
+  // 이메일 인증 필수(Google 로그인은 자동 인증, 관리자는 예외). 무분별 가입·생성 양산 차단.
+  if (!isAdmin && !emailVerified) {
+    return NextResponse.json(
+      { error: '이메일 인증이 필요해요. 마이페이지에서 인증 메일을 다시 받을 수 있어요.' },
+      { status: 403 },
     );
   }
 

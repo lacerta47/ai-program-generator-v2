@@ -16,6 +16,10 @@ service cloud.firestore {
     function isOwner(uid) {
       return isSignedIn() && request.auth.uid == uid;
     }
+    // 이메일 인증 완료(Google 로그인은 자동 true). 무분별 가입·게시 양산 차단용.
+    function isVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
 
     // code 객체 형태/크기 검증 (Firestore 문서 1MiB 한도 보호)
     function validCode(c) {
@@ -78,12 +82,13 @@ service cloud.firestore {
     match /posts/{postId} {
       allow read: if true;
       allow create: if isSignedIn()
+        && (isAdmin() || isVerified())
         && request.resource.data.ownerUid == request.auth.uid
         && validPost(request.resource.data);
       // 수정: 본인/관리자만. 변경 가능 필드는 제목·작성자명·계획서·코드·수정시각으로 제한
       // (ownerUid·categoryId·createdAt 변조 차단). 변경되는 값은 형태·크기 재검증.
       // 본인/관리자 콘텐츠 편집만. 카운터(좋아요·조회·포크)는 서버 API(Admin SDK) 전용 — 클라 직접 쓰기 차단.
-      allow update: if (isAdmin() || isOwner(resource.data.ownerUid))
+      allow update: if (isAdmin() || (isOwner(resource.data.ownerUid) && isVerified()))
         && request.resource.data.diff(resource.data).affectedKeys()
              .hasOnly(['title', 'authorName', 'plan', 'code', 'prompt', 'updatedAt'])
         && request.resource.data.title is string
