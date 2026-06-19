@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { Menu, X } from 'lucide-react';
 import Lenis from 'lenis';
 import LandingFooter from './LandingFooter';
 import LandingNav from './LandingNav';
@@ -14,6 +15,7 @@ export default function FooterScrollExperience() {
   const lunRef = useRef<HTMLHeadingElement>(null);
   const hintRef = useRef<HTMLParagraphElement>(null);
   const taglineRef = useRef<HTMLParagraphElement>(null);
+  const [navOpen, setNavOpen] = useState(true);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -72,8 +74,23 @@ export default function FooterScrollExperience() {
 
   return (
     <>
-      {/* 상단 네비게이션(메인과 동일, 항상 보이게 고정) */}
-      <div className="fixed right-4 top-4 z-30">
+      {/* 접기/펴기 토글 — 항상 우상단 고정 */}
+      <button
+        onClick={() => setNavOpen((o) => !o)}
+        aria-label={navOpen ? '메뉴 접기' : '메뉴 펴기'}
+        aria-expanded={navOpen}
+        className="press fixed right-4 top-4 z-40 grid h-11 w-11 place-items-center rounded-full border-2 border-line bg-surface/90 text-ink backdrop-blur-sm hover:border-brand/50 hover:text-brand-strong dark:hover:text-brand"
+      >
+        {navOpen ? <X size={19} aria-hidden /> : <Menu size={19} aria-hidden />}
+      </button>
+
+      {/* 네비게이션(토글 왼쪽). 접으면 슬라이드+페이드아웃 */}
+      <div
+        className={`fixed right-[68px] top-4 z-30 transition-all duration-300 ease-out motion-reduce:transition-none ${
+          navOpen ? 'translate-x-0 opacity-100' : 'pointer-events-none translate-x-3 opacity-0'
+        }`}
+        aria-hidden={!navOpen}
+      >
         <LandingNav />
       </div>
 
