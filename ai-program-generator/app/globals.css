@@ -317,3 +317,12 @@ textarea {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* 스크롤바 숨김(스크롤 기능은 유지) — 랜딩 몰입 스크롤 시안용 */
+.hide-scrollbar {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
+}
+.hide-scrollbar::-webkit-scrollbar {
+  display: none; /* Chrome/Safari */
+}
