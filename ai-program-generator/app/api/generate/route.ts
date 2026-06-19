@@ -122,7 +122,7 @@ export async function POST(req: NextRequest) {
       const send = (obj: unknown) =>
         controller.enqueue(encoder.encode(JSON.stringify(obj) + '\n'));
       try {
-        for await (const chunk of provider.generateStream({ prompt: finalPrompt, system, mode })) {
+        for await (const chunk of provider.generateStream({ prompt: finalPrompt, system, mode }, req.signal)) {
           if (req.signal.aborted) throw new Error('ABORTED');
           send(chunk);
         }

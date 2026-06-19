@@ -22,7 +22,7 @@ const RESPONSE_SCHEMA = {
 };
 
 export class GeminiProvider implements AIProvider {
-  async *generateStream(input: GenerateInput): AsyncGenerator<GenerationChunk> {
+  async *generateStream(input: GenerateInput, signal?: AbortSignal): AsyncGenerator<GenerationChunk> {
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
       throw new Error('GEMINI_API_KEY 환경변수가 설정되지 않았습니다.');
@@ -32,12 +32,12 @@ export class GeminiProvider implements AIProvider {
     // 초기화 시점에 폴백/재시도 적용(첫 청크 전에 429/503이 표면화됨).
     let stream;
     try {
-      stream = await startStream(ai, PRIMARY_MODEL, input);
+      stream = await startStream(ai, PRIMARY_MODEL, input, signal);
     } catch (e) {
       if (!isQuotaExhausted(e)) throw e;
       console.warn(`[gemini] ${PRIMARY_MODEL} 일일 무료 한도 소진 → ${FALLBACK_MODEL}로 폴백`);
       try {
-        stream = await startStream(ai, FALLBACK_MODEL, input);
+        stream = await startStream(ai, FALLBACK_MODEL, input, signal);
       } catch (e2) {
         if (isQuotaExhausted(e2)) {
           throw new Error(
@@ -86,8 +86,8 @@ export class GeminiProvider implements AIProvider {
   }
 }
 
-/** 모델 스트림 시작(초기화)만 담당 — 503 일시 과부하는 callWithRetry로. */
-function startStream(ai: GoogleGenAI, model: string, input: GenerateInput) {
+/** 모델 스트림 시작(초기화)만 담당 — 503 일시 과부하는 callWithRetry로. signal로 모델 호출 취소. */
+function startStream(ai: GoogleGenAI, model: string, input: GenerateInput, signal?: AbortSignal) {
   return callWithRetry(() =>
     ai.models.generateContentStream({
       model,
@@ -96,6 +96,7 @@ function startStream(ai: GoogleGenAI, model: string, input: GenerateInput) {
         systemInstruction: input.system,
         responseMimeType: 'application/json',
         responseSchema: RESPONSE_SCHEMA,
+        abortSignal: signal,
       },
     }),
   );
