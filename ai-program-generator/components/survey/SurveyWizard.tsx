@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, HelpCircle, RotateCcw, Wand2, X } from 'lucide-react';
+import { ArrowLeft, Check, HelpCircle, RotateCcw, Wand2, X } from 'lucide-react';
 import type { GeneratedCode } from '@/lib/ai/types';
 import type { ProgramType, SurveyAnswers, SurveyStep } from '@/lib/survey/types';
 import { AI_PICK } from '@/lib/survey/types';
@@ -9,7 +9,7 @@ import { PROGRAM_TYPES } from '@/lib/survey/programs';
 import { visibleSteps, assemblePrompt, surveyToPlan } from '@/lib/survey/assemble';
 import { buildFixRequest } from '@/lib/survey/fixes';
 import { requestGenerateStream } from '@/lib/client/generate';
-import { currentStage, STAGE_LABEL_EASY } from '@/lib/ai/streamStages';
+import { currentStage, STAGE_ORDER, STAGE_LABEL_EASY, type StreamStage } from '@/lib/ai/streamStages';
 import { buildModifyPrompt } from '@/components/creator/prompts';
 import { useAuth } from '@/components/auth/AuthProvider';
 import LoginDialog from '@/components/auth/LoginDialog';
@@ -38,6 +38,7 @@ export default function SurveyWizard() {
   const [editReturn, setEditReturn] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [buildMsg, setBuildMsg] = useState('AI가 준비하고 있어요…');
+  const [stage, setStage] = useState<StreamStage | null>(null);
   const [code, setCode] = useState<GeneratedCode>(EMPTY_CODE);
   // 저장/공유용 프롬프트 — 생성 시 조립 프롬프트로 시작, '고치기'마다 요청을 누적
   const [genPrompt, setGenPrompt] = useState('');
@@ -191,10 +192,13 @@ export default function SurveyWizard() {
     setFixText('');
   }
 
-  // 스트리밍 도착 필드 → 저학년용 단계 문구(타이머 아님, 진짜 진행)
+  // 스트리밍 도착 필드 → 저학년용 단계 진행(타이머 아님, 진짜 도착 기반)
   function onStageDelta(p: Partial<{ html: string; css: string; javascript: string }>) {
     const s = currentStage(p);
-    if (s) setBuildMsg(STAGE_LABEL_EASY[s]);
+    if (s) {
+      setStage(s);
+      setBuildMsg('열심히 만들고 있어요!');
+    }
   }
 
   async function generate() {
@@ -206,6 +210,7 @@ export default function SurveyWizard() {
       return;
     }
     setBusy(true);
+    setStage(null);
     setBuildMsg('AI가 준비하고 있어요…');
     const ctrl = new AbortController();
     abortRef.current = ctrl;
@@ -245,6 +250,7 @@ export default function SurveyWizard() {
     // 저장/공유 프롬프트에 고치기 요청을 누적(게시물 prompt 한도 대비 클램프)
     setGenPrompt((prev) => `${prev}\n\n[고치기 요청]: ${request}`.slice(-40000));
     setBusy(true);
+    setStage(null);
     setBuildMsg('AI가 준비하고 있어요…');
     const ctrl = new AbortController();
     abortRef.current = ctrl;
@@ -343,6 +349,39 @@ export default function SurveyWizard() {
           <div className="flex flex-col items-center gap-5 text-center">
             <BuilderBot />
             <p className="text-[18px] text-muted">{buildMsg}</p>
+            {/* 3단계 체크리스트 — 도착한 단계만큼 체크(진짜 진행 기반) */}
+            <ul className="flex flex-col gap-2.5 text-left">
+              {STAGE_ORDER.map((s) => {
+                const cur = stage ? STAGE_ORDER.indexOf(stage) : -1;
+                const done = cur > STAGE_ORDER.indexOf(s);
+                const active = stage === s;
+                return (
+                  <li
+                    key={s}
+                    className={`flex items-center gap-3 text-[17px] ${
+                      active ? 'font-medium text-ink' : done ? 'text-muted' : 'text-muted/55'
+                    }`}
+                  >
+                    <span
+                      className={`grid h-7 w-7 shrink-0 place-items-center rounded-full border-2 ${
+                        done
+                          ? 'border-brand bg-brand text-brand-ink'
+                          : active
+                            ? 'border-brand text-brand'
+                            : 'border-line'
+                      }`}
+                    >
+                      {done ? (
+                        <Check size={16} aria-hidden />
+                      ) : active ? (
+                        <span className="h-2.5 w-2.5 rounded-full bg-brand motion-safe:animate-pulse" />
+                      ) : null}
+                    </span>
+                    {STAGE_LABEL_EASY[s]}
+                  </li>
+                );
+              })}
+            </ul>
             <Button variant="soft" onClick={cancelGenerate}>
               <X size={17} aria-hidden /> 그만 만들기
             </Button>

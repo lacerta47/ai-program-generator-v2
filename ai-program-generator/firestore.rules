@@ -116,11 +116,11 @@ service cloud.firestore {
       allow create: if isOwner(uid)
         && request.resource.data.keys().hasOnly(['nickname', 'nicknameUpdatedAt'])
         && validNick(request.resource.data.nickname)
-        && request.resource.data.nicknameUpdatedAt is timestamp;
+        && request.resource.data.nicknameUpdatedAt == request.time;
       allow update: if isOwner(uid)
         && request.resource.data.keys().hasOnly(['nickname', 'nicknameUpdatedAt'])
         && validNick(request.resource.data.nickname)
-        && request.resource.data.nicknameUpdatedAt is timestamp
+        && request.resource.data.nicknameUpdatedAt == request.time
         && (
           !('nicknameUpdatedAt' in resource.data)
           || !(resource.data.nicknameUpdatedAt is timestamp)
