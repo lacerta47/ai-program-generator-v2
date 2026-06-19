@@ -18,20 +18,22 @@ export default function FooterScrollExperience() {
     root.classList.add('hide-scrollbar');
     const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-    // 스크롤 진행도 → LUN 페이드/드리프트(스크롤 직접 연동: reduced-motion에도 안전)
+    // 스크롤 진행도 → LUN: 내릴수록 "커지다가" 끝(페이드 직전)에 가장 크고, 마지막 구간에서 페이드아웃.
+    // 스크롤 직접 연동이라 reduced-motion에도 안전.
     const onScroll = () => {
       const vh = window.innerHeight;
       const y = window.scrollY;
-      const start = vh * 0.55;
-      const end = vh * 1.7;
-      const p = Math.min(1, Math.max(0, (y - start) / (end - start)));
+      // 트랙(h-[600vh])의 sticky 구간 ≈ 5vh 동안 진행도 0→1
+      const p = Math.min(1, Math.max(0, y / (vh * 5)));
       if (lunRef.current) {
-        lunRef.current.style.opacity = String(1 - p);
-        lunRef.current.style.transform = `translateY(${-p * 60}px) scale(${1 - p * 0.08})`;
+        const scale = 1 + p * 0.7; // 내릴수록 커짐(최대 ~1.7x) → 페이드 직전이 가장 큼
+        const fadeStart = 0.82; // 마지막 18% 구간에서만 페이드
+        const op = p < fadeStart ? 1 : Math.max(0, 1 - (p - fadeStart) / (1 - fadeStart));
+        lunRef.current.style.transform = `scale(${scale})`;
+        lunRef.current.style.opacity = String(op);
       }
       if (hintRef.current) {
-        // 힌트는 초반에 빠르게 사라짐
-        hintRef.current.style.opacity = String(Math.max(0, 1 - y / (vh * 0.35)));
+        hintRef.current.style.opacity = String(Math.max(0, 1 - y / (vh * 0.4)));
       }
     };
 
@@ -64,9 +66,9 @@ export default function FooterScrollExperience() {
 
   return (
     <>
-      {/* LUN 트랙 — 긴 구간 동안 sticky로 머물다 페이드 */}
-      <div className="relative h-[230vh]">
-        <div className="sticky top-0 flex h-screen flex-col items-center justify-center gap-5 px-6 text-center">
+      {/* LUN 트랙 — 긴 구간(약 3배) 동안 sticky로 머물며 커지다 페이드 */}
+      <div className="relative h-[600vh]">
+        <div className="sticky top-0 flex h-screen flex-col items-center justify-center gap-5 overflow-hidden px-6 text-center">
           <h1
             ref={lunRef}
             className="text-[120px] leading-none will-change-[opacity,transform] sm:text-[200px]"
