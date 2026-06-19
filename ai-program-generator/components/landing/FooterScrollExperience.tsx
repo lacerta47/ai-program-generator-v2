@@ -16,6 +16,9 @@ export default function FooterScrollExperience() {
   useEffect(() => {
     const root = document.documentElement;
     root.classList.add('hide-scrollbar');
+    // 항상 최상단에서 시작(브라우저 스크롤 복원 끄고 0으로)
+    if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+    window.scrollTo(0, 0);
     const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     // 스크롤 진행도 → LUN: 내릴수록 "커지다가" 끝(페이드 직전)에 가장 크고, 마지막 구간에서 페이드아웃.
@@ -27,7 +30,7 @@ export default function FooterScrollExperience() {
       const p = Math.min(1, Math.max(0, y / (vh * 5)));
       if (lunRef.current) {
         const scale = 1 + p * 0.7; // 내릴수록 커짐(최대 ~1.7x) → 페이드 직전이 가장 큼
-        const fadeStart = 0.82; // 마지막 18% 구간에서만 페이드
+        const fadeStart = 0.9; // 마지막 10% 구간에서만 급격히 페이드
         const op = p < fadeStart ? 1 : Math.max(0, 1 - (p - fadeStart) / (1 - fadeStart));
         lunRef.current.style.transform = `scale(${scale})`;
         lunRef.current.style.opacity = String(op);
@@ -55,6 +58,7 @@ export default function FooterScrollExperience() {
 
     return () => {
       root.classList.remove('hide-scrollbar');
+      if ('scrollRestoration' in history) history.scrollRestoration = 'auto';
       if (lenis) {
         lenis.destroy();
         cancelAnimationFrame(raf);
@@ -71,12 +75,15 @@ export default function FooterScrollExperience() {
         <div className="sticky top-0 flex h-screen flex-col items-center justify-center gap-5 overflow-hidden px-6 text-center">
           <h1
             ref={lunRef}
-            className="text-[120px] leading-none will-change-[opacity,transform] sm:text-[200px]"
+            className="text-[125px] leading-none will-change-[opacity,transform] sm:text-[216px]"
           >
             <span className="lun-shiny font-wordmark">LUN</span>
           </h1>
-          <p ref={hintRef} className="text-[13px] text-muted/70">
-            천천히 내려보세요
+          <p
+            ref={hintRef}
+            className="-translate-y-1 text-[13px] font-medium uppercase tracking-[0.4em] text-brand-strong dark:text-brand"
+          >
+            Logic&nbsp;·&nbsp;Unfold&nbsp;·&nbsp;Next
           </p>
         </div>
       </div>
