@@ -77,7 +77,7 @@ export default function Creator() {
     } catch (e) {
       console.error('작품 수정 저장 실패:', e);
       if (e instanceof ProfanityError) {
-        toast('제목에 쓸 수 없는 말이 있어요. 고운 말로 바꿔 주세요.');
+        toast(e.message);
       } else {
         toast('저장하지 못했어요. 인터넷 연결이나 권한을 확인해 주세요.');
       }
@@ -132,6 +132,8 @@ export default function Creator() {
       abortRef.current = null;
       setStreamingPartial({});
       setLoading('idle');
+      // 취소/실패로 코드 탭에 남지 않게 — 결과(미리보기)로 복귀(코드 없으면 빈 화면이 자연히 노출)
+      setResultTab('preview');
     }
   }
 
@@ -175,6 +177,8 @@ export default function Creator() {
       abortRef.current = null;
       setStreamingPartial({});
       setLoading('idle');
+      // 취소/실패 시 보던 미리보기로 복귀(수정 전 결과 보존)
+      setResultTab('preview');
     }
   }
 
@@ -317,6 +321,7 @@ export default function Creator() {
         setModifyText={setModifyText}
         onModify={handleModify}
         modifyRef={modifyRef}
+        onNeedLogin={() => setLoginOpen(true)}
       />
 
       <LoginDialog open={loginOpen} onClose={() => setLoginOpen(false)} />

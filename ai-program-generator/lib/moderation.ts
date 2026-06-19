@@ -101,7 +101,11 @@ export class ProfanityError extends Error {
   }
 }
 
-/** 비속어가 있으면 ProfanityError를 던진다(데이터 계층 write 가드용). */
-export async function assertClean(text: string): Promise<void> {
-  if (await hasProfanity(text)) throw new ProfanityError();
+/** 비속어가 있으면 ProfanityError를 던진다(데이터 계층 write 가드용). label을 주면 어느 칸인지 안내. */
+export async function assertClean(text: string, label = ''): Promise<void> {
+  if (await hasProfanity(text)) {
+    throw new ProfanityError(
+      label ? `${label}에 쓸 수 없는 말이 있어요. 고운 말로 바꿔 주세요.` : undefined,
+    );
+  }
 }

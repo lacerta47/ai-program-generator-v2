@@ -15,7 +15,7 @@ import {
   type DocumentData,
 } from 'firebase/firestore';
 import { db } from './client';
-import { assertClean } from '@/lib/moderation';
+import { assertClean, isReservedNickname, ProfanityError } from '@/lib/moderation';
 import { forkPost } from '@/lib/client/postCount';
 import type { Post, NewPost, PostEdit } from './types';
 
@@ -72,10 +72,18 @@ export async function getPost(id: string): Promise<Post | null> {
 }
 
 export async function createPost(data: NewPost): Promise<string> {
-  await assertClean(data.title);
-  await assertClean(data.authorName);
+  await assertClean(data.title, '제목');
+  await assertClean(data.authorName, '이름');
+  assertAuthorNameAllowed(data.authorName);
   const ref = await addDoc(collection(db, COL), data);
   return ref.id;
+}
+
+/** 작성자명이 '관리자' 등 사칭 예약어면 차단(닉네임과 동일 정책). */
+function assertAuthorNameAllowed(authorName: string): void {
+  if (isReservedNickname(authorName)) {
+    throw new ProfanityError('그 이름은 쓸 수 없어요. 다른 이름으로 해주세요.');
+  }
 }
 
 export async function updatePostTitle(id: string, title: string): Promise<void> {
@@ -85,8 +93,9 @@ export async function updatePostTitle(id: string, title: string): Promise<void> 
 
 /** 작품 전체 편집(덮어쓰기) — 제목·작성자명·계획서·코드. ownerUid/categoryId/createdAt는 불변. */
 export async function updatePostContent(id: string, edit: PostEdit): Promise<void> {
-  await assertClean(edit.title);
-  await assertClean(edit.authorName);
+  await assertClean(edit.title, '제목');
+  await assertClean(edit.authorName, '이름');
+  assertAuthorNameAllowed(edit.authorName);
   await updateDoc(doc(db, COL, id), { ...edit });
 }
 
