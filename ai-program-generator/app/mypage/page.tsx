@@ -248,10 +248,13 @@ function MyWorks({ uid }: { uid: string }) {
     try {
       await deletePost(post.id);
       toast('작품을 삭제했어요.', 'success');
-      // 커서/hasMore 정합을 위해 재조회. 현재 페이지의 마지막 1건이었고 첫 페이지가 아니면 이전 페이지로.
+      // 삭제로 페이지 경계가 밀리므로 이후 페이지의 시작 커서는 stale → 폐기하고 재조회가 다시 채우게 한다.
+      // 현재 페이지의 마지막 1건이었고 첫 페이지가 아니면 이전 페이지로(그 시작 커서는 유효).
       if ((posts?.length ?? 0) <= 1 && page > 0) {
+        startsRef.current = startsRef.current.slice(0, page); // 이전 페이지까지의 커서만 유지
         setPage((p) => Math.max(0, p - 1));
       } else {
+        startsRef.current = startsRef.current.slice(0, page + 1); // 현재 페이지 이후 커서 폐기
         setReloadKey((k) => k + 1);
       }
     } catch (e) {

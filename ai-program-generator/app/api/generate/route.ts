@@ -128,7 +128,9 @@ export async function POST(req: NextRequest) {
         }
         controller.close();
       } catch (e) {
-        const aborted = req.signal.aborted || (e instanceof Error && e.message === 'ABORTED');
+        const aborted =
+          req.signal.aborted ||
+          (e instanceof Error && (e.message === 'ABORTED' || e.name === 'AbortError'));
         await refundOnce();
         if (!aborted) {
           console.error('[/api/generate] 스트리밍 실패:', e);
