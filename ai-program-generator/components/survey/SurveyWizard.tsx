@@ -348,9 +348,15 @@ export default function SurveyWizard() {
         <div className="order-1 grid min-h-[50vh] place-items-center lg:order-2">
           <div className="flex flex-col items-center gap-5 text-center">
             <BuilderBot />
-            <p className="text-[18px] text-muted">{buildMsg}</p>
-            {/* 3단계 체크리스트 — 도착한 단계만큼 체크(진짜 진행 기반) */}
-            <ul className="flex flex-col gap-2.5 text-left">
+            {/* 스크린리더용 단계 안내(시각 요소는 아래 체크리스트) */}
+            <p className="sr-only" role="status" aria-live="polite">
+              {stage ? `${STAGE_LABEL_EASY[stage]} 만들고 있어요` : 'AI가 준비하고 있어요'}
+            </p>
+            <p className="text-[18px] text-muted" aria-hidden="true">
+              {buildMsg}
+            </p>
+            {/* 3단계 체크리스트 — 도착한 단계만큼 체크(진짜 진행 기반). 시각용이라 SR에선 숨김 */}
+            <ul className="flex flex-col gap-2.5 text-left" aria-hidden="true">
               {STAGE_ORDER.map((s) => {
                 const cur = stage ? STAGE_ORDER.indexOf(stage) : -1;
                 const done = cur > STAGE_ORDER.indexOf(s);
