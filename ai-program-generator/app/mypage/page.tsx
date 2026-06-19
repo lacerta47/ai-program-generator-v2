@@ -7,6 +7,7 @@ import { Pencil, Download, Link2, Check, Trash2, Heart, Eye, GitFork, Sparkles }
 import { useAuth } from '@/components/auth/AuthProvider';
 import { useToast } from '@/components/ui/Toast';
 import { useConfirm } from '@/components/ui/ConfirmProvider';
+import { sendEmailVerification } from 'firebase/auth';
 import { auth } from '@/lib/firebase/client';
 import { fetchMyPosts, deletePost, type PostCursor } from '@/lib/firebase/posts';
 import {
@@ -87,6 +88,40 @@ function AccountCard({
   const [editOpen, setEditOpen] = useState(false);
   const [draft, setDraft] = useState('');
   const [busy, setBusy] = useState(false);
+  // 이메일 인증 상태(Google은 자동 true). 미인증이면 안내 + 재발송/확인.
+  const [verified, setVerified] = useState(true);
+  const [vBusy, setVBusy] = useState(false);
+
+  useEffect(() => {
+    setVerified(auth.currentUser?.emailVerified ?? true);
+  }, [uid]);
+
+  async function resendVerification() {
+    if (!auth.currentUser) return;
+    setVBusy(true);
+    try {
+      await sendEmailVerification(auth.currentUser);
+      toast('인증 메일을 다시 보냈어요. 메일함을 확인해 주세요.', 'success');
+    } catch {
+      toast('잠시 후 다시 시도해 주세요.');
+    } finally {
+      setVBusy(false);
+    }
+  }
+
+  async function recheckVerification() {
+    if (!auth.currentUser) return;
+    setVBusy(true);
+    try {
+      await auth.currentUser.reload();
+      await auth.currentUser.getIdToken(true); // 서버가 볼 토큰도 갱신
+      const ok = auth.currentUser.emailVerified;
+      setVerified(ok);
+      toast(ok ? '이메일 인증이 확인됐어요!' : '아직 인증 전이에요. 메일 링크를 눌러 주세요.', ok ? 'success' : undefined);
+    } finally {
+      setVBusy(false);
+    }
+  }
 
   useEffect(() => {
     let alive = true;
@@ -175,6 +210,22 @@ function AccountCard({
           오늘 사용 <span className="text-ink">{usageText}</span>
         </span>
       </div>
+
+      {!verified && (
+        <div className="anim-pop-in mt-4 rounded-[var(--r-md)] border-2 border-coral/40 bg-coral-soft p-4">
+          <p className="text-[15px] text-coral-ink">
+            이메일 인증이 필요해요. 인증해야 <strong>프로그램 만들기·게시판 올리기</strong>를 쓸 수 있어요.
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Button variant="primary" onClick={resendVerification} disabled={vBusy}>
+              인증 메일 다시 보내기
+            </Button>
+            <Button variant="ghost" onClick={recheckVerification} disabled={vBusy}>
+              인증했어요(새로고침)
+            </Button>
+          </div>
+        </div>
+      )}
 
       <Modal open={editOpen} onClose={() => setEditOpen(false)} label="별명 바꾸기" className="max-w-xs p-6">
         <h2 className="mb-4 text-[20px]">별명 바꾸기</h2>

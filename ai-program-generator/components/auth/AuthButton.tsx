@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { signOut } from 'firebase/auth';
-import { LogIn, LogOut, Crown, User } from 'lucide-react';
+import { LogIn, LogOut, Crown, User, AlertCircle } from 'lucide-react';
 import { auth } from '@/lib/firebase/client';
 import { getUserProfile } from '@/lib/firebase/users';
 import { countReports } from '@/lib/firebase/reports';
@@ -45,6 +45,15 @@ export default function AuthButton() {
   if (user) {
     return (
       <div className="flex items-center gap-2">
+        {!user.emailVerified && (
+          <Link
+            href="/mypage"
+            title="이메일 인증이 필요해요"
+            className="press inline-flex items-center gap-1 rounded-full bg-coral-soft px-3 py-1.5 text-[13px] font-medium text-coral-ink hover:brightness-95"
+          >
+            <AlertCircle size={14} aria-hidden /> 인증 필요
+          </Link>
+        )}
         {isAdmin && (
           <Link
             href="/admin"
