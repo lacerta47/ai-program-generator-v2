@@ -30,6 +30,7 @@ interface Usage {
   used: number;
   limit: number | null;
   unlimited: boolean;
+  kind?: 'daily' | 'total';
 }
 
 /** 본인 토큰으로 /api/me/usage 호출. */
@@ -238,7 +239,7 @@ function AccountCard({
           가입일 <span className="text-ink">{createdAt ? formatDate(new Date(createdAt).getTime()) : '—'}</span>
         </span>
         <span className="text-muted">
-          오늘 사용 <span className="text-ink">{usageText}</span>
+          {usage?.kind === 'total' ? '사용' : '오늘 사용'} <span className="text-ink">{usageText}</span>
         </span>
       </div>
 
