@@ -9,5 +9,9 @@ export async function GET(req: NextRequest) {
   if (gate instanceof NextResponse) return gate;
   const doc = await adminDb.doc(`teachers/${gate.uid}`).get();
   const d = doc.data() ?? {};
-  return NextResponse.json({ name: (d.name as string) ?? '', totalQuota: (d.totalQuota as number) ?? 0 });
+  return NextResponse.json({
+    name: (d.name as string) ?? '',
+    totalQuota: (d.totalQuota as number) ?? 0,
+    usedTotal: (d.usedTotal as number) ?? 0,
+  });
 }

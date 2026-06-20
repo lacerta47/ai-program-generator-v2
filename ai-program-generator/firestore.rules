@@ -145,6 +145,12 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // 학생 메타(소속 선생님·한도·누적 소진). 서버 Admin SDK가 발급/수정. 본인·관리자 읽기.
+    match /students/{uid} {
+      allow read: if isOwner(uid) || isAdmin();
+      allow write: if isAdmin();
+    }
+
     // 닉네임 점유 — 문서ID=소문자별명, 값={uid}. 한 번 점유하면 그 계정 영구 소유(재활용 없음).
     match /nicknames/{key} {
       allow read: if true;
