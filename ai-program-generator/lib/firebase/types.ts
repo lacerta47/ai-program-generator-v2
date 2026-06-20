@@ -8,6 +8,8 @@ export interface Category {
   createdAt: number;
   /** 부모 카테고리 id. 없거나 null = 최상위(root). 인접 리스트로 3단 트리 구성. */
   parentId?: string | null;
+  /** 선생님 소유 게시판이면 그 선생님 uid (C2). 일반 게시판은 없음. */
+  teacherUid?: string;
 }
 
 /** 계획서 5필드 — 생성기 입력이자 게시물에 개별 저장(편집 시 폼 복원용) */
