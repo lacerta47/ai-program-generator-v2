@@ -7,7 +7,8 @@ import { Pencil, Download, Link2, Check, Trash2, Heart, Eye, GitFork, Sparkles }
 import { useAuth } from '@/components/auth/AuthProvider';
 import { useToast } from '@/components/ui/Toast';
 import { useConfirm } from '@/components/ui/ConfirmProvider';
-import { sendEmailVerification } from 'firebase/auth';
+import { sendEmailVerification, signOut } from 'firebase/auth';
+import { deleteMyAccount } from '@/lib/client/account';
 import { auth } from '@/lib/firebase/client';
 import { fetchMyPosts, deletePost, type PostCursor } from '@/lib/firebase/posts';
 import {
@@ -43,7 +44,7 @@ async function fetchMyUsage(): Promise<Usage> {
 }
 
 export default function MyPage() {
-  const { user, loading } = useAuth();
+  const { user, loading, isAdmin } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
 
@@ -64,7 +65,7 @@ export default function MyPage() {
         </div>
       ) : (
         <div className="mx-auto flex max-w-3xl flex-col gap-6 p-4 sm:p-6">
-          <AccountCard uid={user.uid} email={user.email} createdAt={user.metadata?.creationTime} />
+          <AccountCard uid={user.uid} email={user.email} createdAt={user.metadata?.creationTime} isAdmin={isAdmin} />
           <MyWorks uid={user.uid} />
         </div>
       )}
@@ -76,12 +77,38 @@ function AccountCard({
   uid,
   email,
   createdAt,
+  isAdmin,
 }: {
   uid: string;
   email: string | null;
   createdAt?: string;
+  isAdmin: boolean;
 }) {
   const { toast } = useToast();
+  const router = useRouter();
+  const confirm = useConfirm();
+  const [withdrawing, setWithdrawing] = useState(false);
+
+  async function withdraw() {
+    const ok = await confirm({
+      title: '정말 탈퇴할까요?',
+      message: '계정과 만든 작품이 모두 영구 삭제돼요. 되돌릴 수 없어요.',
+      confirmLabel: '탈퇴',
+      danger: true,
+    });
+    if (!ok) return;
+    setWithdrawing(true);
+    try {
+      await deleteMyAccount();
+      await signOut(auth);
+      toast('탈퇴가 완료됐어요. 그동안 고마웠어요.', 'success');
+      router.replace('/');
+    } catch (e) {
+      toast(e instanceof Error ? e.message : '계정을 삭제하지 못했어요.');
+      setWithdrawing(false);
+    }
+  }
+
   const [nickname, setNickname] = useState<string | null>(null);
   const [usage, setUsage] = useState<Usage | null>(null);
   const [usageError, setUsageError] = useState(false);
@@ -224,6 +251,19 @@ function AccountCard({
               인증했어요(새로고침)
             </Button>
           </div>
+        </div>
+      )}
+
+      {!isAdmin && (
+        <div className="mt-5 border-t border-line pt-4 text-right">
+          <button
+            type="button"
+            onClick={withdraw}
+            disabled={withdrawing}
+            className="text-[13px] text-muted underline-offset-4 hover:text-coral-ink hover:underline disabled:opacity-50"
+          >
+            {withdrawing ? '탈퇴 처리 중…' : '회원 탈퇴'}
+          </button>
         </div>
       )}
 
