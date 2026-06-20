@@ -11,6 +11,8 @@ import { TextInput, Label } from '@/components/ui/Field';
 import { useToast } from '@/components/ui/Toast';
 import { useConfirm } from '@/components/ui/ConfirmProvider';
 import { listStudents, createStudents, patchStudent, deleteStudent, type Student } from '@/lib/teacher/students';
+import { listBoardPosts, deleteBoardPost, type BoardPost } from '@/lib/teacher/posts';
+import { formatDate } from '@/lib/program';
 
 interface TeacherInfo {
   name: string;
@@ -57,6 +59,8 @@ function Console() {
   const [info, setInfo] = useState<TeacherInfo | null>(null);
   const [students, setStudents] = useState<Student[]>([]);
   const [loadingList, setLoadingList] = useState(true);
+  const [boardPosts, setBoardPosts] = useState<BoardPost[]>([]);
+  const [loadingBoard, setLoadingBoard] = useState(true);
 
   const [prefix, setPrefix] = useState('');
   const [count, setCount] = useState('');
@@ -68,6 +72,7 @@ function Console() {
 
   const reload = () => {
     setLoadingList(true);
+    setLoadingBoard(true);
     fetchTeacherMe()
       .then(setInfo)
       .catch((e) => console.error('선생님 정보 조회 실패:', e));
@@ -78,6 +83,13 @@ function Console() {
         toast('학생 목록을 불러오지 못했어요.');
       })
       .finally(() => setLoadingList(false));
+    listBoardPosts()
+      .then((r) => setBoardPosts(r.posts))
+      .catch((e) => {
+        console.error('우리 반 게시판 조회 실패:', e);
+        toast('우리 반 게시판을 불러오지 못했어요.');
+      })
+      .finally(() => setLoadingBoard(false));
   };
 
   useEffect(() => {
@@ -120,6 +132,23 @@ function Console() {
       reload();
     } catch (err) {
       toast(err instanceof Error ? err.message : '바꾸지 못했어요.');
+    }
+  }
+
+  async function removePost(p: BoardPost) {
+    const ok = await confirm({
+      title: '작품 삭제',
+      message: `「${p.title}」을(를) 게시판에서 지울까요? 되돌릴 수 없어요.`,
+      confirmLabel: '삭제',
+      danger: true,
+    });
+    if (!ok) return;
+    try {
+      await deleteBoardPost(p.id);
+      toast('지웠어요.', 'success');
+      reload();
+    } catch (err) {
+      toast(err instanceof Error ? err.message : '지우지 못했어요.');
     }
   }
 
@@ -208,6 +237,27 @@ function Console() {
                 <Button variant="soft" onClick={() => changeLimit(s)}>한도</Button>
                 <Button variant="ghost" onClick={() => remove(s)}>삭제</Button>
               </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <h2 className="mb-2 mt-8 text-[18px]">우리 반 게시판</h2>
+      {loadingBoard ? (
+        <div className="py-8">
+          <LoadingDots label="확인 중…" />
+        </div>
+      ) : boardPosts.length === 0 ? (
+        <p className="py-8 text-center text-muted">아직 올라온 작품이 없어요.</p>
+      ) : (
+        <div className="flex flex-col gap-2">
+          {boardPosts.map((p) => (
+            <div key={p.id} className="flex items-center justify-between gap-3 rounded-[var(--r-md)] border-2 border-line bg-surface p-4">
+              <div className="min-w-0">
+                <p className="truncate text-[16px]">{p.title || '(제목 없음)'}</p>
+                <p className="truncate text-[13px] text-muted">{p.authorName} · {formatDate(p.createdAt)}</p>
+              </div>
+              <Button variant="ghost" onClick={() => removePost(p)}>삭제</Button>
             </div>
           ))}
         </div>
