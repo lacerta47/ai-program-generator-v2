@@ -20,6 +20,10 @@ service cloud.firestore {
     function isVerified() {
       return isSignedIn() && request.auth.token.email_verified == true;
     }
+    // 발급 계정(선생님/학생) — 가짜 이메일이라 email_verified 없이도 쓰기 허용(역할 기반).
+    function isRoleAccount() {
+      return isSignedIn() && (request.auth.token.teacher == true || request.auth.token.student == true);
+    }
 
     // code 객체 형태/크기 검증 (Firestore 문서 1MiB 한도 보호)
     function validCode(c) {
@@ -82,13 +86,13 @@ service cloud.firestore {
     match /posts/{postId} {
       allow read: if true;
       allow create: if isSignedIn()
-        && (isAdmin() || isVerified())
+        && (isAdmin() || isVerified() || isRoleAccount())
         && request.resource.data.ownerUid == request.auth.uid
         && validPost(request.resource.data);
       // 수정: 본인/관리자만. 변경 가능 필드는 제목·작성자명·계획서·코드·수정시각으로 제한
       // (ownerUid·categoryId·createdAt 변조 차단). 변경되는 값은 형태·크기 재검증.
       // 본인/관리자 콘텐츠 편집만. 카운터(좋아요·조회·포크)는 서버 API(Admin SDK) 전용 — 클라 직접 쓰기 차단.
-      allow update: if (isAdmin() || (isOwner(resource.data.ownerUid) && isVerified()))
+      allow update: if (isAdmin() || (isOwner(resource.data.ownerUid) && (isVerified() || isRoleAccount())))
         && request.resource.data.diff(resource.data).affectedKeys()
              .hasOnly(['title', 'authorName', 'plan', 'code', 'prompt', 'updatedAt'])
         && request.resource.data.title is string
@@ -133,6 +137,12 @@ service cloud.firestore {
           || request.time > resource.data.nicknameUpdatedAt + duration.value(15, 'd')
         );
       allow delete: if isAdmin();
+    }
+
+    // 선생님 메타(표시명·총 한도 풀). 서버 Admin SDK가 발급/수정. 본인·관리자 읽기.
+    match /teachers/{uid} {
+      allow read: if isOwner(uid) || isAdmin();
+      allow write: if isAdmin();
     }
 
     // 닉네임 점유 — 문서ID=소문자별명, 값={uid}. 한 번 점유하면 그 계정 영구 소유(재활용 없음).
