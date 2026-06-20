@@ -7,6 +7,7 @@ import type { GenerateMode } from '@/lib/ai/types';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { todayKeyKST } from '@/lib/usageDay';
 import { readEffectiveLimit } from '@/lib/admin/usageConfig';
+import { reserveStudentQuota, refundStudentQuota } from '@/lib/server/studentQuota';
 
 // AI 호출은 반드시 서버에서만 실행한다(키 노출 방지).
 export const runtime = 'nodejs';
@@ -85,7 +86,20 @@ export async function POST(req: NextRequest) {
   // 3) 한도 선점 (트랜잭션). 생성이 실패하면 4)에서 환불한다.
   const day = todayKeyKST();
   const usageRef = adminDb.collection('usage').doc(`${uid}_${day}`);
-  if (!isAdmin && !isTeacher) {
+  if (isStudent) {
+    const r = await reserveStudentQuota(uid);
+    if (!r.ok) {
+      const msg =
+        r.reason === 'pool'
+          ? '선생님이 정한 우리 반 한도를 다 썼어요.'
+          : r.reason === 'cap-daily'
+            ? '오늘 만들 수 있는 횟수를 다 썼어요. 내일 다시 만들어 보세요!'
+            : r.reason === 'cap-total'
+              ? '만들 수 있는 횟수를 다 썼어요.'
+              : '한도를 확인하지 못했어요. 잠시 후 다시 해주세요.';
+      return NextResponse.json({ error: msg }, { status: r.reason === 'misconfig' ? 500 : 429 });
+    }
+  } else if (!isAdmin && !isTeacher) {
     const dailyLimit = await readEffectiveLimit(uid);
     try {
       const allowed = await adminDb.runTransaction(async (tx) => {
@@ -128,7 +142,8 @@ export async function POST(req: NextRequest) {
   const refundOnce = async () => {
     if (refunded || isAdmin || isTeacher) return;
     refunded = true;
-    await refundQuota(usageRef);
+    if (isStudent) await refundStudentQuota(uid);
+    else await refundQuota(usageRef);
   };
 
   const stream = new ReadableStream<Uint8Array>({
