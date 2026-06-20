@@ -13,6 +13,8 @@ export async function deleteAccountCascade(uid: string): Promise<void> {
   nicks.forEach((d) => refs.push(d.ref));
   refs.push(adminDb.doc(`users/${uid}`));
   refs.push(adminDb.doc(`limits/${uid}`));
+  refs.push(adminDb.doc(`teachers/${uid}`));
+  refs.push(adminDb.doc(`students/${uid}`));
   for (let i = 0; i < refs.length; i += 450) {
     const batch = adminDb.batch();
     refs.slice(i, i + 450).forEach((r) => batch.delete(r));

@@ -15,8 +15,8 @@ export async function DELETE(req: NextRequest) {
   let uid: string;
   try {
     const decoded = await adminAuth.verifyIdToken(idToken);
-    if (decoded.admin === true) {
-      return NextResponse.json({ error: '관리자 계정은 탈퇴할 수 없어요.' }, { status: 403 });
+    if (decoded.admin === true || decoded.teacher === true) {
+      return NextResponse.json({ error: '관리자·선생님 계정은 탈퇴할 수 없어요.' }, { status: 403 });
     }
     uid = decoded.uid;
   } catch {
