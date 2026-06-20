@@ -28,11 +28,15 @@ export async function POST(req: NextRequest) {
 
   let uid: string;
   let isAdmin = false;
+  let isTeacher = false;
+  let isStudent = false;
   let emailVerified = false;
   try {
     const decoded = await adminAuth.verifyIdToken(idToken);
     uid = decoded.uid;
     isAdmin = decoded.admin === true;
+    isTeacher = decoded.teacher === true;
+    isStudent = decoded.student === true;
     emailVerified = decoded.email_verified === true;
   } catch {
     return NextResponse.json(
@@ -42,7 +46,7 @@ export async function POST(req: NextRequest) {
   }
 
   // 이메일 인증 필수(Google 로그인은 자동 인증, 관리자는 예외). 무분별 가입·생성 양산 차단.
-  if (!isAdmin && !emailVerified) {
+  if (!isAdmin && !isTeacher && !isStudent && !emailVerified) {
     return NextResponse.json(
       { error: '이메일 인증이 필요해요. 마이페이지에서 인증 메일을 다시 받을 수 있어요.' },
       { status: 403 },
@@ -81,7 +85,7 @@ export async function POST(req: NextRequest) {
   // 3) 한도 선점 (트랜잭션). 생성이 실패하면 4)에서 환불한다.
   const day = todayKeyKST();
   const usageRef = adminDb.collection('usage').doc(`${uid}_${day}`);
-  if (!isAdmin) {
+  if (!isAdmin && !isTeacher) {
     const dailyLimit = await readEffectiveLimit(uid);
     try {
       const allowed = await adminDb.runTransaction(async (tx) => {
@@ -122,7 +126,7 @@ export async function POST(req: NextRequest) {
   const encoder = new TextEncoder();
   let refunded = false;
   const refundOnce = async () => {
-    if (refunded || isAdmin) return;
+    if (refunded || isAdmin || isTeacher) return;
     refunded = true;
     await refundQuota(usageRef);
   };
