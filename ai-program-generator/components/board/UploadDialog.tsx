@@ -6,6 +6,7 @@ import { PartyPopper, LayoutGrid, X } from 'lucide-react';
 import { useAuth } from '@/components/auth/AuthProvider';
 import { subscribeCategories } from '@/lib/firebase/categories';
 import { leafPaths } from '@/lib/board/categoryTree';
+import { getMyBoard } from '@/lib/student/board';
 import { createPost, incrementForkCount } from '@/lib/firebase/posts';
 import { getUserProfile, claimNickname, NicknameError } from '@/lib/firebase/users';
 import { ProfanityError } from '@/lib/moderation';
@@ -35,6 +36,7 @@ export default function UploadDialog({ open, onClose, code, plan, prompt, defaul
   const [nickname, setNickname] = useState(''); // 최초 설정용 입력값
   const [savedNickname, setSavedNickname] = useState<string | null>(null); // 이미 정한 별명(읽기전용 표시)
   const [categoryId, setCategoryId] = useState('');
+  const [studentBoard, setStudentBoard] = useState<{ boardId: string; boardName: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [done, setDone] = useState<{ postId: string; categoryId: string } | null>(null);
@@ -53,6 +55,20 @@ export default function UploadDialog({ open, onClose, code, plan, prompt, defaul
     }
   }, [defaultTitle, open]);
 
+  useEffect(() => {
+    if (!open || !isStudent) return;
+    setStudentBoard(null);
+    getMyBoard()
+      .then((b) => {
+        setStudentBoard(b);
+        setCategoryId(b.boardId);
+      })
+      .catch((e) => {
+        console.error('학생 게시판 조회 실패:', e);
+        setError('지금은 올릴 수 없어요. 잠시 후 다시 해주세요.');
+      });
+  }, [open, isStudent]);
+
   // 이미 정한 별명이 있으면 그대로 사용(읽기전용). 없으면 최초 입력받음.
   useEffect(() => {
     if (open && user) {
@@ -61,6 +77,7 @@ export default function UploadDialog({ open, onClose, code, plan, prompt, defaul
   }, [open, user]);
 
   useEffect(() => {
+    if (isStudent) return;
     if (!categories.length || categoryId) return;
     const leaves = leafPaths(categories);
     const preferred =
@@ -68,7 +85,7 @@ export default function UploadDialog({ open, onClose, code, plan, prompt, defaul
         ? defaultCategoryId
         : leaves[0]?.id ?? '';
     setCategoryId(preferred);
-  }, [categories, categoryId, defaultCategoryId]);
+  }, [categories, categoryId, defaultCategoryId, isStudent]);
 
   if (!open) return null;
 
@@ -78,7 +95,7 @@ export default function UploadDialog({ open, onClose, code, plan, prompt, defaul
     if (!user.emailVerified && !isTeacher && !isStudent) return setError('이메일 인증 후 올릴 수 있어요. 마이페이지에서 인증 메일을 받아 주세요.');
     const name = (savedNickname ?? nickname).trim();
     if (!name) return setError('별명을 적어 주세요.');
-    if (!categoryId) return setError('게시판을 골라 주세요.');
+    if (!categoryId) return setError(isStudent ? '우리 반 게시판을 불러오는 중이에요. 잠시 후 다시 해주세요.' : '게시판을 골라 주세요.');
     if (!title.trim()) return setError('제목을 적어 주세요.');
 
     setBusy(true);
@@ -161,7 +178,7 @@ export default function UploadDialog({ open, onClose, code, plan, prompt, defaul
             </Button>
           </div>
 
-          {leafPaths(categories).length === 0 ? (
+          {!isStudent && leafPaths(categories).length === 0 ? (
             <p className="text-[15px] text-muted">
               아직 작품을 올릴 게시판(반)이 없어요. 관리자 선생님이 먼저 만들어야 해요.
             </p>
@@ -190,15 +207,24 @@ export default function UploadDialog({ open, onClose, code, plan, prompt, defaul
               <Label text="작품 제목" required>
                 <TextInput value={title} onChange={(e) => setTitle(e.target.value)} maxLength={100} required />
               </Label>
-              <Label text="어느 게시판에 올릴까요?">
-                <Select value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
-                  {leafPaths(categories).map((l) => (
-                    <option key={l.id} value={l.id}>
-                      {l.path}
-                    </option>
-                  ))}
-                </Select>
-              </Label>
+              {isStudent ? (
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-[15px] font-medium text-muted">게시판</span>
+                  <div className="rounded-[var(--r-md)] bg-surface-2 px-4 py-2.5 text-[14px] text-ink">
+                    {studentBoard ? `우리 반 게시판 「${studentBoard.boardName}」에 올라가요` : '우리 반 게시판을 확인하는 중…'}
+                  </div>
+                </div>
+              ) : (
+                <Label text="어느 게시판에 올릴까요?">
+                  <Select value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
+                    {leafPaths(categories).map((l) => (
+                      <option key={l.id} value={l.id}>
+                        {l.path}
+                      </option>
+                    ))}
+                  </Select>
+                </Label>
+              )}
               {error && (
                 <p className="anim-pop-in rounded-[var(--r-md)] bg-coral-soft px-3.5 py-2.5 text-[14px] text-coral-ink">
                   {error}
