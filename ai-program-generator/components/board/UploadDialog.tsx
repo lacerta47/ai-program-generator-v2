@@ -57,16 +57,22 @@ export default function UploadDialog({ open, onClose, code, plan, prompt, defaul
 
   useEffect(() => {
     if (!open || !isStudent) return;
+    let cancelled = false;
     setStudentBoard(null);
     getMyBoard()
       .then((b) => {
+        if (cancelled) return;
         setStudentBoard(b);
         setCategoryId(b.boardId);
       })
       .catch((e) => {
+        if (cancelled) return;
         console.error('학생 게시판 조회 실패:', e);
         setError('지금은 올릴 수 없어요. 잠시 후 다시 해주세요.');
       });
+    return () => {
+      cancelled = true;
+    };
   }, [open, isStudent]);
 
   // 이미 정한 별명이 있으면 그대로 사용(읽기전용). 없으면 최초 입력받음.
