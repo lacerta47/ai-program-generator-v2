@@ -67,6 +67,7 @@ function Console() {
   const [created, setCreated] = useState<{ email: string; password: string }[] | null>(null);
 
   const reload = () => {
+    setLoadingList(true);
     fetchTeacherMe()
       .then(setInfo)
       .catch((e) => console.error('선생님 정보 조회 실패:', e));
@@ -159,10 +160,10 @@ function Console() {
         </Label>
         <div className="flex gap-3">
           <label className="flex items-center gap-1.5 text-[14px]">
-            <input type="radio" name="ltype" checked={limitType === 'daily'} onChange={() => setLimitType('daily')} /> 1일 한도
+            <input type="radio" name="ltype" aria-label="1일 한도" checked={limitType === 'daily'} onChange={() => setLimitType('daily')} /> 1일 한도
           </label>
           <label className="flex items-center gap-1.5 text-[14px]">
-            <input type="radio" name="ltype" checked={limitType === 'total'} onChange={() => setLimitType('total')} /> 총 한도
+            <input type="radio" name="ltype" aria-label="총 한도" checked={limitType === 'total'} onChange={() => setLimitType('total')} /> 총 한도
           </label>
         </div>
         <Label text="한도 값 (횟수)" required>
@@ -174,6 +175,7 @@ function Console() {
         {created && (
           <div className="rounded-[var(--r-md)] bg-mint-soft px-3.5 py-2.5 text-[13px] text-mint-ink">
             <p className="mb-1 font-medium">만든 계정 (공용 비번으로 로그인) — 학생들에게 나눠주세요</p>
+            {created[0] && <p className="mb-1">공용 비밀번호: <b>{created[0].password}</b></p>}
             <ul className="space-y-0.5">
               {created.map((c) => (
                 <li key={c.email}>{c.email}</li>
