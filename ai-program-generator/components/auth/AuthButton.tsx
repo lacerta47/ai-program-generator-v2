@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { signOut } from 'firebase/auth';
-import { LogIn, LogOut, Crown, User, AlertCircle } from 'lucide-react';
+import { LogIn, LogOut, Crown, User, AlertCircle, GraduationCap } from 'lucide-react';
 import { auth } from '@/lib/firebase/client';
 import { getUserProfile } from '@/lib/firebase/users';
 import { countReports } from '@/lib/firebase/reports';
@@ -12,7 +12,7 @@ import LoginDialog from './LoginDialog';
 import Button from '@/components/ui/Button';
 
 export default function AuthButton() {
-  const { user, isAdmin, loading } = useAuth();
+  const { user, isAdmin, isTeacher, loading } = useAuth();
   const [open, setOpen] = useState(false);
   const [nickname, setNickname] = useState<string | null>(null);
   const [reportCount, setReportCount] = useState(0);
@@ -45,7 +45,7 @@ export default function AuthButton() {
   if (user) {
     return (
       <div className="flex items-center gap-2">
-        {!user.emailVerified && (
+        {!user.emailVerified && !isTeacher && (
           <Link
             href="/mypage"
             title="이메일 인증이 필요해요"
@@ -60,6 +60,14 @@ export default function AuthButton() {
             className="press inline-flex items-center gap-1 rounded-full bg-sunshine-soft px-3 py-1.5 text-[13px] font-medium text-sunshine-ink hover:brightness-95"
           >
             <Crown size={14} aria-hidden /> 관리자{reportCount > 0 ? ` · 신고 ${reportCount}` : ''}
+          </Link>
+        )}
+        {isTeacher && (
+          <Link
+            href="/teacher"
+            className="press inline-flex items-center gap-1 rounded-full bg-brand-soft px-3 py-1.5 text-[13px] font-medium text-brand-ink hover:brightness-95"
+          >
+            <GraduationCap size={14} aria-hidden /> 선생님
           </Link>
         )}
         <Link

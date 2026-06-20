@@ -44,7 +44,7 @@ async function fetchMyUsage(): Promise<Usage> {
 }
 
 export default function MyPage() {
-  const { user, loading, isAdmin } = useAuth();
+  const { user, loading, isAdmin, isTeacher } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
 
@@ -65,7 +65,7 @@ export default function MyPage() {
         </div>
       ) : (
         <div className="mx-auto flex max-w-3xl flex-col gap-6 p-4 sm:p-6">
-          <AccountCard uid={user.uid} email={user.email} createdAt={user.metadata?.creationTime} isAdmin={isAdmin} />
+          <AccountCard uid={user.uid} email={user.email} createdAt={user.metadata?.creationTime} isAdmin={isAdmin} isTeacher={isTeacher} />
           <MyWorks uid={user.uid} />
         </div>
       )}
@@ -78,11 +78,13 @@ function AccountCard({
   email,
   createdAt,
   isAdmin,
+  isTeacher,
 }: {
   uid: string;
   email: string | null;
   createdAt?: string;
   isAdmin: boolean;
+  isTeacher: boolean;
 }) {
   const { toast } = useToast();
   const router = useRouter();
@@ -238,7 +240,7 @@ function AccountCard({
         </span>
       </div>
 
-      {!verified && (
+      {!verified && !isTeacher && (
         <div className="anim-pop-in mt-4 rounded-[var(--r-md)] border-2 border-coral/40 bg-coral-soft p-4">
           <p className="text-[15px] text-coral-ink">
             이메일 인증이 필요해요. 인증해야 <strong>프로그램 만들기·게시판 올리기</strong>를 쓸 수 있어요.
@@ -254,7 +256,7 @@ function AccountCard({
         </div>
       )}
 
-      {!isAdmin && (
+      {!isAdmin && !isTeacher && (
         <div className="mt-5 border-t border-line pt-4 text-right">
           <button
             type="button"

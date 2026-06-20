@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { Flag, Users, ChevronRight, UserPlus, FolderTree, Sparkles } from 'lucide-react';
+import { Flag, Users, ChevronRight, UserPlus, FolderTree, Sparkles, GraduationCap } from 'lucide-react';
 import { countReports } from '@/lib/firebase/reports';
 import Header from '@/components/common/Header';
 import AdminGate from '@/components/admin/AdminGate';
@@ -48,6 +48,12 @@ function HubContent() {
           icon={<UserPlus size={22} aria-hidden />}
           title="계정 관리"
           desc="수업용 계정 만들기·한도"
+        />
+        <HubCard
+          href="/admin/teachers"
+          icon={<GraduationCap size={22} aria-hidden />}
+          title="선생님 관리"
+          desc="선생님 계정 발급·총 한도"
         />
         <HubCard
           href="/admin/categories"
