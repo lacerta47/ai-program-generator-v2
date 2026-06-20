@@ -8,6 +8,7 @@ import { useToast } from '@/components/ui/Toast';
 import { useConfirm } from '@/components/ui/ConfirmProvider';
 import Button from '@/components/ui/Button';
 import { TextInput, Label } from '@/components/ui/Field';
+import LoadingDots from '@/components/ui/LoadingDots';
 import { listTeachers, createTeacher, patchTeacher, deleteTeacher, type Teacher } from '@/lib/admin/teachers';
 
 export default function AdminTeachersPage() {
@@ -25,6 +26,7 @@ function Content() {
   const { toast } = useToast();
   const confirm = useConfirm();
   const [teachers, setTeachers] = useState<Teacher[]>([]);
+  const [loading, setLoading] = useState(true);
   const [loginId, setLoginId] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
@@ -35,7 +37,11 @@ function Content() {
   const reload = () =>
     listTeachers()
       .then((r) => setTeachers(r.teachers))
-      .catch((e) => console.error('선생님 목록 조회 실패:', e));
+      .catch((e) => {
+        console.error('선생님 목록 조회 실패:', e);
+        toast('선생님 목록을 불러오지 못했어요.');
+      })
+      .finally(() => setLoading(false));
 
   useEffect(() => {
     reload();
@@ -129,21 +135,26 @@ function Content() {
       </form>
 
       <div className="flex flex-col gap-2">
-        {teachers.map((t) => (
-          <div key={t.uid} className="flex items-center justify-between gap-3 rounded-[var(--r-md)] border-2 border-line bg-surface p-4">
-            <div className="min-w-0">
-              <p className="truncate text-[16px]">
-                {t.name || '(이름 없음)'} {t.disabled && <span className="text-coral-ink">· 정지됨</span>}
-              </p>
-              <p className="truncate text-[13px] text-muted">{t.email} · 총 한도 {t.totalQuota}</p>
+        {loading ? (
+          <div className="py-12"><LoadingDots label="확인 중…" /></div>
+        ) : teachers.length === 0 ? (
+          <p className="py-8 text-center text-muted">아직 선생님이 없어요.</p>
+        ) : (
+          teachers.map((t) => (
+            <div key={t.uid} className="flex items-center justify-between gap-3 rounded-[var(--r-md)] border-2 border-line bg-surface p-4">
+              <div className="min-w-0">
+                <p className="truncate text-[16px]">
+                  {t.name || '(이름 없음)'} {t.disabled && <span className="text-coral-ink">· 정지됨</span>}
+                </p>
+                <p className="truncate text-[13px] text-muted">{t.email} · 총 한도 {t.totalQuota}</p>
+              </div>
+              <div className="flex shrink-0 gap-2">
+                <Button variant="soft" onClick={() => changeQuota(t)}>한도</Button>
+                <Button variant="ghost" onClick={() => remove(t)}>삭제</Button>
+              </div>
             </div>
-            <div className="flex shrink-0 gap-2">
-              <Button variant="soft" onClick={() => changeQuota(t)}>한도</Button>
-              <Button variant="ghost" onClick={() => remove(t)}>삭제</Button>
-            </div>
-          </div>
-        ))}
-        {!teachers.length && <p className="py-8 text-center text-muted">아직 선생님이 없어요.</p>}
+          ))
+        )}
       </div>
     </div>
   );
