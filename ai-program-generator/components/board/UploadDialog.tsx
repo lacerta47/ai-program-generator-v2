@@ -28,7 +28,7 @@ interface Props {
 }
 
 export default function UploadDialog({ open, onClose, code, plan, prompt, defaultTitle, forkedFrom, forkedFromAuthor, defaultCategoryId }: Props) {
-  const { user } = useAuth();
+  const { user, isTeacher } = useAuth();
   const router = useRouter();
   const [categories, setCategories] = useState<Category[]>([]);
   const [title, setTitle] = useState(defaultTitle);
@@ -75,7 +75,7 @@ export default function UploadDialog({ open, onClose, code, plan, prompt, defaul
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!user) return setError('로그인이 필요해요.');
-    if (!user.emailVerified) return setError('이메일 인증 후 올릴 수 있어요. 마이페이지에서 인증 메일을 받아 주세요.');
+    if (!user.emailVerified && !isTeacher) return setError('이메일 인증 후 올릴 수 있어요. 마이페이지에서 인증 메일을 받아 주세요.');
     const name = (savedNickname ?? nickname).trim();
     if (!name) return setError('별명을 적어 주세요.');
     if (!categoryId) return setError('게시판을 골라 주세요.');

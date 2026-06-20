@@ -12,7 +12,7 @@ import LoginDialog from './LoginDialog';
 import Button from '@/components/ui/Button';
 
 export default function AuthButton() {
-  const { user, isAdmin, loading } = useAuth();
+  const { user, isAdmin, isTeacher, loading } = useAuth();
   const [open, setOpen] = useState(false);
   const [nickname, setNickname] = useState<string | null>(null);
   const [reportCount, setReportCount] = useState(0);
@@ -45,7 +45,7 @@ export default function AuthButton() {
   if (user) {
     return (
       <div className="flex items-center gap-2">
-        {!user.emailVerified && (
+        {!user.emailVerified && !isTeacher && (
           <Link
             href="/mypage"
             title="이메일 인증이 필요해요"

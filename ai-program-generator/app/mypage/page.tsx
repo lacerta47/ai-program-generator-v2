@@ -240,7 +240,7 @@ function AccountCard({
         </span>
       </div>
 
-      {!verified && (
+      {!verified && !isTeacher && (
         <div className="anim-pop-in mt-4 rounded-[var(--r-md)] border-2 border-coral/40 bg-coral-soft p-4">
           <p className="text-[15px] text-coral-ink">
             이메일 인증이 필요해요. 인증해야 <strong>프로그램 만들기·게시판 올리기</strong>를 쓸 수 있어요.
