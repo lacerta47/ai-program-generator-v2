@@ -15,19 +15,18 @@ export async function GET(req: NextRequest) {
   let pageToken: string | undefined;
   do {
     const page = await adminAuth.listUsers(1000, pageToken);
-    for (const u of page.users) {
-      if (u.customClaims?.teacher === true) {
-        const doc = await adminDb.doc(`teachers/${u.uid}`).get();
-        const d = doc.data() ?? {};
-        teachers.push({
-          uid: u.uid,
-          email: u.email ?? null,
-          name: (d.name as string) ?? '',
-          totalQuota: (d.totalQuota as number) ?? 0,
-          disabled: u.disabled,
-        });
-      }
-    }
+    const teacherUsers = page.users.filter((u) => u.customClaims?.teacher === true);
+    const docs = await Promise.all(teacherUsers.map((u) => adminDb.doc(`teachers/${u.uid}`).get()));
+    teacherUsers.forEach((u, i) => {
+      const d = docs[i].data() ?? {};
+      teachers.push({
+        uid: u.uid,
+        email: u.email ?? null,
+        name: (d.name as string) ?? '',
+        totalQuota: (d.totalQuota as number) ?? 0,
+        disabled: u.disabled,
+      });
+    });
     pageToken = page.pageToken;
   } while (pageToken);
 
