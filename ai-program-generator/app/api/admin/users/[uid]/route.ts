@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminAuth, adminDb } from '@/lib/firebase/admin';
+import { adminAuth } from '@/lib/firebase/admin';
+import { deleteAccountCascade } from '@/lib/server/deleteAccount';
 import { requireAdmin } from '@/lib/admin/requireAdmin';
 import { setUserLimit, clearUserLimit } from '@/lib/admin/usageConfig';
 
@@ -72,22 +73,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ u
     const blocked = await blockIfAdminTarget(uid);
     if (blocked) return blocked;
 
-    // 1) Firestore 먼저 (중간 실패 시 고아 닉네임 방지 — Auth는 마지막)
-    const refs: FirebaseFirestore.DocumentReference[] = [];
-    const posts = await adminDb.collection('posts').where('ownerUid', '==', uid).get();
-    posts.forEach((d) => refs.push(d.ref));
-    const nicks = await adminDb.collection('nicknames').where('uid', '==', uid).get();
-    nicks.forEach((d) => refs.push(d.ref));
-    refs.push(adminDb.doc(`users/${uid}`));
-    refs.push(adminDb.doc(`limits/${uid}`));
-    for (let i = 0; i < refs.length; i += 450) {
-      const batch = adminDb.batch();
-      refs.slice(i, i + 450).forEach((r) => batch.delete(r));
-      await batch.commit();
-    }
-
-    // 2) Auth 마지막
-    await adminAuth.deleteUser(uid);
+    await deleteAccountCascade(uid);
     return NextResponse.json({ ok: true });
   } catch (e) {
     console.error('계정 삭제 실패:', e);
