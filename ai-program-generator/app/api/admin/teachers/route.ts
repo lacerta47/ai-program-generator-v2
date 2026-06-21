@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
   const gate = await requireAdmin(req);
   if (gate) return gate;
 
-  const teachers: { uid: string; email: string | null; name: string; totalQuota: number; disabled: boolean }[] = [];
+  const teachers: { uid: string; email: string | null; name: string; totalQuota: number; usedTotal: number; disabled: boolean }[] = [];
   let pageToken: string | undefined;
   do {
     const page = await adminAuth.listUsers(1000, pageToken);
@@ -24,6 +24,7 @@ export async function GET(req: NextRequest) {
         email: u.email ?? null,
         name: (d.name as string) ?? '',
         totalQuota: (d.totalQuota as number) ?? 0,
+        usedTotal: (d.usedTotal as number) ?? 0,
         disabled: u.disabled,
       });
     });

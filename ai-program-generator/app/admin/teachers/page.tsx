@@ -146,7 +146,7 @@ function Content() {
                 <p className="truncate text-[16px]">
                   {t.name || '(이름 없음)'} {t.disabled && <span className="text-coral-ink">· 정지됨</span>}
                 </p>
-                <p className="truncate text-[13px] text-muted">{t.email} · 총 한도 {t.totalQuota}</p>
+                <p className="truncate text-[13px] text-muted">{t.email} · 사용 {t.usedTotal}/{t.totalQuota}</p>
               </div>
               <div className="flex shrink-0 gap-2">
                 <Button variant="soft" onClick={() => changeQuota(t)}>한도</Button>
