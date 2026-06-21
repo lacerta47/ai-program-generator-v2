@@ -236,8 +236,8 @@ export default function UploadDialog({ open, onClose, code, plan, prompt, defaul
                   {error}
                 </p>
               )}
-              <Button type="submit" variant="primary" disabled={busy} className="w-full">
-                {busy ? '올리는 중…' : '올리기'}
+              <Button type="submit" variant="primary" disabled={busy || (isStudent && !studentBoard)} className="w-full">
+                {busy ? '올리는 중…' : isStudent && !studentBoard ? '게시판 확인 중…' : '올리기'}
               </Button>
             </form>
           )}
