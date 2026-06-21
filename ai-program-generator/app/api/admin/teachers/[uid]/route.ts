@@ -5,13 +5,21 @@ import { deleteAccountCascade } from '@/lib/server/deleteAccount';
 
 export const runtime = 'nodejs';
 
-/** 대상이 teacher claim 아니면 400. 맞으면 null. */
+/** 대상이 teacher claim 아니면 400, 없는 계정이면 404. 맞으면 null. */
 async function ensureTeacher(uid: string): Promise<NextResponse | null> {
-  const u = await adminAuth.getUser(uid);
-  if (u.customClaims?.teacher !== true) {
-    return NextResponse.json({ error: '선생님 계정이 아니에요.' }, { status: 400 });
+  try {
+    const u = await adminAuth.getUser(uid);
+    if (u.customClaims?.teacher !== true) {
+      return NextResponse.json({ error: '선생님 계정이 아니에요.' }, { status: 400 });
+    }
+    return null;
+  } catch (e) {
+    if ((e as { code?: string }).code === 'auth/user-not-found') {
+      return NextResponse.json({ error: '계정을 찾을 수 없어요.' }, { status: 404 });
+    }
+    console.error('선생님 확인 실패:', e);
+    return NextResponse.json({ error: '처리하지 못했어요.' }, { status: 500 });
   }
-  return null;
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ uid: string }> }) {
