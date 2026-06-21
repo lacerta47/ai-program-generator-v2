@@ -18,6 +18,13 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
       return NextResponse.json({ error: '우리 반 게시판 글이 아니에요.' }, { status: 403 });
     }
     await postRef.delete();
+    // 그 글의 신고도 함께 정리(유령 미처리 신고 카운트 방지). 관리자 글삭제와 동일한 청소.
+    const reps = await adminDb.collection('reports').where('postId', '==', id).get();
+    for (let i = 0; i < reps.docs.length; i += 450) {
+      const batch = adminDb.batch();
+      reps.docs.slice(i, i + 450).forEach((d) => batch.delete(d.ref));
+      await batch.commit();
+    }
     return NextResponse.json({ ok: true });
   } catch (e) {
     console.error('우리 반 글 삭제 실패:', e);
