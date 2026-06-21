@@ -53,6 +53,12 @@ export default function TeacherPage() {
   );
 }
 
+/** 발급된 계정 목록을 배포용 텍스트로 만든다(공용 비번 + 아이디 목록). */
+function buildCredText(list: { email: string; password: string }[]): string {
+  if (!list.length) return '';
+  return `공용 비밀번호: ${list[0].password}\n` + list.map((c) => c.email).join('\n');
+}
+
 function Console() {
   const { toast } = useToast();
   const confirm = useConfirm();
@@ -210,6 +216,37 @@ function Console() {
                 <li key={c.email}>{c.email}</li>
               ))}
             </ul>
+            <div className="mt-2 flex gap-2">
+              <Button
+                type="button"
+                variant="soft"
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(buildCredText(created));
+                    toast('계정 목록을 복사했어요.', 'success');
+                  } catch {
+                    toast('복사하지 못했어요.');
+                  }
+                }}
+              >
+                전체 복사
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => {
+                  const blob = new Blob([buildCredText(created)], { type: 'text/plain;charset=utf-8' });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = '우리반-계정.txt';
+                  a.click();
+                  URL.revokeObjectURL(url);
+                }}
+              >
+                텍스트로 저장
+              </Button>
+            </div>
           </div>
         )}
       </form>
