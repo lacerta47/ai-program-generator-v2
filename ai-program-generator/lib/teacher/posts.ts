@@ -20,7 +20,7 @@ export interface BoardPost {
   createdAt: number;
 }
 
-export function listBoardPosts(): Promise<{ board: { id: string; name: string }; posts: BoardPost[] }> {
+export function listBoardPosts(): Promise<{ board: { id: string; name: string }; posts: BoardPost[]; limited: boolean }> {
   return authed('/api/teacher/posts');
 }
 

@@ -66,6 +66,7 @@ function Console() {
   const [students, setStudents] = useState<Student[]>([]);
   const [loadingList, setLoadingList] = useState(true);
   const [boardPosts, setBoardPosts] = useState<BoardPost[]>([]);
+  const [boardLimited, setBoardLimited] = useState(false); // 최근 50개만 반환됐는지
   const [loadingBoard, setLoadingBoard] = useState(true);
 
   const [prefix, setPrefix] = useState('');
@@ -90,7 +91,10 @@ function Console() {
       })
       .finally(() => setLoadingList(false));
     listBoardPosts()
-      .then((r) => setBoardPosts(r.posts))
+      .then((r) => {
+        setBoardPosts(r.posts);
+        setBoardLimited(r.limited);
+      })
       .catch((e) => {
         console.error('우리 반 게시판 조회 실패:', e);
         toast('우리 반 게시판을 불러오지 못했어요.');
@@ -185,7 +189,14 @@ function Console() {
       <form onSubmit={submit} className="mt-5 flex flex-col gap-3 rounded-[var(--r-lg)] border-2 border-line bg-surface p-5">
         <h2 className="text-[18px]">학생 만들기</h2>
         <Label text="반 이름 (영문 소문자·숫자·-)" required>
-          <TextInput value={prefix} onChange={(e) => setPrefix(e.target.value)} placeholder="haetnim" required />
+          <TextInput
+            value={prefix}
+            onChange={(e) => setPrefix(e.target.value)}
+            placeholder="haetnim"
+            pattern="[a-z0-9-]+"
+            title="영문 소문자·숫자·- 만 쓸 수 있어요"
+            required
+          />
         </Label>
         <Label text="인원수 (1~50)" required>
           <TextInput inputMode="numeric" value={count} onChange={(e) => setCount(e.target.value)} placeholder="20" required />
@@ -297,6 +308,9 @@ function Console() {
               <Button variant="ghost" onClick={() => removePost(p)}>삭제</Button>
             </div>
           ))}
+          {boardLimited && (
+            <p className="pt-1 text-center text-[12.5px] text-muted">최근 50개만 보여요.</p>
+          )}
         </div>
       )}
     </div>
