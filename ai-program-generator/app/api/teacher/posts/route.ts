@@ -10,10 +10,12 @@ export async function GET(req: NextRequest) {
   if (gate instanceof NextResponse) return gate;
   try {
     const board = await ensureTeacherBoard(gate.uid);
+    const LIMIT = 50; // 모더레이션 콘솔 — 최근 글만. 과대 조회 방지(글 누적 시 성능).
     const snap = await adminDb
       .collection('posts')
       .where('categoryId', '==', board.boardId)
       .orderBy('createdAt', 'desc')
+      .limit(LIMIT)
       .get();
     const posts = snap.docs.map((d) => {
       const p = d.data();
@@ -24,7 +26,11 @@ export async function GET(req: NextRequest) {
         createdAt: (p.createdAt as number) ?? 0,
       };
     });
-    return NextResponse.json({ board: { id: board.boardId, name: board.boardName }, posts });
+    return NextResponse.json({
+      board: { id: board.boardId, name: board.boardName },
+      posts,
+      limited: snap.size === LIMIT, // 더 있을 수 있음(최근 50개만 반환)
+    });
   } catch (e) {
     console.error('우리 반 게시판 조회 실패:', e);
     return NextResponse.json({ error: '게시판을 불러오지 못했어요.' }, { status: 500 });
