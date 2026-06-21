@@ -37,6 +37,7 @@ export default function UploadDialog({ open, onClose, code, plan, prompt, defaul
   const [savedNickname, setSavedNickname] = useState<string | null>(null); // 이미 정한 별명(읽기전용 표시)
   const [categoryId, setCategoryId] = useState('');
   const [studentBoard, setStudentBoard] = useState<{ boardId: string; boardName: string } | null>(null);
+  const [slowBoard, setSlowBoard] = useState(false); // 게시판 조회가 오래 걸릴 때 안내용
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [done, setDone] = useState<{ postId: string; categoryId: string } | null>(null);
@@ -59,6 +60,10 @@ export default function UploadDialog({ open, onClose, code, plan, prompt, defaul
     if (!open || !isStudent) return;
     let cancelled = false;
     setStudentBoard(null);
+    setSlowBoard(false);
+    const slowTimer = setTimeout(() => {
+      if (!cancelled) setSlowBoard(true);
+    }, 4000);
     getMyBoard()
       .then((b) => {
         if (cancelled) return;
@@ -69,9 +74,13 @@ export default function UploadDialog({ open, onClose, code, plan, prompt, defaul
         if (cancelled) return;
         console.error('학생 게시판 조회 실패:', e);
         setError('지금은 올릴 수 없어요. 잠시 후 다시 해주세요.');
+      })
+      .finally(() => {
+        clearTimeout(slowTimer);
       });
     return () => {
       cancelled = true;
+      clearTimeout(slowTimer);
     };
   }, [open, isStudent]);
 
@@ -219,6 +228,11 @@ export default function UploadDialog({ open, onClose, code, plan, prompt, defaul
                   <div className="rounded-[var(--r-md)] bg-surface-2 px-4 py-2.5 text-[14px] text-ink">
                     {studentBoard ? `우리 반 게시판 「${studentBoard.boardName}」에 올라가요` : '우리 반 게시판을 확인하는 중…'}
                   </div>
+                  {!studentBoard && slowBoard && !error && (
+                    <p className="text-[12.5px] text-muted">
+                      게시판을 불러오는 데 시간이 조금 걸려요. 새로고침을 해보세요.
+                    </p>
+                  )}
                 </div>
               ) : (
                 <Label text="어느 게시판에 올릴까요?">
