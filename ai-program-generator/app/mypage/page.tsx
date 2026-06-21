@@ -47,15 +47,12 @@ async function fetchMyUsage(): Promise<Usage> {
 export default function MyPage() {
   const { user, loading, isAdmin, isTeacher, isStudent } = useAuth();
   const router = useRouter();
-  const { toast } = useToast();
 
+  // 로그아웃(또는 비로그인) 시 조용히 메인으로 — 안내 토스트는 띄우지 않음(로그아웃 시 거슬림).
   useEffect(() => {
     if (loading) return;
-    if (!user) {
-      toast('로그인이 필요해요.');
-      router.replace('/');
-    }
-  }, [loading, user, router, toast]);
+    if (!user) router.replace('/');
+  }, [loading, user, router]);
 
   return (
     <main className="min-h-screen">

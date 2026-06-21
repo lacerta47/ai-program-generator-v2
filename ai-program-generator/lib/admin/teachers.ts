@@ -18,6 +18,7 @@ export interface Teacher {
   email: string | null;
   name: string;
   totalQuota: number;
+  usedTotal: number;
   disabled: boolean;
 }
 
