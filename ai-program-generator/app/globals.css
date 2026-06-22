@@ -260,6 +260,13 @@ textarea {
 
 .anim-pop-in { animation: pop-in 0.22s var(--ease-out) both; }
 .anim-pop { animation: pop 0.25s var(--ease-out) both; }
+
+@keyframes pop-tada {
+  0% { transform: scale(0.9); }
+  60% { transform: scale(1.06); }
+  100% { transform: scale(1); }
+}
+.anim-pop-tada { animation: pop-tada 360ms ease-out both; }
 .stagger > * { animation: pop-in 0.24s var(--ease-out) both; }
 .stagger > *:nth-child(1) { animation-delay: 0ms; }
 .stagger > *:nth-child(2) { animation-delay: 40ms; }
