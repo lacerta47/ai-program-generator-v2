@@ -148,21 +148,21 @@ export default function PostList({
             <div className="flex shrink-0 gap-1 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100">
               <Mini label="링크 복사" onClick={() => share(post)}>
                 {copiedId === post.id ? (
-                  <Check size={16} className="anim-pop text-mint-ink" />
+                  <Check size={18} className="anim-pop text-mint-ink" />
                 ) : (
-                  <Link2 size={16} />
+                  <Link2 size={18} />
                 )}
               </Mini>
               <Mini label="ZIP 저장" onClick={() => onDownload(post)}>
-                <Download size={16} />
+                <Download size={18} />
               </Mini>
               {canManage && (
                 <>
                   <Mini label="제목 바꾸기" onClick={() => setEditing({ id: post.id, title: post.title })}>
-                    <Pencil size={16} />
+                    <Pencil size={18} />
                   </Mini>
                   <Mini label="삭제" danger onClick={() => onDelete(post)}>
-                    <Trash2 size={16} />
+                    <Trash2 size={18} />
                   </Mini>
                 </>
               )}
@@ -194,7 +194,7 @@ function Mini({
       title={label}
       aria-label={label}
       onClick={onClick}
-      className={`press grid h-9 w-9 place-items-center rounded-[10px] ${
+      className={`press grid h-11 w-11 place-items-center rounded-[10px] ${
         danger ? 'text-coral-ink hover:bg-coral-soft' : 'text-muted hover:bg-brand-soft hover:text-brand-strong'
       }`}
     >
