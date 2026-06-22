@@ -12,6 +12,7 @@ import { useToast } from '@/components/ui/Toast';
 import { useConfirm } from '@/components/ui/ConfirmProvider';
 import { listStudents, createStudents, patchStudent, deleteStudent, type Student } from '@/lib/teacher/students';
 import { listBoardPosts, deleteBoardPost, type BoardPost } from '@/lib/teacher/posts';
+import { listTeacherReports, dismissReportedPost, deleteReportedPost, type TeacherReportGroup } from '@/lib/teacher/reports';
 import { formatDate } from '@/lib/program';
 
 interface TeacherInfo {
@@ -65,6 +66,7 @@ function Console() {
   const [info, setInfo] = useState<TeacherInfo | null>(null);
   const [students, setStudents] = useState<Student[]>([]);
   const [loadingList, setLoadingList] = useState(true);
+  const [reports, setReports] = useState<TeacherReportGroup[]>([]);
   const [boardPosts, setBoardPosts] = useState<BoardPost[]>([]);
   const [boardLimited, setBoardLimited] = useState(false); // 최근 50개만 반환됐는지
   const [loadingBoard, setLoadingBoard] = useState(true);
@@ -100,6 +102,9 @@ function Console() {
         toast('우리 반 게시판을 불러오지 못했어요.');
       })
       .finally(() => setLoadingBoard(false));
+    listTeacherReports()
+      .then((r) => setReports(r.reports))
+      .catch((e) => console.error('신고 조회 실패:', e));
   };
 
   useEffect(() => {
@@ -145,6 +150,33 @@ function Console() {
     }
   }
 
+  async function dismissReport(g: TeacherReportGroup) {
+    try {
+      await dismissReportedPost(g.postId);
+      toast('신고를 정리했어요.', 'success');
+      reload();
+    } catch (err) {
+      toast(err instanceof Error ? err.message : '처리하지 못했어요.');
+    }
+  }
+
+  async function removeReportedPost(g: TeacherReportGroup) {
+    const ok = await confirm({
+      title: '작품 삭제',
+      message: `「${g.postTitle}」을(를) 삭제할까요? 되돌릴 수 없어요.`,
+      confirmLabel: '삭제',
+      danger: true,
+    });
+    if (!ok) return;
+    try {
+      await deleteReportedPost(g.postId);
+      toast('작품을 삭제했어요.', 'success');
+      reload();
+    } catch (err) {
+      toast(err instanceof Error ? err.message : '삭제하지 못했어요.');
+    }
+  }
+
   async function removePost(p: BoardPost) {
     const ok = await confirm({
       title: '작품 삭제',
@@ -185,6 +217,45 @@ function Console() {
       <p className="mt-1 text-[14px] text-muted">
         우리 반 한도 <span className="text-ink">{info ? `${info.usedTotal}/${info.totalQuota}` : '…'}</span>
       </p>
+
+      {reports.length > 0 && (
+        <section className="mt-5">
+          <h2 className="mb-2 text-[18px] text-coral-ink">처리할 신고 {reports.reduce((n, g) => n + g.items.length, 0)}건</h2>
+          <div className="flex flex-col gap-2">
+            {reports.map((g) => (
+              <div key={g.postId} className="rounded-[var(--r-md)] border-2 border-coral/40 bg-coral-soft/40 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-[16px]">{g.postTitle || '(제목 없음)'}</p>
+                    <p className="truncate text-[13px] text-muted">{g.postAuthorName || '익명'} · 신고 {g.items.length}건</p>
+                  </div>
+                  <a
+                    href={`/board?post=${g.postId}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="press inline-flex shrink-0 items-center gap-1 rounded-full border-2 border-line bg-surface px-3 py-1.5 text-[13px] text-ink hover:border-brand/50"
+                  >
+                    작품 보기
+                  </a>
+                </div>
+                <ul className="mt-2 flex flex-col gap-1">
+                  {g.items.map((it, i) => (
+                    <li key={i} className="text-[13px]">
+                      <span className="font-medium text-coral-ink">{it.reason}</span>
+                      {it.memo && <span className="text-ink"> — {it.memo}</span>}
+                      <span className="ml-2 text-[12px] text-muted">{formatDate(it.createdAt)}</span>
+                    </li>
+                  ))}
+                </ul>
+                <div className="mt-3 flex justify-end gap-2">
+                  <Button variant="ghost" onClick={() => dismissReport(g)}>신고 무시</Button>
+                  <Button variant="soft" onClick={() => removeReportedPost(g)}>작품 삭제</Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       <form onSubmit={submit} className="mt-5 flex flex-col gap-3 rounded-[var(--r-lg)] border-2 border-line bg-surface p-5">
         <h2 className="text-[18px]">학생 만들기</h2>
