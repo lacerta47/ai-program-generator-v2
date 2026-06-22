@@ -2,6 +2,7 @@ import { Wand2, LayoutGrid, MousePointerClick } from 'lucide-react';
 import ThemeToggle from './ThemeToggle';
 import GlowNavLink from './GlowNavLink';
 import AuthButton from '@/components/auth/AuthButton';
+import SoundToggle from '@/components/ui/SoundToggle';
 
 export default function Header({ active }: { active?: 'creator' | 'board' | 'survey' }) {
   return (
@@ -36,6 +37,7 @@ export default function Header({ active }: { active?: 'creator' | 'board' | 'sur
             </span>
             게시판
           </GlowNavLink>
+          <SoundToggle />
           <ThemeToggle />
           <AuthButton />
         </nav>
