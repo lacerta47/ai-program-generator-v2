@@ -18,6 +18,7 @@ import Card from '@/components/ui/Card';
 import Chip, { CHIP_COLORS } from '@/components/ui/Chip';
 import { TextInput, TextArea, Label } from '@/components/ui/Field';
 import { useToast } from '@/components/ui/Toast';
+import { playSuccess } from '@/lib/client/sound';
 import { buildGeneratePrompt, buildModifyPrompt } from './prompts';
 import { useCreatorSource } from './useCreatorSource';
 import { Tip } from './Tip';
@@ -123,6 +124,7 @@ export default function Creator() {
       setCode(result);
       setResultTab('preview');
       setPreviewKey((k) => k + 1);
+      playSuccess();
       toast('우와! 멋진 프로그램을 완성했어요!', 'success');
     } catch (e) {
       if (!ctrl.signal.aborted && !(e instanceof Error && e.name === 'AbortError')) {
@@ -168,6 +170,7 @@ export default function Creator() {
       setModifyText('');
       setResultTab('preview');
       setPreviewKey((k) => k + 1);
+      playSuccess();
       toast('원하는 대로 고쳐봤어요!', 'success');
     } catch (e) {
       if (!ctrl.signal.aborted && !(e instanceof Error && e.name === 'AbortError')) {

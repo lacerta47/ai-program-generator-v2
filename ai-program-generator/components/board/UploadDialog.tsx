@@ -12,6 +12,7 @@ import { getUserProfile, claimNickname, NicknameError } from '@/lib/firebase/use
 import { ProfanityError } from '@/lib/moderation';
 import type { Category, PlanFields } from '@/lib/firebase/types';
 import type { GeneratedCode } from '@/lib/ai/types';
+import { playSuccess } from '@/lib/client/sound';
 import Button from '@/components/ui/Button';
 import Modal from '@/components/ui/Modal';
 import { TextInput, Select, Label } from '@/components/ui/Field';
@@ -148,6 +149,7 @@ export default function UploadDialog({ open, onClose, code, plan, prompt, defaul
       if (forkedFrom) {
         incrementForkCount(forkedFrom).catch((e) => console.error('forkCount 증가 실패:', e));
       }
+      playSuccess();
       setDone({ postId, categoryId });
     } catch (err) {
       if (err instanceof ProfanityError) {
@@ -167,7 +169,7 @@ export default function UploadDialog({ open, onClose, code, plan, prompt, defaul
           <span className="grid h-16 w-16 place-items-center rounded-full bg-mint-soft text-mint-ink">
             <PartyPopper size={30} aria-hidden />
           </span>
-          <p className="text-[19px]">게시판에 올라갔어요!</p>
+          <p className="anim-pop-tada text-[19px]">게시판에 올라갔어요!</p>
           <div className="flex w-full flex-col gap-2">
             <Button
               variant="primary"

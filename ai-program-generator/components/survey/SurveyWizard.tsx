@@ -11,6 +11,7 @@ import { buildFixRequest } from '@/lib/survey/fixes';
 import { requestGenerateStream } from '@/lib/client/generate';
 import { currentStage, STAGE_ORDER, STAGE_LABEL_EASY, type StreamStage } from '@/lib/ai/streamStages';
 import { buildModifyPrompt } from '@/components/creator/prompts';
+import { playSelect, playSuccess } from '@/lib/client/sound';
 import { useAuth } from '@/components/auth/AuthProvider';
 import LoginDialog from '@/components/auth/LoginDialog';
 import UploadDialog from '@/components/board/UploadDialog';
@@ -152,6 +153,7 @@ export default function SurveyWizard() {
     }
   }
   function choose(optionId: string) {
+    playSelect();
     if (!type) return;
     const step = steps[stepIdx];
     if (step.multi) {
@@ -223,6 +225,7 @@ export default function SurveyWizard() {
       });
       setCode(result);
       setPreviewKey((k) => k + 1);
+      playSuccess();
       toast('우와! 멋진 걸 만들었어요!', 'success');
     } catch (e) {
       // 사용자가 '그만 만들기'로 취소한 경우는 에러 토스트 없이 조용히 설문으로 복귀
@@ -264,6 +267,7 @@ export default function SurveyWizard() {
       setPreviewKey((k) => k + 1);
       setFixPicks([]);
       setFixText('');
+      playSuccess();
       toast('원하는 대로 고쳐봤어요!', 'success');
     } catch (e) {
       if (!ctrl.signal.aborted && !(e instanceof Error && e.name === 'AbortError')) {
@@ -303,7 +307,7 @@ export default function SurveyWizard() {
     return (
       <div className="mx-auto max-w-4xl">
         <div className="mb-3 flex items-center justify-between gap-2">
-          <h2 className="text-[22px]">{type.icon} {type.label} 완성!</h2>
+          <h2 className="anim-pop-tada text-[22px]">{type.icon} {type.label} 완성!</h2>
           <div className="flex gap-2">
             <Button variant="soft" onClick={reset}>
               <RotateCcw size={17} aria-hidden /> 새로 만들기
