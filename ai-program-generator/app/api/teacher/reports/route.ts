@@ -17,15 +17,21 @@ export async function GET(req: NextRequest) {
   if (gate instanceof NextResponse) return gate;
   try {
     const stuSnap = await adminDb.collection('students').where('teacherUid', '==', gate.uid).get();
-    const studentUids = new Set(stuSnap.docs.map((d) => d.id));
-    if (studentUids.size === 0) return NextResponse.json({ reports: [] });
+    const studentUids = [...new Set(stuSnap.docs.map((d) => d.id))];
+    if (studentUids.length === 0) return NextResponse.json({ reports: [] });
 
-    const repSnap = await adminDb.collection('reports').get();
+    const chunks: string[][] = [];
+    for (let i = 0; i < studentUids.length; i += 30) chunks.push(studentUids.slice(i, i + 30));
+    const snaps = await Promise.all(
+      chunks.map((c) => adminDb.collection('reports').where('postOwnerUid', 'in', c).get()),
+    );
+    const docs = snaps.flatMap((s) => s.docs);
+
     const groups = new Map<string, Group>();
-    for (const d of repSnap.docs) {
+    for (const d of docs) {
       const r = d.data();
       const ownerUid = r.postOwnerUid as string | undefined;
-      if (!ownerUid || !studentUids.has(ownerUid)) continue;
+      if (!ownerUid) continue;
       const postId = r.postId as string;
       let g = groups.get(postId);
       if (!g) {
