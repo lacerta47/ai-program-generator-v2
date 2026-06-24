@@ -54,10 +54,10 @@ export default function TeacherPage() {
   );
 }
 
-/** 발급된 계정 목록을 배포용 텍스트로 만든다(공용 비번 + 아이디 목록). */
-function buildCredText(list: { email: string; password: string }[]): string {
+/** 발급된 계정 목록을 배포용 텍스트로 만든다(학교·PIN·학번 목록). */
+function buildCredText(schoolCode: string, list: { email: string; hakbun: string; password: string }[]): string {
   if (!list.length) return '';
-  return `공용 비밀번호: ${list[0].password}\n` + list.map((c) => c.email).join('\n');
+  return `학교 코드: ${schoolCode}\n공용 PIN: ${list[0].password}\n학번:\n` + list.map((c) => c.hakbun).join('\n');
 }
 
 function Console() {
@@ -71,13 +71,15 @@ function Console() {
   const [boardLimited, setBoardLimited] = useState(false); // 최근 50개만 반환됐는지
   const [loadingBoard, setLoadingBoard] = useState(true);
 
-  const [prefix, setPrefix] = useState('');
+  const [grade, setGrade] = useState('');
+  const [classNo, setClassNo] = useState('');
   const [count, setCount] = useState('');
   const [password, setPassword] = useState('');
   const [limitType, setLimitType] = useState<'daily' | 'total'>('daily');
   const [limitValue, setLimitValue] = useState('');
   const [busy, setBusy] = useState(false);
-  const [created, setCreated] = useState<{ email: string; password: string }[] | null>(null);
+  const [created, setCreated] = useState<{ email: string; hakbun: string; password: string }[] | null>(null);
+  const [createdSchool, setCreatedSchool] = useState('');
 
   const reload = () => {
     setLoadingList(true);
@@ -114,16 +116,23 @@ function Console() {
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    const c = Number(count);
+    const g = Number(grade);
+    const c = Number(classNo);
+    const n = Number(count);
     const v = Number(limitValue);
-    if (!Number.isInteger(c) || c < 1 || c > 50) return toast('인원수는 1~50명으로 적어 주세요.');
+    if (!Number.isInteger(g) || g < 1 || g > 6) return toast('학년은 1~6으로 적어 주세요.');
+    if (!Number.isInteger(c) || c < 1 || c > 99) return toast('반은 1~99로 적어 주세요.');
+    if (!Number.isInteger(n) || n < 1 || n > 50) return toast('인원수는 1~50명으로 적어 주세요.');
+    if (password.length < 6) return toast('PIN은 6자 이상으로 적어 주세요.');
     if (!Number.isInteger(v) || v < 1) return toast('한도는 1 이상의 정수로 적어 주세요.');
     setBusy(true);
     try {
-      const r = await createStudents({ prefix: prefix.trim(), count: c, password, limitType, limitValue: v });
+      const r = await createStudents({ grade: g, classNo: c, count: n, password, limitType, limitValue: v });
       setCreated(r.created);
-      if (r.skipped.length) toast(`${r.skipped.length}명은 이미 있는 아이디라 건너뛰었어요.`);
-      setPrefix('');
+      setCreatedSchool(r.schoolCode);
+      if (r.skipped.length) toast(`${r.skipped.length}명은 이미 있는 학번이라 건너뛰었어요.`);
+      setGrade('');
+      setClassNo('');
       setCount('');
       setPassword('');
       setLimitValue('');
@@ -259,20 +268,18 @@ function Console() {
 
       <form onSubmit={submit} className="mt-5 flex flex-col gap-3 rounded-[var(--r-lg)] border-2 border-line bg-surface p-5">
         <h2 className="text-[18px]">학생 만들기</h2>
-        <Label text="반 이름 (영문 소문자·숫자·-)" required>
-          <TextInput
-            value={prefix}
-            onChange={(e) => setPrefix(e.target.value)}
-            placeholder="haetnim"
-            pattern="[a-z0-9-]+"
-            title="영문 소문자·숫자·- 만 쓸 수 있어요"
-            required
-          />
-        </Label>
+        <div className="flex gap-3">
+          <Label text="학년 (1~6)" required>
+            <TextInput inputMode="numeric" value={grade} onChange={(e) => setGrade(e.target.value)} placeholder="1" required />
+          </Label>
+          <Label text="반 (1~99)" required>
+            <TextInput inputMode="numeric" value={classNo} onChange={(e) => setClassNo(e.target.value)} placeholder="1" required />
+          </Label>
+        </div>
         <Label text="인원수 (1~50)" required>
           <TextInput inputMode="numeric" value={count} onChange={(e) => setCount(e.target.value)} placeholder="20" required />
         </Label>
-        <Label text="공용 비밀번호 (6자 이상)" required>
+        <Label text="공용 PIN (6자리 이상)" required>
           <TextInput type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
         </Label>
         <div className="flex gap-3">
@@ -291,43 +298,24 @@ function Console() {
         </Button>
         {created && (
           <div className="rounded-[var(--r-md)] bg-mint-soft px-3.5 py-2.5 text-[13px] text-mint-ink">
-            <p className="mb-1 font-medium">만든 계정 (공용 비번으로 로그인) — 학생들에게 나눠주세요</p>
-            {created[0] && <p className="mb-1">공용 비밀번호: <b>{created[0].password}</b></p>}
+            <p className="mb-1 font-medium">만든 계정 — 학생들에게 나눠주세요</p>
+            <p className="mb-1">학교 코드: <b>{createdSchool}</b> · 공용 PIN: <b>{created[0]?.password}</b></p>
+            <p className="mb-1 text-[12px]">학생은 로그인에서 학교를 고르고, 자기 학번 + PIN을 넣어요.</p>
             <ul className="space-y-0.5">
               {created.map((c) => (
-                <li key={c.email}>{c.email}</li>
+                <li key={c.hakbun}>학번 {c.hakbun}</li>
               ))}
             </ul>
             <div className="mt-2 flex gap-2">
-              <Button
-                type="button"
-                variant="soft"
-                onClick={async () => {
-                  try {
-                    await navigator.clipboard.writeText(buildCredText(created));
-                    toast('계정 목록을 복사했어요.', 'success');
-                  } catch {
-                    toast('복사하지 못했어요.');
-                  }
-                }}
-              >
-                전체 복사
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => {
-                  const blob = new Blob([buildCredText(created)], { type: 'text/plain;charset=utf-8' });
-                  const url = URL.createObjectURL(blob);
-                  const a = document.createElement('a');
-                  a.href = url;
-                  a.download = '우리반-계정.txt';
-                  a.click();
-                  URL.revokeObjectURL(url);
-                }}
-              >
-                텍스트로 저장
-              </Button>
+              <Button type="button" variant="soft" onClick={async () => {
+                try { await navigator.clipboard.writeText(buildCredText(createdSchool, created)); toast('계정 목록을 복사했어요.', 'success'); }
+                catch { toast('복사하지 못했어요.'); }
+              }}>전체 복사</Button>
+              <Button type="button" variant="ghost" onClick={() => {
+                const blob = new Blob([buildCredText(createdSchool, created)], { type: 'text/plain;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a'); a.href = url; a.download = '우리반-계정.txt'; a.click(); URL.revokeObjectURL(url);
+              }}>텍스트로 저장</Button>
             </div>
           </div>
         )}
