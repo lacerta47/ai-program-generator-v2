@@ -1,4 +1,4 @@
-import { auth } from '@/lib/firebase/client';
+import { authedJson } from '@/lib/client/authedFetch';
 
 export interface Member {
   uid: string;
@@ -18,17 +18,11 @@ export interface MembersResponse {
   members: Member[];
   usageLimit: number;
   days: string[];
+  nextPageToken: string | null;
 }
 
-/** 관리자 ID 토큰을 Bearer로 붙여 /api/admin/users 호출. */
-export async function fetchMembers(): Promise<MembersResponse> {
-  const user = auth.currentUser;
-  if (!user) throw new Error('로그인이 필요해요.');
-  const idToken = await user.getIdToken();
-  const res = await fetch('/api/admin/users', {
-    headers: { Authorization: `Bearer ${idToken}` },
-  });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data?.error || `요청 실패 (${res.status})`);
-  return data as MembersResponse;
+/** 관리자 ID 토큰을 Bearer로 붙여 /api/admin/users 호출. pageToken으로 페이지 이동. */
+export async function fetchMembers(pageToken?: string): Promise<MembersResponse> {
+  const qs = pageToken ? `?pageToken=${encodeURIComponent(pageToken)}` : '';
+  return authedJson(`/api/admin/users${qs}`);
 }
