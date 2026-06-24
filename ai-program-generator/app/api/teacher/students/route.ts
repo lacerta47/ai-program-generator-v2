@@ -12,29 +12,26 @@ export async function GET(req: NextRequest) {
   if (gate instanceof NextResponse) return gate;
 
   const snap = await adminDb.collection('students').where('teacherUid', '==', gate.uid).get();
-  const students = await Promise.all(
-    snap.docs.map(async (d) => {
-      const s = d.data();
-      let email: string | null = null;
-      let disabled = false;
-      try {
-        const u = await adminAuth.getUser(d.id);
-        email = u.email ?? null;
-        disabled = u.disabled;
-      } catch {
-        /* Auth 계정이 사라진 고아 문서 — email null */
-      }
-      return {
-        uid: d.id,
-        email,
-        name: (s.name as string) ?? '',
-        limitType: (s.limitType as string) === 'total' ? 'total' : 'daily',
-        limitValue: (s.limitValue as number) ?? 0,
-        usedTotal: (s.usedTotal as number) ?? 0,
-        disabled,
-      };
-    }),
-  );
+  const docs = snap.docs;
+  const uids = docs.map((d) => d.id);
+  const recById = new Map<string, import('firebase-admin/auth').UserRecord>();
+  for (let i = 0; i < uids.length; i += 100) {
+    const res = await adminAuth.getUsers(uids.slice(i, i + 100).map((uid) => ({ uid })));
+    res.users.forEach((u) => recById.set(u.uid, u));
+  }
+  const students = docs.map((d) => {
+    const s = d.data();
+    const u = recById.get(d.id);
+    return {
+      uid: d.id,
+      email: u?.email ?? null,
+      name: (s.name as string) ?? '',
+      limitType: (s.limitType as string) === 'total' ? 'total' : 'daily',
+      limitValue: (s.limitValue as number) ?? 0,
+      usedTotal: (s.usedTotal as number) ?? 0,
+      disabled: u?.disabled ?? false,
+    };
+  });
   return NextResponse.json({ students });
 }
 
