@@ -17,6 +17,7 @@ export interface Teacher {
   uid: string;
   email: string | null;
   name: string;
+  schoolCode?: string;
   totalQuota: number;
   usedTotal: number;
   disabled: boolean;

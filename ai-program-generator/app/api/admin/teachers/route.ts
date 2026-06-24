@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
   const gate = await requireAdmin(req);
   if (gate) return gate;
 
-  const teachers: { uid: string; email: string | null; name: string; totalQuota: number; usedTotal: number; disabled: boolean }[] = [];
+  const teachers: { uid: string; email: string | null; name: string; schoolCode: string; totalQuota: number; usedTotal: number; disabled: boolean }[] = [];
   let pageToken: string | undefined;
   do {
     const page = await adminAuth.listUsers(1000, pageToken);
@@ -23,6 +23,7 @@ export async function GET(req: NextRequest) {
         uid: u.uid,
         email: u.email ?? null,
         name: (d.name as string) ?? '',
+        schoolCode: (d.schoolCode as string) ?? '',
         totalQuota: (d.totalQuota as number) ?? 0,
         usedTotal: (d.usedTotal as number) ?? 0,
         disabled: u.disabled,
@@ -67,7 +68,8 @@ export async function POST(req: NextRequest) {
   try {
     const user = await adminAuth.createUser({ email, password });
     await adminAuth.setCustomUserClaims(user.uid, { teacher: true });
-    await adminDb.doc(`teachers/${user.uid}`).set({ name, totalQuota, createdAt: Date.now() });
+    await adminDb.doc(`teachers/${user.uid}`).set({ name, totalQuota, schoolCode: loginId, createdAt: Date.now() });
+    await adminDb.doc(`schools/${loginId}`).set({ name, teacherUid: user.uid });
     return NextResponse.json({ uid: user.uid, email, password });
   } catch (e) {
     const code = (e as { code?: string }).code ?? '';
