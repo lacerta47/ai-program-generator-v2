@@ -28,12 +28,13 @@ export function listStudents(): Promise<{ students: Student[] }> {
 }
 
 export function createStudents(body: {
-  prefix: string;
+  grade: number;
+  classNo: number;
   count: number;
   password: string;
   limitType: 'daily' | 'total';
   limitValue: number;
-}): Promise<{ created: { email: string; password: string }[]; skipped: { email: string; reason: string }[] }> {
+}): Promise<{ created: { email: string; hakbun: string; password: string }[]; skipped: { hakbun: string; reason: string }[]; schoolCode: string }> {
   return authed('/api/teacher/students', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

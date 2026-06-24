@@ -13,7 +13,8 @@ import { X, Sparkles } from 'lucide-react';
 import { auth } from '@/lib/firebase/client';
 import Button from '@/components/ui/Button';
 import Modal from '@/components/ui/Modal';
-import { TextInput } from '@/components/ui/Field';
+import { TextInput, Select } from '@/components/ui/Field';
+import { listSchools, type School } from '@/lib/firebase/schools';
 
 function toMessage(e: unknown): string {
   const code = (e as { code?: string })?.code ?? '';
@@ -37,6 +38,13 @@ export default function LoginDialog({ open, onClose }: { open: boolean; onClose:
   const [notice, setNotice] = useState('');
   const [busy, setBusy] = useState(false);
 
+  // 탭
+  const [tab, setTab] = useState<'general' | 'student'>('general');
+  const [schools, setSchools] = useState<School[]>([]);
+  const [schoolCode, setSchoolCode] = useState('');
+  const [hakbun, setHakbun] = useState('');
+  const [pin, setPin] = useState('');
+
   // 열 때마다 초기 상태로(이전 세션의 모드·입력·메시지 잔존 방지)
   useEffect(() => {
     if (open) {
@@ -45,8 +53,18 @@ export default function LoginDialog({ open, onClose }: { open: boolean; onClose:
       setPw('');
       setError('');
       setNotice('');
+      setTab('general');
+      setHakbun('');
+      setPin('');
     }
   }, [open]);
+
+  // 학생 탭 열 때 학교 목록 로드
+  useEffect(() => {
+    if (open && tab === 'student' && schools.length === 0) {
+      listSchools().then(setSchools).catch(() => {});
+    }
+  }, [open, tab, schools.length]);
 
   async function withGoogle() {
     setError('');
@@ -104,6 +122,23 @@ export default function LoginDialog({ open, onClose }: { open: boolean; onClose:
     }
   }
 
+  async function withStudent(e: React.FormEvent) {
+    e.preventDefault();
+    setError('');
+    if (!schoolCode) return setError('학교를 골라 주세요.');
+    if (!hakbun.trim() || !pin) return setError('학번과 PIN을 적어 주세요.');
+    setBusy(true);
+    try {
+      const email = `${schoolCode}-${hakbun.trim()}@class.kr`;
+      await signInWithEmailAndPassword(auth, email, pin);
+      onClose();
+    } catch {
+      setError('학교·학번·비밀번호를 다시 확인해 주세요.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <Modal open={open} onClose={onClose} label="로그인" className="max-w-[380px] p-7">
         <button
@@ -128,72 +163,94 @@ export default function LoginDialog({ open, onClose }: { open: boolean; onClose:
           </div>
         </div>
 
-        <Button variant="ghost" onClick={withGoogle} disabled={busy} className="w-full">
-          <GoogleMark /> Google로 계속하기
-        </Button>
-
-        <div className="my-5 flex items-center gap-3 text-[13px] text-muted">
-          <span className="h-0.5 flex-1 rounded bg-line" /> 또는 이메일로{' '}
-          <span className="h-0.5 flex-1 rounded bg-line" />
+        <div className="mb-5 flex gap-1 rounded-full bg-surface-2 p-1">
+          <button type="button" onClick={() => { setTab('general'); setError(''); setNotice(''); }}
+            className={`flex-1 rounded-full px-3 py-1.5 text-[14px] ${tab === 'general' ? 'bg-surface text-ink shadow-sm' : 'text-muted'}`}>일반</button>
+          <button type="button" onClick={() => { setTab('student'); setError(''); setNotice(''); }}
+            className={`flex-1 rounded-full px-3 py-1.5 text-[14px] ${tab === 'student' ? 'bg-surface text-ink shadow-sm' : 'text-muted'}`}>학생</button>
         </div>
 
-        <form onSubmit={withEmail} className="flex flex-col gap-3">
-          <TextInput
-            type="email"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="이메일"
-            autoComplete="email"
-          />
-          <TextInput
-            type="password"
-            required
-            value={pw}
-            onChange={(e) => setPw(e.target.value)}
-            placeholder="비밀번호 (6글자 이상)"
-            autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
-          />
-          {error && (
-            <p className="anim-pop-in rounded-[var(--r-md)] bg-coral-soft px-3.5 py-2.5 text-[14px] text-coral-ink">
-              {error}
-            </p>
-          )}
-          {notice && (
-            <p className="anim-pop-in rounded-[var(--r-md)] bg-mint-soft px-3.5 py-2.5 text-[14px] text-mint-ink">
-              {notice}
-            </p>
-          )}
-          <Button type="submit" variant="primary" disabled={busy} className="w-full">
-            {busy ? '잠깐만요…' : mode === 'login' ? '로그인' : '가입하기'}
-          </Button>
-        </form>
+        {tab === 'student' ? (
+          <form onSubmit={withStudent} className="flex flex-col gap-3">
+            <Select value={schoolCode} onChange={(e) => setSchoolCode(e.target.value)} aria-label="학교">
+              <option value="">학교를 골라요</option>
+              {schools.map((s) => (<option key={s.schoolCode} value={s.schoolCode}>{s.name}</option>))}
+            </Select>
+            <TextInput inputMode="numeric" value={hakbun} onChange={(e) => setHakbun(e.target.value)} placeholder="학번 (예: 10101)" />
+            <TextInput inputMode="numeric" type="password" value={pin} onChange={(e) => setPin(e.target.value)} placeholder="비밀번호 (PIN)" />
+            {error && <p className="anim-pop-in rounded-[var(--r-md)] bg-coral-soft px-3.5 py-2.5 text-[14px] text-coral-ink">{error}</p>}
+            <Button type="submit" variant="primary" disabled={busy} className="w-full">{busy ? '잠깐만요…' : '학생 로그인'}</Button>
+          </form>
+        ) : (
+          <>
+            <Button variant="ghost" onClick={withGoogle} disabled={busy} className="w-full">
+              <GoogleMark /> Google로 계속하기
+            </Button>
 
-        {mode === 'login' && (
-          <div className="mt-3 text-center">
-            <button
-              type="button"
-              onClick={resetPw}
-              disabled={busy}
-              className="text-[13px] text-muted underline-offset-4 hover:underline disabled:opacity-50"
-            >
-              비밀번호를 잊으셨어요?
-            </button>
-          </div>
+            <div className="my-5 flex items-center gap-3 text-[13px] text-muted">
+              <span className="h-0.5 flex-1 rounded bg-line" /> 또는 이메일로{' '}
+              <span className="h-0.5 flex-1 rounded bg-line" />
+            </div>
+
+            <form onSubmit={withEmail} className="flex flex-col gap-3">
+              <TextInput
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="이메일"
+                autoComplete="email"
+              />
+              <TextInput
+                type="password"
+                required
+                value={pw}
+                onChange={(e) => setPw(e.target.value)}
+                placeholder="비밀번호 (6글자 이상)"
+                autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+              />
+              {error && (
+                <p className="anim-pop-in rounded-[var(--r-md)] bg-coral-soft px-3.5 py-2.5 text-[14px] text-coral-ink">
+                  {error}
+                </p>
+              )}
+              {notice && (
+                <p className="anim-pop-in rounded-[var(--r-md)] bg-mint-soft px-3.5 py-2.5 text-[14px] text-mint-ink">
+                  {notice}
+                </p>
+              )}
+              <Button type="submit" variant="primary" disabled={busy} className="w-full">
+                {busy ? '잠깐만요…' : mode === 'login' ? '로그인' : '가입하기'}
+              </Button>
+            </form>
+
+            {mode === 'login' && (
+              <div className="mt-3 text-center">
+                <button
+                  type="button"
+                  onClick={resetPw}
+                  disabled={busy}
+                  className="text-[13px] text-muted underline-offset-4 hover:underline disabled:opacity-50"
+                >
+                  비밀번호를 잊으셨어요?
+                </button>
+              </div>
+            )}
+
+            <div className="mt-5 text-center">
+              <button
+                onClick={() => {
+                  setMode(mode === 'login' ? 'signup' : 'login');
+                  setError('');
+                  setNotice('');
+                }}
+                className="text-[14px] text-brand-strong underline-offset-4 hover:underline dark:text-brand"
+              >
+                {mode === 'login' ? '처음이에요? 가입하기' : '계정이 있어요? 로그인하기'}
+              </button>
+            </div>
+          </>
         )}
-
-        <div className="mt-5 text-center">
-          <button
-            onClick={() => {
-              setMode(mode === 'login' ? 'signup' : 'login');
-              setError('');
-              setNotice('');
-            }}
-            className="text-[14px] text-brand-strong underline-offset-4 hover:underline dark:text-brand"
-          >
-            {mode === 'login' ? '처음이에요? 가입하기' : '계정이 있어요? 로그인하기'}
-          </button>
-        </div>
     </Modal>
   );
 }
