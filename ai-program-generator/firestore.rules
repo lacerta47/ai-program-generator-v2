@@ -70,8 +70,9 @@ service cloud.firestore {
     }
     function allowedForCat(cat, uid) {
       return !('teacherUid' in cat)
-        || cat.teacherUid == uid
-        || isStudentOf(uid, cat.teacherUid);
+        || cat.teacherUid == null            // 공개보드(teacherUid 없음/null) — 누구나
+        || cat.teacherUid == uid             // 그 교사 본인
+        || isStudentOf(uid, cat.teacherUid); // 그 교사의 학생
     }
     function isStudentOf(uid, teacherUid) {
       return exists(/databases/$(database)/documents/students/$(uid))
