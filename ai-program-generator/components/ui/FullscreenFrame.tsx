@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Maximize, Minimize, ZoomIn, ZoomOut } from 'lucide-react';
 import type { GeneratedCode } from '@/lib/ai/types';
-import { auth } from '@/lib/firebase/client';
+import { authedFetch } from '@/lib/client/authedFetch';
 import LoadingDots from './LoadingDots';
 import Button from './Button';
 
@@ -50,14 +50,16 @@ function requestPreviewId(code: GeneratedCode): Promise<string> {
   const cached = previewIdCache.get(code);
   if (cached) return cached;
   const p = (async () => {
-    const user = auth.currentUser;
-    if (!user) throw new Error('AUTH_REQUIRED'); // 로그아웃 상태(예: 직접 ?fork= URL) — 미리보기 POST 불가
-    const token = await user.getIdToken();
-    const r = await fetch('/api/preview', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify(code),
-    });
+    let r: Response;
+    try {
+      r = await authedFetch('/api/preview', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(code),
+      });
+    } catch {
+      throw new Error('AUTH_REQUIRED'); // 로그아웃 상태(예: 직접 ?fork= URL) — 미리보기 POST 불가
+    }
     if (r.status === 401) throw new Error('AUTH_REQUIRED');
     if (!r.ok) throw new Error(String(r.status));
     const { id } = await r.json();

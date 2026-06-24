@@ -1,4 +1,4 @@
-import { auth } from '@/lib/firebase/client';
+import { authedFetch } from '@/lib/client/authedFetch';
 import type { GeneratedCode, GenerateMode } from '@/lib/ai/types';
 import type { SystemPromptVariant } from '@/lib/ai/prompts';
 
@@ -15,15 +15,9 @@ export async function requestGenerateStream(
   variant: SystemPromptVariant = 'default',
   opts: StreamOpts = {},
 ): Promise<GeneratedCode> {
-  const user = auth.currentUser;
-  if (!user) {
-    throw new Error('로그인해야 프로그램을 만들 수 있어요.');
-  }
-  const idToken = await user.getIdToken();
-
-  const res = await fetch('/api/generate', {
+  const res = await authedFetch('/api/generate', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ prompt, mode, variant }),
     signal: opts.signal,
   });

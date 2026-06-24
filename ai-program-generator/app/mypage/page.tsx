@@ -10,6 +10,7 @@ import { useConfirm } from '@/components/ui/ConfirmProvider';
 import { sendEmailVerification, signOut } from 'firebase/auth';
 import { deleteMyAccount } from '@/lib/client/account';
 import { auth } from '@/lib/firebase/client';
+import { authedJson } from '@/lib/client/authedFetch';
 import { fetchMyPosts, deletePost, type PostCursor } from '@/lib/firebase/posts';
 import {
   getUserProfile,
@@ -34,14 +35,8 @@ interface Usage {
 }
 
 /** 본인 토큰으로 /api/me/usage 호출. */
-async function fetchMyUsage(): Promise<Usage> {
-  const u = auth.currentUser;
-  if (!u) throw new Error('로그인이 필요해요.');
-  const idToken = await u.getIdToken();
-  const res = await fetch('/api/me/usage', { headers: { Authorization: `Bearer ${idToken}` } });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data?.error || `요청 실패 (${res.status})`);
-  return data as Usage;
+function fetchMyUsage(): Promise<Usage> {
+  return authedJson<Usage>('/api/me/usage');
 }
 
 export default function MyPage() {
