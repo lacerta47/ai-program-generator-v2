@@ -91,16 +91,20 @@ function UsersContent() {
   const [sortDir, setSortDir] = useState<SortDir>('desc');
   const [reloadKey, setReloadKey] = useState(0);
   const [actionMember, setActionMember] = useState<Member | null>(null);
+  const [nextPageToken, setNextPageToken] = useState<string | null>(null);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   useEffect(() => {
     let alive = true;
     setError(false);
     setMembers(null);
+    setNextPageToken(null);
     fetchMembers()
       .then((r) => {
         if (!alive) return;
         setMembers(r.members);
         setUsageLimit(r.usageLimit);
+        setNextPageToken(r.nextPageToken);
       })
       .catch((e) => {
         console.error('가입자 불러오기 실패:', e);
@@ -110,6 +114,20 @@ function UsersContent() {
       alive = false;
     };
   }, [reloadKey]);
+
+  async function loadMore() {
+    if (!nextPageToken || loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const r = await fetchMembers(nextPageToken);
+      setMembers((prev) => [...(prev ?? []), ...r.members]);
+      setNextPageToken(r.nextPageToken);
+    } catch (e) {
+      console.error('추가 가입자 불러오기 실패:', e);
+    } finally {
+      setLoadingMore(false);
+    }
+  }
 
   const rows = useMemo(() => {
     if (!members) return [];
@@ -269,6 +287,13 @@ function UsersContent() {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+      {nextPageToken && !error && members !== null && (
+        <div className="mt-4 flex justify-center">
+          <Button variant="soft" onClick={loadMore} disabled={loadingMore}>
+            {loadingMore ? <LoadingDots label="불러오는 중…" /> : '더 보기'}
+          </Button>
         </div>
       )}
       {actionMember && (

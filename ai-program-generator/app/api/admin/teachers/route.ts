@@ -16,7 +16,8 @@ export async function GET(req: NextRequest) {
   do {
     const page = await adminAuth.listUsers(1000, pageToken);
     const teacherUsers = page.users.filter((u) => u.customClaims?.teacher === true);
-    const docs = await Promise.all(teacherUsers.map((u) => adminDb.doc(`teachers/${u.uid}`).get()));
+    const refs = teacherUsers.map((u) => adminDb.doc(`teachers/${u.uid}`));
+    const docs = refs.length > 0 ? await adminDb.getAll(...refs) : [];
     teacherUsers.forEach((u, i) => {
       const d = docs[i].data() ?? {};
       teachers.push({

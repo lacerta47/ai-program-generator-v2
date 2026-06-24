@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/auth/AuthProvider';
-import { auth } from '@/lib/firebase/client';
+import { authedJson } from '@/lib/client/authedFetch';
 import Header from '@/components/common/Header';
 import LoadingDots from '@/components/ui/LoadingDots';
 import Button from '@/components/ui/Button';
@@ -21,14 +21,8 @@ interface TeacherInfo {
   usedTotal: number;
 }
 
-async function fetchTeacherMe(): Promise<TeacherInfo> {
-  const u = auth.currentUser;
-  if (!u) throw new Error('로그인이 필요해요.');
-  const idToken = await u.getIdToken();
-  const res = await fetch('/api/teacher/me', { headers: { Authorization: `Bearer ${idToken}` } });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data?.error || `요청 실패 (${res.status})`);
-  return data as TeacherInfo;
+function fetchTeacherMe(): Promise<TeacherInfo> {
+  return authedJson<TeacherInfo>('/api/teacher/me');
 }
 
 export default function TeacherPage() {
