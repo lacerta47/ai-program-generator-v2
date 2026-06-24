@@ -4,9 +4,14 @@ import {
   doc,
   getCountFromServer,
   getDocs,
+  limit,
+  orderBy,
   query,
   setDoc,
+  startAfter,
   where,
+  type QueryDocumentSnapshot,
+  type DocumentData,
 } from 'firebase/firestore';
 import { db } from './client';
 import type { Post } from './types';
@@ -50,6 +55,19 @@ export async function submitReport(
 export async function fetchReports(): Promise<Report[]> {
   const snap = await getDocs(collection(db, COL));
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Report);
+}
+
+const REPORTS_PAGE = 30;
+
+/** 커서 기반 페이지 조회(관리자 전용). createdAt 내림차순, 30건씩. */
+export async function fetchReportsPage(
+  cursor?: QueryDocumentSnapshot<DocumentData> | null,
+): Promise<{ reports: Report[]; cursor: QueryDocumentSnapshot<DocumentData> | null; hasMore: boolean }> {
+  const base = [collection(db, COL), orderBy('createdAt', 'desc'), limit(REPORTS_PAGE)] as const;
+  const q = cursor ? query(...base, startAfter(cursor)) : query(...base);
+  const snap = await getDocs(q);
+  const reports = snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Report);
+  return { reports, cursor: snap.docs.at(-1) ?? null, hasMore: snap.size === REPORTS_PAGE };
 }
 
 /** 특정 작품의 신고 일괄 삭제(관리자 처리). */

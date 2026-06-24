@@ -4,7 +4,8 @@ import { useEffect, useState } from 'react';
 import { Trash2, Check, ExternalLink } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import { useConfirm } from '@/components/ui/ConfirmProvider';
-import { fetchReports, dismissReportsForPost, type Report } from '@/lib/firebase/reports';
+import { fetchReportsPage, dismissReportsForPost, type Report } from '@/lib/firebase/reports';
+import type { QueryDocumentSnapshot, DocumentData } from 'firebase/firestore';
 import { deletePost } from '@/lib/firebase/posts';
 import { formatDate } from '@/lib/program';
 import Header from '@/components/common/Header';
@@ -52,22 +53,53 @@ function ReportsContent() {
   const { toast } = useToast();
   const confirm = useConfirm();
   const [reports, setReports] = useState<Report[] | null>(null);
+  const [cursor, setCursor] = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+
+  async function loadFirst() {
+    try {
+      const result = await fetchReportsPage(null);
+      setReports(result.reports);
+      setCursor(result.cursor);
+      setHasMore(result.hasMore);
+    } catch (e) {
+      console.error('신고 목록 불러오기 실패:', e);
+      setReports([]);
+    }
+  }
 
   useEffect(() => {
-    fetchReports()
-      .then(setReports)
-      .catch((e) => {
-        console.error('신고 목록 불러오기 실패:', e);
-        setReports([]);
-      });
+    loadFirst();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  async function handleLoadMore() {
+    if (loadingMore || !hasMore) return;
+    setLoadingMore(true);
+    try {
+      const result = await fetchReportsPage(cursor);
+      setReports((prev) => [...(prev ?? []), ...result.reports]);
+      setCursor(result.cursor);
+      setHasMore(result.hasMore);
+    } catch (e) {
+      console.error('신고 목록 추가 불러오기 실패:', e);
+      toast('더 불러오지 못했어요. 잠시 후 다시 해주세요.');
+    } finally {
+      setLoadingMore(false);
+    }
+  }
 
   async function handleDelete(postId: string) {
     if (!(await confirm({ title: '작품을 삭제할까요?', message: '신고된 이 작품을 삭제해요. 되돌릴 수 없어요.', confirmLabel: '삭제', danger: true }))) return;
     try {
       await deletePost(postId);
       await dismissReportsForPost(postId);
-      setReports((prev) => prev?.filter((r) => r.postId !== postId) ?? null);
+      // 처리 후 첫 페이지부터 다시 로드
+      setReports(null);
+      setCursor(null);
+      setHasMore(false);
+      await loadFirst();
       toast('작품을 삭제했어요.', 'success');
     } catch (e) {
       console.error('작품 삭제 실패:', e);
@@ -78,7 +110,11 @@ function ReportsContent() {
   async function handleDismiss(postId: string) {
     try {
       await dismissReportsForPost(postId);
-      setReports((prev) => prev?.filter((r) => r.postId !== postId) ?? null);
+      // 처리 후 첫 페이지부터 다시 로드
+      setReports(null);
+      setCursor(null);
+      setHasMore(false);
+      await loadFirst();
       toast('신고를 정리했어요.', 'success');
     } catch (e) {
       console.error('신고 무시 실패:', e);
@@ -102,6 +138,13 @@ function ReportsContent() {
           {groups.map((g) => (
             <ReportCard key={g.postId} group={g} onDelete={handleDelete} onDismiss={handleDismiss} />
           ))}
+          {hasMore && (
+            <div className="flex justify-center pt-2">
+              <Button type="button" variant="ghost" onClick={handleLoadMore} disabled={loadingMore}>
+                {loadingMore ? <LoadingDots label="불러오는 중…" /> : '더 보기'}
+              </Button>
+            </div>
+          )}
         </div>
       )}
     </div>
