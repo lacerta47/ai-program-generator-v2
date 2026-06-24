@@ -23,8 +23,14 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ p
 
     const repSnap = await adminDb.collection('reports').where('postId', '==', postId).get();
     if (repSnap.empty) return NextResponse.json({ error: '신고를 찾을 수 없어요.' }, { status: 404 });
-    // report의 postOwnerUid가 내 학생인지로 권한 판정(인박스 범위의 source of truth)
-    const mine = repSnap.docs.some((d) => studentUids.has(d.data().postOwnerUid as string));
+
+    // 권한 판정(방어심층): 살아있는 글이면 실제 주인(post.ownerUid)으로, 이미 삭제된 글(고아 신고 정리)이면
+    // 신고의 postOwnerUid로 — 후자는 생성 시 규칙(postOwnerMatches)이 실제 글과 일치를 강제한 값이라 신뢰 가능.
+    const pSnap = await adminDb.doc(`posts/${postId}`).get();
+    const liveOwner = pSnap.exists ? (pSnap.data()?.ownerUid as string | undefined) : undefined;
+    const mine = liveOwner
+      ? studentUids.has(liveOwner)
+      : repSnap.docs.some((d) => studentUids.has(d.data().postOwnerUid as string));
     if (!mine) return NextResponse.json({ error: '우리 반 신고가 아니에요.' }, { status: 403 });
 
     if (deletePost) {
