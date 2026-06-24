@@ -57,6 +57,27 @@ service cloud.firestore {
         && (!('forkedFromAuthor' in d) || (d.forkedFromAuthor is string && d.forkedFromAuthor.size() <= 20));
     }
 
+    // 신고의 postOwnerUid가 실제 글 주인과 일치하는지(위조 차단). 글이 없으면 거부.
+    function postOwnerMatches(postId, ownerUid) {
+      return exists(/databases/$(database)/documents/posts/$(postId))
+        && get(/databases/$(database)/documents/posts/$(postId)).data.ownerUid == ownerUid;
+    }
+
+    // 이 카테고리에 글을 쓸 수 있는지: 존재 + (공개보드 | 그 교사 | 그 교사 학생).
+    function categoryAllowed(catId, uid) {
+      return exists(/databases/$(database)/documents/categories/$(catId))
+        && allowedForCat(get(/databases/$(database)/documents/categories/$(catId)).data, uid);
+    }
+    function allowedForCat(cat, uid) {
+      return !('teacherUid' in cat)
+        || cat.teacherUid == uid
+        || isStudentOf(uid, cat.teacherUid);
+    }
+    function isStudentOf(uid, teacherUid) {
+      return exists(/databases/$(database)/documents/students/$(uid))
+        && get(/databases/$(database)/documents/students/$(uid)).data.teacherUid == teacherUid;
+    }
+
     // 카테고리(게시판): 누구나 읽기, 관리자만 생성/수정/삭제
     match /categories/{categoryId} {
       allow read: if true;
@@ -88,7 +109,8 @@ service cloud.firestore {
       allow create: if isSignedIn()
         && (isAdmin() || isVerified() || isRoleAccount())
         && request.resource.data.ownerUid == request.auth.uid
-        && validPost(request.resource.data);
+        && validPost(request.resource.data)
+        && (isAdmin() || categoryAllowed(request.resource.data.categoryId, request.auth.uid));
       // 수정: 본인/관리자만. 변경 가능 필드는 제목·작성자명·계획서·코드·수정시각으로 제한
       // (ownerUid·categoryId·createdAt 변조 차단). 변경되는 값은 형태·크기 재검증.
       // 본인/관리자 콘텐츠 편집만. 카운터(좋아요·조회·포크)는 서버 API(Admin SDK) 전용 — 클라 직접 쓰기 차단.
@@ -170,7 +192,8 @@ service cloud.firestore {
         && request.resource.data.postId is string
         && request.resource.data.reason is string && request.resource.data.reason.size() <= 20
         && (!('memo' in request.resource.data) || (request.resource.data.memo is string && request.resource.data.memo.size() <= 500))
-        && request.resource.data.createdAt is number;
+        && request.resource.data.createdAt is number
+        && postOwnerMatches(request.resource.data.postId, request.resource.data.postOwnerUid);
       // 재신고(덮어쓰기)는 사유/메모/제목 갱신만 허용. 작성자·대상(postOwnerUid/postId)·reporterUid는 불변 → 신고 귀속 변조 차단.
       allow update: if isSignedIn()
         && request.resource.data.reporterUid == resource.data.reporterUid
