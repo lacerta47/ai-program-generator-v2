@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { PartyPopper, LayoutGrid, X } from 'lucide-react';
 import { useAuth } from '@/components/auth/AuthProvider';
@@ -33,6 +33,8 @@ export default function UploadDialog({ open, onClose, code, plan, prompt, defaul
   const { user, isTeacher, isStudent } = useAuth();
   const router = useRouter();
   const [categories, setCategories] = useState<Category[]>([]);
+  // 업로드 피커엔 공개 게시판만 노출(교사보드는 그 반만 쓰기 가능 — 규칙과 일치). 공개 탐색은 별개로 유지.
+  const publicCategories = useMemo(() => categories.filter((c) => !c.teacherUid), [categories]);
   const [title, setTitle] = useState(defaultTitle);
   const [nickname, setNickname] = useState(''); // 최초 설정용 입력값
   const [savedNickname, setSavedNickname] = useState<string | null>(null); // 이미 정한 별명(읽기전용 표시)
@@ -94,14 +96,14 @@ export default function UploadDialog({ open, onClose, code, plan, prompt, defaul
 
   useEffect(() => {
     if (isStudent) return;
-    if (!categories.length || categoryId) return;
-    const leaves = leafPaths(categories);
+    if (!publicCategories.length || categoryId) return;
+    const leaves = leafPaths(publicCategories);
     const preferred =
       defaultCategoryId && leaves.some((l) => l.id === defaultCategoryId)
         ? defaultCategoryId
         : leaves[0]?.id ?? '';
     setCategoryId(preferred);
-  }, [categories, categoryId, defaultCategoryId, isStudent]);
+  }, [publicCategories, categoryId, defaultCategoryId, isStudent]);
 
   if (!open) return null;
 
@@ -195,7 +197,7 @@ export default function UploadDialog({ open, onClose, code, plan, prompt, defaul
             </Button>
           </div>
 
-          {!isStudent && leafPaths(categories).length === 0 ? (
+          {!isStudent && leafPaths(publicCategories).length === 0 ? (
             <p className="text-[15px] text-muted">
               아직 작품을 올릴 게시판(반)이 없어요. 관리자 선생님이 먼저 만들어야 해요.
             </p>
@@ -239,7 +241,7 @@ export default function UploadDialog({ open, onClose, code, plan, prompt, defaul
               ) : (
                 <Label text="어느 게시판에 올릴까요?">
                   <Select value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
-                    {leafPaths(categories).map((l) => (
+                    {leafPaths(publicCategories).map((l) => (
                       <option key={l.id} value={l.id}>
                         {l.path}
                       </option>
