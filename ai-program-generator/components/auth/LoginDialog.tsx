@@ -164,9 +164,9 @@ export default function LoginDialog({ open, onClose }: { open: boolean; onClose:
         </div>
 
         <div className="mb-5 flex gap-1 rounded-full bg-surface-2 p-1">
-          <button type="button" onClick={() => setTab('general')}
+          <button type="button" onClick={() => { setTab('general'); setError(''); setNotice(''); }}
             className={`flex-1 rounded-full px-3 py-1.5 text-[14px] ${tab === 'general' ? 'bg-surface text-ink shadow-sm' : 'text-muted'}`}>일반</button>
-          <button type="button" onClick={() => setTab('student')}
+          <button type="button" onClick={() => { setTab('student'); setError(''); setNotice(''); }}
             className={`flex-1 rounded-full px-3 py-1.5 text-[14px] ${tab === 'student' ? 'bg-surface text-ink shadow-sm' : 'text-muted'}`}>학생</button>
         </div>
 
