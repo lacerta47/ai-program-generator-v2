@@ -33,11 +33,11 @@ function previewOrigin(): string {
   // 배포 환경: 별도 미리보기 도메인이 있어야 프로세스 격리가 유지된다.
   const configured = process.env.NEXT_PUBLIC_PREVIEW_ORIGIN;
   if (!configured) {
-    // 같은 오리진으로 폴백 = 격리 없음. 무한루프 코드가 탭을 얼릴 수 있으므로 경고.
-    console.warn(
-      '[preview] NEXT_PUBLIC_PREVIEW_ORIGIN 미설정 — 미리보기가 같은 오리진에서 실행되어 프로세스 격리가 적용되지 않습니다.',
-    );
-    return '';
+    // 배포(비-localhost)인데 별도 미리보기 도메인 미설정 = 프로세스 격리 불가.
+    // 같은 오리진으로 조용히 폴백(무한루프 코드가 부모 탭을 얼림)하지 않고 명시적으로 실패시킨다.
+    // 배포 시 NEXT_PUBLIC_PREVIEW_ORIGIN 설정 필수.
+    console.error('[preview] NEXT_PUBLIC_PREVIEW_ORIGIN 미설정 — 미리보기 비활성화(프로세스 격리 불가).');
+    throw new Error('PREVIEW_ORIGIN_UNSET');
   }
   return configured;
 }
@@ -98,7 +98,11 @@ export default function FullscreenFrame({ code, title, postId, onNeedLogin, fram
     setNeedLogin(false);
     // 게시된 작품: 쓰기 없는 GET 경로(공개 code 직접 서빙) — POST/토큰 불필요
     if (postId) {
-      setSrc(`${previewOrigin()}/api/preview/post/${postId}`);
+      try {
+        setSrc(`${previewOrigin()}/api/preview/post/${postId}`);
+      } catch {
+        setFailed(true);
+      }
       return;
     }
     // 즉석 생성 코드: 로그인 토큰으로 POST
