@@ -45,7 +45,7 @@ export function buildExemplarBlock(ex: Exemplar): string {
   // 방어적 축약: 저장 시점에 이미 축약되지만, 혹시 미축약 code/plan이 들어와도 프롬프트가 폭주하지 않게 한 번 더 보장.
   const code = truncateCode(ex.code);
   const p = (s: unknown) => truncateField(s, EXEMPLAR_PLAN_CAP);
-  return `아래는 완성도 높은 "참고 예시"입니다. 그대로 베끼지 말고, 이 정도의 완성도·짜임새를 기준으로 삼으세요. (예시 코드는 축약·생략되어 있을 수 있습니다.)
+  return `아래는 완성도 높은 "참고 예시"입니다. 그대로 베끼지 말고, 이 정도의 완성도·짜임새를 기준으로만 삼으세요. 글씨 크기·색 대비·reduced-motion·이모지 절제 같은 디자인·접근성·안전 규칙은 예시의 스타일보다 항상 우선합니다(예시가 옛 기준일 수 있음). (예시 코드는 축약·생략되어 있을 수 있습니다.)
 
 [참고 예시 — 계획서]
 - 이름: ${p(plan.name)}
