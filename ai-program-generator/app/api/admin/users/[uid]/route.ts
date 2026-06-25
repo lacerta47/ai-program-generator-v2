@@ -17,7 +17,7 @@ async function blockIfAdminTarget(uid: string): Promise<NextResponse | null> {
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ uid: string }> }) {
   const gate = await requireAdmin(req);
-  if (gate) return gate;
+  if (gate instanceof NextResponse) return gate;
   const { uid } = await params;
 
   let body: unknown;
@@ -26,7 +26,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ ui
   } catch {
     return NextResponse.json({ error: '요청 본문이 올바르지 않아요.' }, { status: 400 });
   }
-  const b = body as { disabled?: unknown; dailyLimit?: unknown; password?: unknown };
+  const b = (body ?? {}) as { disabled?: unknown; dailyLimit?: unknown; password?: unknown };
 
   try {
     if (typeof b.disabled === 'boolean') {
@@ -66,7 +66,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ ui
 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ uid: string }> }) {
   const gate = await requireAdmin(req);
-  if (gate) return gate;
+  if (gate instanceof NextResponse) return gate;
   const { uid } = await params;
 
   try {

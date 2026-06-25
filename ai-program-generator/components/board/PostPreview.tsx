@@ -59,7 +59,7 @@ export default function PostPreview({
         if (alive) setLiked(v);
       })
       .catch((e) => console.error('isLiked 실패:', e));
-    recordView(post.id, currentUserUid)
+    recordView(post.id)
       .then((inc) => {
         if (alive && inc) {
           setViewCount((c) => c + 1);
@@ -86,7 +86,7 @@ export default function PostPreview({
     setLiked(!wasLiked);
     setLikeCount((c) => c + delta);
     onLikeChanged?.(post.id, delta);
-    toggleLike(post.id, currentUserUid, wasLiked)
+    toggleLike(post.id)
       .catch((e) => {
         console.error('좋아요 실패:', e);
         setLiked(wasLiked);

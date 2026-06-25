@@ -8,6 +8,7 @@ import { useToast } from '@/components/ui/Toast';
 import { useConfirm } from '@/components/ui/ConfirmProvider';
 import Button from '@/components/ui/Button';
 import { TextInput, Label } from '@/components/ui/Field';
+import Modal from '@/components/ui/Modal';
 import LoadingDots from '@/components/ui/LoadingDots';
 import { listTeachers, createTeacher, patchTeacher, deleteTeacher, type Teacher } from '@/lib/admin/teachers';
 
@@ -33,6 +34,8 @@ function Content() {
   const [quota, setQuota] = useState('');
   const [busy, setBusy] = useState(false);
   const [created, setCreated] = useState<{ email: string; password: string } | null>(null);
+  const [editTarget, setEditTarget] = useState<Teacher | null>(null); // 총 한도 보충 모달 대상
+  const [editVal, setEditVal] = useState('');
 
   const reload = () =>
     listTeachers()
@@ -71,17 +74,22 @@ function Content() {
     }
   }
 
-  async function changeQuota(t: Teacher) {
-    const v = window.prompt(`${t.name} 선생님 총 한도 (누적 횟수)`, String(t.totalQuota));
-    if (v === null) return;
-    const q = Number(v);
+  function changeQuota(t: Teacher) {
+    setEditTarget(t);
+    setEditVal(String(t.totalQuota));
+  }
+
+  async function saveQuota() {
+    if (!editTarget) return;
+    const q = Number(editVal);
     if (!Number.isInteger(q) || q < 0) {
       toast('0 이상의 정수로 적어 주세요.');
       return;
     }
     try {
-      await patchTeacher(t.uid, { totalQuota: q });
+      await patchTeacher(editTarget.uid, { totalQuota: q });
       toast('총 한도를 바꿨어요.', 'success');
+      setEditTarget(null);
       reload();
     } catch (err) {
       toast(err instanceof Error ? err.message : '바꾸지 못했어요.');
@@ -156,6 +164,26 @@ function Content() {
           ))
         )}
       </div>
+
+      <Modal open={!!editTarget} onClose={() => setEditTarget(null)} label="총 한도 보충" className="max-w-xs p-6">
+        <h2 className="mb-1 text-[19px]">{editTarget?.name} 선생님 총 한도</h2>
+        <p className="mb-4 text-[13px] text-muted">누적 사용 {editTarget?.usedTotal}회 — 누적 한도를 올려 보충해요.</p>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            saveQuota();
+          }}
+          className="flex flex-col gap-3"
+        >
+          <Label text="총 한도 (누적 횟수)" required>
+            <TextInput inputMode="numeric" value={editVal} onChange={(e) => setEditVal(e.target.value)} autoFocus required />
+          </Label>
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="ghost" onClick={() => setEditTarget(null)}>취소</Button>
+            <Button type="submit" variant="primary">저장</Button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }

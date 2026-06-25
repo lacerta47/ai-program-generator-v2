@@ -51,12 +51,6 @@ export async function submitReport(
   });
 }
 
-/** 전체 신고 조회(관리자 전용 — 규칙이 비관리자 읽기를 거부). */
-export async function fetchReports(): Promise<Report[]> {
-  const snap = await getDocs(collection(db, COL));
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Report);
-}
-
 const REPORTS_PAGE = 30;
 
 /** 커서 기반 페이지 조회(관리자 전용). createdAt 내림차순, 30건씩. */

@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useContext, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { onAuthStateChanged, signOut, type User } from 'firebase/auth';
 import { auth } from '@/lib/firebase/client';
 import { claimSession, watchSession } from '@/lib/client/session';
@@ -24,6 +25,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isTeacher, setIsTeacher] = useState(false);
   const [isStudent, setIsStudent] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [kicked, setKicked] = useState(false); // 다른 기기 로그인으로 밀려났을 때 안내 배너
   const sessionUnsub = useRef<Unsubscribe | null>(null);
 
   useEffect(() => {
@@ -42,9 +44,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             const myId = await claimSession(u.uid);
             sessionUnsub.current = watchSession(u.uid, myId, () => {
               signOut(auth).catch(() => {});
-              if (typeof window !== 'undefined') {
-                window.alert('다른 곳에서 같은 학생으로 로그인했어요. 이 화면은 로그아웃할게요.');
-              }
+              setKicked(true);
             });
           } catch (e) {
             console.error('세션 설정 실패:', e);
@@ -59,5 +59,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
-  return <AuthContext.Provider value={{ user, isAdmin, isTeacher, isStudent, loading }}>{children}</AuthContext.Provider>;
+  // 배너 자동 닫힘(6초)
+  useEffect(() => {
+    if (!kicked) return;
+    const t = setTimeout(() => setKicked(false), 6000);
+    return () => clearTimeout(t);
+  }, [kicked]);
+
+  return (
+    <AuthContext.Provider value={{ user, isAdmin, isTeacher, isStudent, loading }}>
+      {children}
+      {kicked && typeof document !== 'undefined' &&
+        createPortal(
+          <div
+            role="status"
+            className="anim-pop-in fixed left-1/2 top-4 z-[100] flex -translate-x-1/2 items-center gap-3 rounded-[var(--r-md)] border-2 border-coral/40 bg-coral-soft px-4 py-3 text-[15px] text-coral-ink shadow-lg"
+          >
+            다른 기기에서 로그인해서 이 화면은 로그아웃했어요.
+            <button onClick={() => setKicked(false)} className="press rounded-full px-2 py-0.5 underline underline-offset-2">
+              닫기
+            </button>
+          </div>,
+          document.body,
+        )}
+    </AuthContext.Provider>
+  );
 }

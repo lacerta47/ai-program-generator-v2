@@ -42,13 +42,19 @@ service cloud.firestore {
         && p.etc is string && p.etc.size() <= 5000;
     }
 
+    // 작성자명·닉네임 운영자 사칭 차단(예약어 부분일치·대소문자 무시). 클라 isReservedNickname의 서버 강제판.
+    // 띄어쓰기 우회(관 리 자)까지는 못 막지만 직접 SDK로 "관리자" 박는 흔한 사칭은 규칙 단에서 거부.
+    function notImpersonating(s) {
+      return !s.matches('(?i).*(관리자|운영자|운영진|운영팀|관리팀|매니저|스태프|admin|administrator|manager|staff|moderator|official).*');
+    }
+
     // 게시물 생성 문서 형태/크기 검증
     function validPost(d) {
       return d.keys().hasOnly(['title', 'categoryId', 'ownerUid', 'authorName', 'code', 'plan', 'prompt', 'createdAt', 'updatedAt', 'forkedFrom', 'forkedFromAuthor'])
         && d.title is string && d.title.size() > 0 && d.title.size() <= 100
         && d.categoryId is string && d.categoryId.size() > 0 && d.categoryId.size() <= 128
         && d.ownerUid is string
-        && d.authorName is string && d.authorName.size() > 0 && d.authorName.size() <= 20
+        && d.authorName is string && d.authorName.size() > 0 && d.authorName.size() <= 20 && notImpersonating(d.authorName)
         && d.prompt is string && d.prompt.size() <= 50000
         && d.createdAt is number
         && validCode(d.code)
@@ -122,6 +128,7 @@ service cloud.firestore {
         && request.resource.data.title.size() > 0 && request.resource.data.title.size() <= 100
         && request.resource.data.authorName is string
         && request.resource.data.authorName.size() > 0 && request.resource.data.authorName.size() <= 20
+        && notImpersonating(request.resource.data.authorName)
         && request.resource.data.prompt is string && request.resource.data.prompt.size() <= 50000
         && validCode(request.resource.data.code)
         && (!('plan' in request.resource.data) || validPlan(request.resource.data.plan));
@@ -138,7 +145,7 @@ service cloud.firestore {
     }
 
     function validNick(n) {
-      return n is string && n.size() > 0 && n.size() <= 20;
+      return n is string && n.size() > 0 && n.size() <= 20 && notImpersonating(n);
     }
 
     // 사용자 프로필: 닉네임 + 마지막 변경시각(서버 타임스탬프). 본인만.

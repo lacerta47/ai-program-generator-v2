@@ -9,36 +9,41 @@ const LOGIN_RE = /^[a-z0-9-]+$/;
 
 export async function GET(req: NextRequest) {
   const gate = await requireAdmin(req);
-  if (gate) return gate;
+  if (gate instanceof NextResponse) return gate;
 
   const teachers: { uid: string; email: string | null; name: string; schoolCode: string; totalQuota: number; usedTotal: number; disabled: boolean }[] = [];
-  let pageToken: string | undefined;
-  do {
-    const page = await adminAuth.listUsers(1000, pageToken);
-    const teacherUsers = page.users.filter((u) => u.customClaims?.teacher === true);
-    const refs = teacherUsers.map((u) => adminDb.doc(`teachers/${u.uid}`));
-    const docs = refs.length > 0 ? await adminDb.getAll(...refs) : [];
-    teacherUsers.forEach((u, i) => {
-      const d = docs[i].data() ?? {};
-      teachers.push({
-        uid: u.uid,
-        email: u.email ?? null,
-        name: (d.name as string) ?? '',
-        schoolCode: (d.schoolCode as string) ?? '',
-        totalQuota: (d.totalQuota as number) ?? 0,
-        usedTotal: (d.usedTotal as number) ?? 0,
-        disabled: u.disabled,
+  try {
+    let pageToken: string | undefined;
+    do {
+      const page = await adminAuth.listUsers(1000, pageToken);
+      const teacherUsers = page.users.filter((u) => u.customClaims?.teacher === true);
+      const refs = teacherUsers.map((u) => adminDb.doc(`teachers/${u.uid}`));
+      const docs = refs.length > 0 ? await adminDb.getAll(...refs) : [];
+      teacherUsers.forEach((u, i) => {
+        const d = docs[i].data() ?? {};
+        teachers.push({
+          uid: u.uid,
+          email: u.email ?? null,
+          name: (d.name as string) ?? '',
+          schoolCode: (d.schoolCode as string) ?? '',
+          totalQuota: (d.totalQuota as number) ?? 0,
+          usedTotal: (d.usedTotal as number) ?? 0,
+          disabled: u.disabled,
+        });
       });
-    });
-    pageToken = page.pageToken;
-  } while (pageToken);
+      pageToken = page.pageToken;
+    } while (pageToken);
+  } catch (e) {
+    console.error('교사 목록 조회 실패:', e);
+    return NextResponse.json({ error: '교사 목록을 불러오지 못했어요.' }, { status: 500 });
+  }
 
   return NextResponse.json({ teachers });
 }
 
 export async function POST(req: NextRequest) {
   const gate = await requireAdmin(req);
-  if (gate) return gate;
+  if (gate instanceof NextResponse) return gate;
 
   let body: unknown;
   try {

@@ -24,7 +24,7 @@ async function ensureTeacher(uid: string): Promise<NextResponse | null> {
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ uid: string }> }) {
   const gate = await requireAdmin(req);
-  if (gate) return gate;
+  if (gate instanceof NextResponse) return gate;
   const { uid } = await params;
 
   let body: unknown;
@@ -58,7 +58,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ ui
 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ uid: string }> }) {
   const gate = await requireAdmin(req);
-  if (gate) return gate;
+  if (gate instanceof NextResponse) return gate;
   const { uid } = await params;
 
   const notTeacher = await ensureTeacher(uid);
