@@ -12,6 +12,9 @@ import { reserveStudentQuota, refundStudentQuota } from '@/lib/server/studentQuo
 // AI 호출은 반드시 서버에서만 실행한다(키 노출 방지).
 export const runtime = 'nodejs';
 
+// 교사·admin 일일 생성 상한 — 무제한 방지(한 계정이 공유 Gemini 키를 소진하는 비용·DoS 차단). env로 조정.
+const ROLE_DAILY_LIMIT = Number(process.env.ROLE_GEN_DAILY_LIMIT) || 100;
+
 function isMode(v: unknown): v is GenerateMode {
   return v === 'generate' || v === 'modify';
 }
@@ -99,8 +102,9 @@ export async function POST(req: NextRequest) {
               : '한도를 확인하지 못했어요. 잠시 후 다시 해주세요.';
       return NextResponse.json({ error: msg }, { status: r.reason === 'misconfig' ? 500 : 429 });
     }
-  } else if (!isAdmin && !isTeacher) {
-    const dailyLimit = await readEffectiveLimit(uid);
+  } else {
+    // 교사·admin도 무제한이 아니라 넉넉한 일일 상한 경유. 일반 사용자는 설정 한도.
+    const dailyLimit = isAdmin || isTeacher ? ROLE_DAILY_LIMIT : await readEffectiveLimit(uid);
     try {
       const allowed = await adminDb.runTransaction(async (tx) => {
         const snap = await tx.get(usageRef);
@@ -140,7 +144,7 @@ export async function POST(req: NextRequest) {
   const encoder = new TextEncoder();
   let refunded = false;
   const refundOnce = async () => {
-    if (refunded || isAdmin || isTeacher) return;
+    if (refunded) return;
     refunded = true;
     if (isStudent) await refundStudentQuota(uid);
     else await refundQuota(usageRef);
