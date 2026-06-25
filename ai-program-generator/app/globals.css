@@ -299,12 +299,14 @@ textarea {
 }
 .lun-attn { animation: lun-attn 1.1s var(--ease-out) 2; }
 
-/* 라우트 진입 전환(C-lite) — 랜딩→앱 하드컷을 부드럽게(app/template.tsx). reduced-motion 전역 가드로 정지. */
+/* 라우트 진입 전환(C-lite) — 랜딩→앱 하드컷을 부드럽게(app/template.tsx). reduced-motion 전역 가드로 정지.
+   fill-mode는 forwards(both 아님) — 애니메이션이 어떤 이유로든 안 돌면(엔진/확장으로 비활성 등)
+   콘텐츠가 opacity:0 상태에 갇히지 않고 보이는 기본 상태를 유지한다(빈 화면 방지). 0 지연이라 플래시도 없음. */
 @keyframes page-enter {
   from { opacity: 0; transform: translateY(10px) scale(0.99); }
   to { opacity: 1; transform: none; }
 }
-.page-enter { animation: page-enter 0.45s var(--ease-out) both; }
+.page-enter { animation: page-enter 0.45s var(--ease-out) forwards; }
 
 /* LUN 워드마크 반짝임 — 잉크색 글자 위로 브랜드색 빛줄기가 흐름(background-clip: text) */
 @keyframes lun-shine {
