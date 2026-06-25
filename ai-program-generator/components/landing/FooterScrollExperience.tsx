@@ -110,7 +110,7 @@ export default function FooterScrollExperience() {
             Logic&nbsp;·&nbsp;Unfold&nbsp;·&nbsp;Next
           </p>
           {/* 기존 메인 하단 문구 — 초기 상태에 노출, 스크롤 시 페이드 */}
-          <p ref={taglineRef} className="absolute inset-x-0 bottom-8 text-[12.5px] text-muted/60">
+          <p ref={taglineRef} className="absolute inset-x-0 bottom-8 text-[14px] text-muted/85">
             논리를 펼치면, 마법이 시작돼요
           </p>
         </div>

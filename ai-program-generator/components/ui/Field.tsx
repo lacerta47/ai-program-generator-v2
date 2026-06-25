@@ -6,7 +6,7 @@ import { CircleHelp } from 'lucide-react';
 
 // 라벨과 동일한 굵기(font-medium)로 맞춰 입력 글씨도 또렷하게 — 둘 다 Gowun Dodum
 const baseCls =
-  'w-full rounded-[var(--r-md)] border-2 border-line bg-surface px-4 text-[16px] font-medium text-ink outline-none transition-[border-color,box-shadow,transform] duration-150 placeholder:text-muted/80 placeholder:font-normal focus:border-brand focus:shadow-[0_0_0_4px_var(--brand-soft)] dark:bg-surface-2';
+  'w-full rounded-[var(--r-md)] border-2 border-line bg-surface px-4 text-[16px] font-medium text-ink outline-none transition-[border-color,box-shadow,transform] duration-150 placeholder:text-muted placeholder:font-normal focus:border-brand focus:shadow-[0_0_0_4px_var(--brand-soft)] dark:bg-surface-2';
 
 export const TextInput = forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputElement>>(
   function TextInput({ className = '', ...props }, ref) {
