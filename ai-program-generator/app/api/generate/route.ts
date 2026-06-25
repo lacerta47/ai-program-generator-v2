@@ -168,7 +168,7 @@ export async function POST(req: NextRequest) {
         if (!aborted) {
           console.error('[/api/generate] 스트리밍 실패:', e);
           try {
-            send({ type: 'error', error: e instanceof Error ? e.message : 'AI 생성에 실패했습니다.' });
+            send({ type: 'error', error: e instanceof Error ? e.message : '앗, 만들다가 문제가 생겼어요. 잠깐 뒤 다시 해볼까요?' });
           } catch {}
         }
         try {
