@@ -24,6 +24,11 @@ export async function deleteAccountCascade(uid: string): Promise<void> {
   const teacherDoc = await adminDb.doc(`teachers/${uid}`).get();
   const schoolCode = teacherDoc.data()?.schoolCode as string | undefined;
   if (schoolCode) refs.push(adminDb.doc(`schools/${schoolCode}`));
+  // 선생님 삭제 시 산하 학생은 작품·문서·보드를 보존하되 Auth만 비활성(로그인 차단) — 계정·작품은 지우지 않음.
+  if (teacherDoc.exists) {
+    const students = await adminDb.collection('students').where('teacherUid', '==', uid).get();
+    await Promise.all(students.docs.map((d) => adminAuth.updateUser(d.id, { disabled: true }).catch(() => {})));
+  }
   for (let i = 0; i < refs.length; i += 450) {
     const batch = adminDb.batch();
     refs.slice(i, i + 450).forEach((r) => batch.delete(r));
