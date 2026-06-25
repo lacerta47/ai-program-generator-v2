@@ -75,7 +75,7 @@ export default function FooterScrollExperience() {
   return (
     <>
       {/* 상단 우측: 네비(토글 왼쪽) + 접기/펴기 토글. items-center로 X와 네비 정렬 */}
-      <div className="fixed right-4 top-4 z-40 flex items-center gap-2">
+      <div className="fixed right-4 top-4 z-40 flex items-start gap-2">
         <div
           className={`transition-all duration-300 ease-out motion-reduce:transition-none ${
             navOpen ? 'translate-x-0 opacity-100' : 'pointer-events-none translate-x-3 opacity-0'
@@ -88,7 +88,7 @@ export default function FooterScrollExperience() {
           onClick={() => setNavOpen((o) => !o)}
           aria-label={navOpen ? '메뉴 접기' : '메뉴 펴기'}
           aria-expanded={navOpen}
-          className="press grid h-9 w-9 shrink-0 place-items-center rounded-full border-2 border-line bg-surface/90 text-ink backdrop-blur-sm hover:border-brand/50 hover:text-brand-strong dark:hover:text-brand"
+          className="press mt-1.5 grid h-9 w-9 shrink-0 place-items-center rounded-full border-2 border-line bg-surface/90 text-ink backdrop-blur-sm hover:border-brand/50 hover:text-brand-strong dark:hover:text-brand"
         >
           {navOpen ? <X size={18} aria-hidden /> : <Menu size={18} aria-hidden />}
         </button>
@@ -110,7 +110,7 @@ export default function FooterScrollExperience() {
             Logic&nbsp;·&nbsp;Unfold&nbsp;·&nbsp;Next
           </p>
           {/* 기존 메인 하단 문구 — 초기 상태에 노출, 스크롤 시 페이드 */}
-          <p ref={taglineRef} className="absolute inset-x-0 bottom-8 text-[12.5px] text-muted/60">
+          <p ref={taglineRef} className="absolute inset-x-0 bottom-8 text-[14px] text-muted/85">
             논리를 펼치면, 마법이 시작돼요
           </p>
         </div>
