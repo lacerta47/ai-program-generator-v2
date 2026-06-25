@@ -291,6 +291,14 @@ textarea {
 }
 .lift:hover { transform: translateY(-2px); }
 
+/* 랜딩 네비 주목 효과 — 무조작 시 dock이 톡 튀어 시선을 끈다(reduced-motion 시 전역 가드로 정지). */
+@keyframes lun-attn {
+  0% { transform: scale(1); }
+  45% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+.lun-attn { animation: lun-attn 1.1s var(--ease-out) 2; }
+
 /* LUN 워드마크 반짝임 — 잉크색 글자 위로 브랜드색 빛줄기가 흐름(background-clip: text) */
 @keyframes lun-shine {
   to { background-position: -150% center; }
