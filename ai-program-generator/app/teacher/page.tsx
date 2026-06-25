@@ -8,6 +8,7 @@ import Header from '@/components/common/Header';
 import LoadingDots from '@/components/ui/LoadingDots';
 import Button from '@/components/ui/Button';
 import { TextInput, Label } from '@/components/ui/Field';
+import Modal from '@/components/ui/Modal';
 import { useToast } from '@/components/ui/Toast';
 import { useConfirm } from '@/components/ui/ConfirmProvider';
 import { listStudents, createStudents, patchStudent, deleteStudent, type Student } from '@/lib/teacher/students';
@@ -74,6 +75,8 @@ function Console() {
   const [busy, setBusy] = useState(false);
   const [created, setCreated] = useState<{ email: string; hakbun: string; password: string }[] | null>(null);
   const [createdSchool, setCreatedSchool] = useState('');
+  const [editTarget, setEditTarget] = useState<Student | null>(null); // 한도 수정 모달 대상
+  const [editVal, setEditVal] = useState('');
 
   const reload = () => {
     setLoadingList(true);
@@ -139,14 +142,19 @@ function Console() {
     }
   }
 
-  async function changeLimit(s: Student) {
-    const v = window.prompt(`${s.name} 한도 (${s.limitType === 'total' ? '총' : '1일'} 횟수)`, String(s.limitValue));
-    if (v === null) return;
-    const n = Number(v);
+  function changeLimit(s: Student) {
+    setEditTarget(s);
+    setEditVal(String(s.limitValue));
+  }
+
+  async function saveLimit() {
+    if (!editTarget) return;
+    const n = Number(editVal);
     if (!Number.isInteger(n) || n < 1) return toast('1 이상의 정수로 적어 주세요.');
     try {
-      await patchStudent(s.uid, { limitValue: n });
+      await patchStudent(editTarget.uid, { limitValue: n });
       toast('한도를 바꿨어요.', 'success');
+      setEditTarget(null);
       reload();
     } catch (err) {
       toast(err instanceof Error ? err.message : '바꾸지 못했어요.');
@@ -366,6 +374,27 @@ function Console() {
           )}
         </div>
       )}
+
+      <Modal open={!!editTarget} onClose={() => setEditTarget(null)} label="한도 바꾸기" className="max-w-xs p-6">
+        <h2 className="mb-4 text-[19px]">
+          {editTarget?.name} 한도 ({editTarget?.limitType === 'total' ? '총' : '1일'} 횟수)
+        </h2>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            saveLimit();
+          }}
+          className="flex flex-col gap-3"
+        >
+          <Label text="횟수 (1 이상)" required>
+            <TextInput inputMode="numeric" value={editVal} onChange={(e) => setEditVal(e.target.value)} autoFocus required />
+          </Label>
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="ghost" onClick={() => setEditTarget(null)}>취소</Button>
+            <Button type="submit" variant="primary">저장</Button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }
