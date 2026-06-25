@@ -67,7 +67,7 @@ export class GeminiProvider implements AIProvider {
     try {
       parsed = JSON.parse(acc);
     } catch {
-      throw new Error('Gemini 응답을 JSON으로 파싱하지 못했습니다.');
+      throw new Error('앗, 결과를 정리하다 살짝 꼬였어요. 다시 한 번 만들어 볼까요?');
     }
     const code = normalize(parsed);
     if (!code.html.trim()) {
@@ -81,7 +81,7 @@ export class GeminiProvider implements AIProvider {
     for await (const chunk of this.generateStream(input)) {
       if (chunk.type === 'done') final = chunk.code;
     }
-    if (!final) throw new Error('Gemini 응답이 비어 있습니다.');
+    if (!final) throw new Error('앗, 결과가 비어서 왔어요. 다시 만들어 볼까요?');
     return final;
   }
 }
