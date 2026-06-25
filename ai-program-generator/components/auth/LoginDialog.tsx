@@ -13,7 +13,7 @@ import { X, Sparkles } from 'lucide-react';
 import { auth } from '@/lib/firebase/client';
 import Button from '@/components/ui/Button';
 import Modal from '@/components/ui/Modal';
-import { TextInput, Select } from '@/components/ui/Field';
+import { TextInput, Select, Label } from '@/components/ui/Field';
 import { listSchools, type School } from '@/lib/firebase/schools';
 
 function toMessage(e: unknown): string {
@@ -155,29 +155,54 @@ export default function LoginDialog({ open, onClose }: { open: boolean; onClose:
           </span>
           <div>
             <h2 className="text-[24px]">{mode === 'login' ? '어서 오세요!' : '반가워요!'}</h2>
-            <p className="mt-1 text-[14px] text-muted">
-              로그인하면 내 작품을
-              <br />
-              게시판에 올릴 수 있어요
+            <p className="mt-1 text-balance text-[14px] text-muted">
+              {tab === 'student'
+                ? '학교를 고르고, 학번이랑 선생님이 준 번호를 넣어요'
+                : '로그인하면 내 작품을 게시판에 올릴 수 있어요'}
             </p>
           </div>
         </div>
 
-        <div className="mb-5 flex gap-1 rounded-full bg-surface-2 p-1">
-          <button type="button" onClick={() => { setTab('general'); setError(''); setNotice(''); }}
-            className={`flex-1 rounded-full px-3 py-1.5 text-[14px] ${tab === 'general' ? 'bg-surface text-ink shadow-sm' : 'text-muted'}`}>일반</button>
-          <button type="button" onClick={() => { setTab('student'); setError(''); setNotice(''); }}
-            className={`flex-1 rounded-full px-3 py-1.5 text-[14px] ${tab === 'student' ? 'bg-surface text-ink shadow-sm' : 'text-muted'}`}>학생</button>
+        <div role="tablist" aria-label="로그인 방법" className="relative mb-5 grid grid-cols-2 rounded-full bg-surface-2 p-1">
+          <span
+            aria-hidden
+            className="absolute inset-y-1 left-1 w-[calc(50%-0.25rem)] rounded-full bg-surface shadow-sm transition-transform duration-200 ease-out"
+            style={{ transform: tab === 'student' ? 'translateX(100%)' : 'translateX(0%)' }}
+          />
+          <button
+            type="button"
+            role="tab"
+            aria-selected={tab === 'general'}
+            onClick={() => { setTab('general'); setError(''); setNotice(''); }}
+            className={`relative z-10 rounded-full px-3 py-1.5 text-[14px] transition-colors ${tab === 'general' ? 'text-ink' : 'text-muted hover:text-ink'}`}
+          >
+            일반
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={tab === 'student'}
+            onClick={() => { setTab('student'); setError(''); setNotice(''); }}
+            className={`relative z-10 rounded-full px-3 py-1.5 text-[14px] transition-colors ${tab === 'student' ? 'text-ink' : 'text-muted hover:text-ink'}`}
+          >
+            학생
+          </button>
         </div>
 
         {tab === 'student' ? (
           <form onSubmit={withStudent} className="flex flex-col gap-3">
-            <Select value={schoolCode} onChange={(e) => setSchoolCode(e.target.value)} aria-label="학교">
-              <option value="">학교를 골라요</option>
-              {schools.map((s) => (<option key={s.schoolCode} value={s.schoolCode}>{s.name}</option>))}
-            </Select>
-            <TextInput inputMode="numeric" value={hakbun} onChange={(e) => setHakbun(e.target.value)} placeholder="학번 (예: 10101)" />
-            <TextInput inputMode="numeric" type="password" value={pin} onChange={(e) => setPin(e.target.value)} placeholder="비밀번호 (PIN)" />
+            <Label text="학교">
+              <Select value={schoolCode} onChange={(e) => setSchoolCode(e.target.value)}>
+                <option value="">학교를 골라요</option>
+                {schools.map((s) => (<option key={s.schoolCode} value={s.schoolCode}>{s.name}</option>))}
+              </Select>
+            </Label>
+            <Label text="학번">
+              <TextInput inputMode="numeric" value={hakbun} onChange={(e) => setHakbun(e.target.value)} placeholder="예: 10101" />
+            </Label>
+            <Label text="비밀번호 (PIN)">
+              <TextInput inputMode="numeric" type="password" value={pin} onChange={(e) => setPin(e.target.value)} placeholder="선생님이 알려준 번호" />
+            </Label>
             {error && <p className="anim-pop-in rounded-[var(--r-md)] bg-coral-soft px-3.5 py-2.5 text-[14px] text-coral-ink">{error}</p>}
             <Button type="submit" variant="primary" disabled={busy} className="w-full">{busy ? '잠깐만요…' : '학생 로그인'}</Button>
           </form>
