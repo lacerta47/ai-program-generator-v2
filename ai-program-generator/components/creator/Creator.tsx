@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Wand2, Lightbulb, Pencil } from 'lucide-react';
 import type { GeneratedCode } from '@/lib/ai/types';
@@ -27,6 +27,7 @@ import ResultPanel from './ResultPanel';
 type ResultTab = 'preview' | 'code';
 
 const EMPTY_CODE: GeneratedCode = { html: '', css: '', javascript: '' };
+const DRAFT_KEY = 'lun:create-draft';
 
 export default function Creator() {
   const [plan, setPlan] = useState<PlanFields>(EMPTY_PLAN);
@@ -60,6 +61,42 @@ export default function Creator() {
     setPreviewKey((k) => k + 1);
   };
   const { editing, forkSource, clearSource } = useCreatorSource(applyLoaded);
+
+  // 만들기 폼 임시저장(새로 만들 때만 — 편집/이어만들기는 실제 내용을 불러오므로 제외).
+  // 새로고침·실수로 나가도 계획서가 사라지지 않게 localStorage에 보관하고, 다음 방문 시 조용히 복원.
+  const draftMode = () => {
+    const p = new URLSearchParams(window.location.search);
+    return !p.get('edit') && !p.get('fork');
+  };
+  const draftRestored = useRef(false);
+  useEffect(() => {
+    if (draftRestored.current) return;
+    draftRestored.current = true;
+    if (!draftMode()) return;
+    try {
+      const raw = localStorage.getItem(DRAFT_KEY);
+      if (!raw) return;
+      const saved = JSON.parse(raw) as Partial<PlanFields>;
+      if (Object.values(saved).some((v) => typeof v === 'string' && v.trim())) {
+        setPlan({ ...EMPTY_PLAN, ...saved });
+        toast('이어서 작성할 수 있어요');
+      }
+    } catch {}
+    // 최초 1회만
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  useEffect(() => {
+    if (!draftMode()) return;
+    const has = Object.values(plan).some((v) => v.trim());
+    const t = setTimeout(() => {
+      try {
+        if (has) localStorage.setItem(DRAFT_KEY, JSON.stringify(plan));
+        else localStorage.removeItem(DRAFT_KEY);
+      } catch {}
+    }, 400);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [plan]);
 
   async function handleSaveEdit() {
     if (!editing) return;
