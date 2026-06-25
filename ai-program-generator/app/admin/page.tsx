@@ -88,7 +88,7 @@ function HubCard({
       href={href}
       className="press lift flex items-center gap-4 rounded-[var(--r-lg)] border-2 border-line bg-surface p-5 hover:border-brand/50"
     >
-      <span className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-brand-soft text-brand-ink">
+      <span className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-brand-soft text-brand-strong dark:text-brand">
         {icon}
       </span>
       <span className="min-w-0 flex-1">

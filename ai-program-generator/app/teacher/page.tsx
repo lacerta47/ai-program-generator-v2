@@ -286,10 +286,10 @@ function Console() {
         </Label>
         <div className="flex gap-3">
           <label className="flex items-center gap-1.5 text-[14px]">
-            <input type="radio" name="ltype" aria-label="1일 한도" checked={limitType === 'daily'} onChange={() => setLimitType('daily')} /> 1일 한도
+            <input type="radio" name="ltype" checked={limitType === 'daily'} onChange={() => setLimitType('daily')} /> 1일 한도
           </label>
           <label className="flex items-center gap-1.5 text-[14px]">
-            <input type="radio" name="ltype" aria-label="총 한도" checked={limitType === 'total'} onChange={() => setLimitType('total')} /> 총 한도
+            <input type="radio" name="ltype" checked={limitType === 'total'} onChange={() => setLimitType('total')} /> 총 한도
           </label>
         </div>
         <Label text="한도 값 (횟수)" required>

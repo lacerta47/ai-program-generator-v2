@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { Sparkles, Trash2 } from 'lucide-react';
-import { auth } from '@/lib/firebase/client';
+import { authedJson } from '@/lib/client/authedFetch';
 import Header from '@/components/common/Header';
 import AdminGate from '@/components/admin/AdminGate';
 import Button from '@/components/ui/Button';
@@ -34,22 +34,6 @@ const VARIANT_LABEL: Record<Variant, string> = {
   survey: '선택지(저학년)',
 };
 
-async function authedFetch(path: string, init?: RequestInit) {
-  const user = auth.currentUser;
-  if (!user) throw new Error('로그인이 필요해요.');
-  const idToken = await user.getIdToken();
-  const res = await fetch(path, {
-    ...init,
-    headers: {
-      ...(init?.headers ?? {}),
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${idToken}`,
-    },
-  });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data?.error || `요청 실패 (${res.status})`);
-  return data;
-}
 
 export default function AdminExemplarsPage() {
   return (
@@ -68,7 +52,7 @@ function ExemplarsContent() {
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(() => {
-    return authedFetch('/api/admin/exemplars')
+    return authedJson('/api/admin/exemplars')
       .then((d) => setData(d as ExemplarsData))
       .catch((e) => toast(e instanceof Error ? e.message : '불러오기 실패'));
   }, [toast]);
@@ -80,8 +64,9 @@ function ExemplarsContent() {
   async function designate(sourcePostId: string, variant: Variant) {
     setBusy(true);
     try {
-      await authedFetch('/api/admin/exemplars', {
+      await authedJson('/api/admin/exemplars', {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sourcePostId, variant }),
       });
       toast(`${VARIANT_LABEL[variant]} 예시로 지정했어요.`, 'success');
@@ -96,7 +81,7 @@ function ExemplarsContent() {
   async function clearSlot(variant: Variant) {
     setBusy(true);
     try {
-      await authedFetch(`/api/admin/exemplars?variant=${variant}`, { method: 'DELETE' });
+      await authedJson(`/api/admin/exemplars?variant=${variant}`, { method: 'DELETE' });
       toast(`${VARIANT_LABEL[variant]} 예시를 비웠어요.`, 'success');
       await load();
     } catch (e) {
