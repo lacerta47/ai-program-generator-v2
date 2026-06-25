@@ -54,7 +54,12 @@ export default function LandingFooter() {
     >
       <div className="mx-auto max-w-3xl text-center">
         {/* 브랜드 + 한글 회사명 — 메인과 동일한 샤이니 워드마크 */}
-        <p className="lun-shiny font-wordmark -translate-y-[8px] text-[48px] leading-none">LUN</p>
+        <p
+          style={{ animationDuration: '20s' }}
+          className="lun-shiny font-wordmark -translate-y-[8px] text-[48px] leading-none"
+        >
+          LUN
+        </p>
         <p className="mt-2 text-[13px] text-muted">아름다운교육연구소</p>
 
         {/* 영문 태그라인(모노) — 샘플 카피, 교체 가능 */}
