@@ -10,7 +10,7 @@ const toMs = (s?: string): number | null => (s ? new Date(s).getTime() : null);
 
 export async function GET(req: NextRequest) {
   const gate = await requireAdmin(req);
-  if (gate) return gate;
+  if (gate instanceof NextResponse) return gate;
 
   const PAGE = 50;
   const pageToken = req.nextUrl.searchParams.get('pageToken') || undefined;

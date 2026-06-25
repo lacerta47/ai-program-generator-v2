@@ -10,7 +10,7 @@ const pad2 = (n: number) => (n < 10 ? `0${n}` : `${n}`);
 
 export async function POST(req: NextRequest) {
   const gate = await requireAdmin(req);
-  if (gate) return gate;
+  if (gate instanceof NextResponse) return gate;
 
   let body: unknown;
   try {

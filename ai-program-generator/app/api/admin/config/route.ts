@@ -6,13 +6,13 @@ export const runtime = 'nodejs';
 
 export async function GET(req: NextRequest) {
   const gate = await requireAdmin(req);
-  if (gate) return gate;
+  if (gate instanceof NextResponse) return gate;
   return NextResponse.json({ dailyLimit: await readDailyLimit() });
 }
 
 export async function PATCH(req: NextRequest) {
   const gate = await requireAdmin(req);
-  if (gate) return gate;
+  if (gate instanceof NextResponse) return gate;
   let body: unknown;
   try {
     body = await req.json();

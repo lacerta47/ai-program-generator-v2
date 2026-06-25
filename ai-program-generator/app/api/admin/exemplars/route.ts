@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/admin/requireAdmin';
-import { adminAuth } from '@/lib/firebase/admin';
 import {
   getExemplar,
   setExemplarFromPost,
@@ -15,16 +14,9 @@ function isVariant(v: unknown): v is ExemplarVariant {
   return v === 'default' || v === 'survey';
 }
 
-/** requireAdmin 통과 후 호출 — Bearer 토큰에서 관리자 uid 추출(approvedBy 기록용). */
-async function adminUid(req: NextRequest): Promise<string> {
-  const idToken = (req.headers.get('authorization') ?? '').slice(7);
-  const decoded = await adminAuth.verifyIdToken(idToken);
-  return decoded.uid;
-}
-
 export async function GET(req: NextRequest) {
   const gate = await requireAdmin(req);
-  if (gate) return gate;
+  if (gate instanceof NextResponse) return gate;
   const [def, survey, candidates] = await Promise.all([
     getExemplar('default'),
     getExemplar('survey'),
@@ -35,7 +27,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const gate = await requireAdmin(req);
-  if (gate) return gate;
+  if (gate instanceof NextResponse) return gate;
   let body: unknown;
   try {
     body = await req.json();
@@ -50,8 +42,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "variant는 'default' 또는 'survey'여야 해요." }, { status: 400 });
   }
   try {
-    const uid = await adminUid(req);
-    const exemplar = await setExemplarFromPost(sourcePostId, variant, uid);
+    const exemplar = await setExemplarFromPost(sourcePostId, variant, gate.uid);
     return NextResponse.json({ ok: true, exemplar });
   } catch (e) {
     const code = e instanceof Error ? e.message : String(e);
@@ -68,7 +59,7 @@ export async function POST(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   const gate = await requireAdmin(req);
-  if (gate) return gate;
+  if (gate instanceof NextResponse) return gate;
   const variant = new URL(req.url).searchParams.get('variant');
   if (!isVariant(variant)) {
     return NextResponse.json({ error: "variant는 'default' 또는 'survey'여야 해요." }, { status: 400 });
