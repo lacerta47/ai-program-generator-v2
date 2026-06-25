@@ -52,33 +52,28 @@ export async function GET(req: NextRequest) {
     const v = (d.data() as { dailyLimit?: number } | undefined)?.dailyLimit;
     if (typeof v === 'number' && v >= 0) overrideById.set(d.id, v);
   });
-  const usageByUid = new Map<string, Map<string, number>>();
-  usageDocs.forEach((snap, i) => {
-    const uid = uids[Math.floor(i / days.length)];
-    const day = days[i % days.length];
-    const count = snap.exists ? ((snap.data() as { count?: number }).count ?? 0) : 0;
-    if (!usageByUid.has(uid)) usageByUid.set(uid, new Map());
-    usageByUid.get(uid)!.set(day, count);
-  });
+  // usage 문서를 id(`${uid}_${day}`)로 키잉 — getAll 반환 순서에 의존하지 않음.
+  const usageById = new Map(usageDocs.map((d) => [d.id, d]));
+  const usageCount = (uid: string, day: string): number => {
+    const snap = usageById.get(`${uid}_${day}`);
+    return snap?.exists ? ((snap.data() as { count?: number }).count ?? 0) : 0;
+  };
   const postCountByUid = new Map<string, number>();
   uids.forEach((u, i) => postCountByUid.set(u, postCounts[i]));
 
-  const members = users.map((u) => {
-    const perDay = usageByUid.get(u.uid);
-    return {
-      uid: u.uid,
-      email: u.email ?? null,
-      nickname: nickById.get(u.uid) ?? null,
-      createdAt: toMs(u.metadata.creationTime) ?? 0,
-      lastSignInAt: toMs(u.metadata.lastSignInTime),
-      isAdmin: u.customClaims?.admin === true,
-      disabled: u.disabled === true,
-      postCount: postCountByUid.get(u.uid) ?? 0,
-      usageToday: perDay?.get(today) ?? 0,
-      usage7d: days.map((d) => perDay?.get(d) ?? 0),
-      limitOverride: overrideById.get(u.uid) ?? null,
-    };
-  });
+  const members = users.map((u) => ({
+    uid: u.uid,
+    email: u.email ?? null,
+    nickname: nickById.get(u.uid) ?? null,
+    createdAt: toMs(u.metadata.creationTime) ?? 0,
+    lastSignInAt: toMs(u.metadata.lastSignInTime),
+    isAdmin: u.customClaims?.admin === true,
+    disabled: u.disabled === true,
+    postCount: postCountByUid.get(u.uid) ?? 0,
+    usageToday: usageCount(u.uid, today),
+    usage7d: days.map((d) => usageCount(u.uid, d)),
+    limitOverride: overrideById.get(u.uid) ?? null,
+  }));
 
   const usageLimit = await readDailyLimit();
   return NextResponse.json({ members, usageLimit, days, nextPageToken: page.pageToken ?? null });
