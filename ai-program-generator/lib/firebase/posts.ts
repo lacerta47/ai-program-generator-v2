@@ -32,21 +32,25 @@ export interface PostsPage {
 
 /**
  * 카테고리별 게시물 페이지 조회 (createdAt 내림차순, 커서 기반).
- * 배포된 복합 인덱스 posts(categoryId asc, createdAt desc)를 사용한다.
+ * boardTeacherUid로도 필터한다(공개=null, 교실=교사 uid) — 읽기 규칙이 이 필드로 인가하므로 목록 쿼리도 일치해야 함.
+ * 배포된 복합 인덱스 posts(categoryId asc, boardTeacherUid asc, createdAt desc)를 사용한다.
  */
-export async function fetchPosts(categoryId: string, cursor?: PostCursor): Promise<PostsPage> {
+export async function fetchPosts(
+  categoryId: string,
+  boardTeacherUid: string | null,
+  cursor?: PostCursor,
+): Promise<PostsPage> {
   const base = [
     where('categoryId', '==', categoryId),
+    where('boardTeacherUid', '==', boardTeacherUid),
     orderBy('createdAt', 'desc'),
   ] as const;
   const q = cursor
     ? query(collection(db, COL), ...base, startAfter(cursor), limit(PAGE_SIZE))
     : query(collection(db, COL), ...base, limit(PAGE_SIZE));
-
   const snap = await getDocs(q);
-  const posts = snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Post);
   return {
-    posts,
+    posts: snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Post),
     cursor: snap.docs[snap.docs.length - 1] ?? null,
     hasMore: snap.docs.length === PAGE_SIZE,
   };
