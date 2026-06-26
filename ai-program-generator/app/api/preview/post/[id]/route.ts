@@ -41,7 +41,15 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   let code: GeneratedCode | null = null;
   try {
     const snap = await adminDb.collection('posts').doc(id).get();
-    if (snap.exists && isCode(snap.data()?.code)) code = snap.data()!.code as GeneratedCode;
+    const data = snap.data();
+    if (snap.exists && data && data.boardTeacherUid) {
+      // 교실 글은 공개 GET으로 서빙하지 않는다(누출 차단). 멤버는 POST /api/preview 경로로.
+      return new Response(
+        '<p style="font-family:sans-serif;color:#888;text-align:center;margin-top:3em">미리보기를 찾을 수 없어요.</p>',
+        { status: 404, headers: SECURITY_HEADERS },
+      );
+    }
+    if (snap.exists && isCode(data?.code)) code = data!.code as GeneratedCode;
   } catch (e) {
     console.error('[/api/preview/post/[id]] 조회 실패:', e);
     return new Response(

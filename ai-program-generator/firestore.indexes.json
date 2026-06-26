@@ -5,6 +5,7 @@
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "categoryId", "order": "ASCENDING" },
+        { "fieldPath": "boardTeacherUid", "order": "ASCENDING" },
         { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
     },

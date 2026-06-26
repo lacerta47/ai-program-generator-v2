@@ -19,19 +19,24 @@ import { useToast } from '@/components/ui/Toast';
 import { useConfirm } from '@/components/ui/ConfirmProvider';
 
 export default function BoardView() {
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, isTeacher } = useAuth();
   const { toast } = useToast();
   const confirm = useConfirm();
   const router = useRouter();
   const params = useSearchParams();
 
   const [categories, setCategories] = useState<Category[]>([]);
+  // 내가 속한 교실 보드의 교사 uid: 교사 본인=자기 uid, 학생=classTeacherUid 클레임. 비로그인/일반은 undefined.
+  const [myClassTeacherUid, setMyClassTeacherUid] = useState<string | undefined>(undefined);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(
     params.get('category'),
   );
   const [posts, setPosts] = useState<Post[]>([]);
   const cursorRef = useRef<PostCursor>(null);
   const selectedPostRef = useRef<Post | null>(null);
+  // fetchPosts에 넘길 boardTeacherUid를 카테고리 id로 조회하기 위한 최신 카테고리 스냅샷.
+  // loadFirst/loadMore가 categories 의존성으로 인한 재생성·재로드를 피하면서 값을 읽게 한다.
+  const categoriesRef = useRef<Category[]>([]);
   const resolvedDeepLink = useRef<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -59,30 +64,69 @@ export default function BoardView() {
     [],
   );
 
-  // 선택된 카테고리가 없으면 첫 잎새로 (딥링크 글 해결 중이면 대기)
+  // 내 교실 보드 소유자(myClassTeacherUid) 해석 — 멤버십 필터·쿼리 인가에 쓰임.
   useEffect(() => {
-    if (!selectedCategoryId && !deepLinkResolving && categories.length > 0) {
-      const firstLeaf = leafPaths(categories)[0];
+    if (!user) {
+      setMyClassTeacherUid(undefined);
+      return;
+    }
+    let cancelled = false;
+    user
+      .getIdTokenResult()
+      .then((result) => {
+        if (cancelled) return;
+        const claim = result.claims.classTeacherUid;
+        // 학생=classTeacherUid 클레임, 교사 본인=자기 uid, 그 외=undefined
+        setMyClassTeacherUid(typeof claim === 'string' ? claim : isTeacher ? user.uid : undefined);
+      })
+      .catch((e) => {
+        if (cancelled) return;
+        console.error('클레임 조회 실패:', e);
+        setMyClassTeacherUid(isTeacher ? user.uid : undefined);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [user, isTeacher]);
+
+  // 멤버십 필터: 공개 보드(teacherUid 없음) + 내 교실 보드만 노출.
+  const visibleCategories = categories.filter(
+    (c) => !c.teacherUid || c.teacherUid === user?.uid || c.teacherUid === myClassTeacherUid,
+  );
+
+  // 선택된 카테고리가 없으면 첫 잎새로 (딥링크 글 해결 중이면 대기). 멤버십 필터된 목록 기준.
+  useEffect(() => {
+    if (!selectedCategoryId && !deepLinkResolving && visibleCategories.length > 0) {
+      const firstLeaf = leafPaths(visibleCategories)[0];
       if (firstLeaf) setSelectedCategoryId(firstLeaf.id);
     }
-  }, [categories, selectedCategoryId, deepLinkResolving]);
+  }, [visibleCategories, selectedCategoryId, deepLinkResolving]);
 
-  // 보던 카테고리가 사라졌거나(삭제) 폴더(잎새 아님)를 가리키면 첫 잎새로 되돌림.
+  // 보던 카테고리가 사라졌거나(삭제·비멤버) 폴더(잎새 아님)를 가리키면 첫 잎새로 되돌림.
   // 폴더 딥링크(?category=<folder>)가 빈 목록을 조용히 띄우는 것 방지. 글 딥링크 해결 중이면 대기.
   useEffect(() => {
-    if (!selectedCategoryId || categories.length === 0 || deepLinkResolving) return;
-    const exists = categories.some((c) => c.id === selectedCategoryId);
-    if (!exists || hasChildren(selectedCategoryId, categories)) {
-      const firstLeaf = leafPaths(categories)[0];
+    if (!selectedCategoryId || visibleCategories.length === 0 || deepLinkResolving) return;
+    const exists = visibleCategories.some((c) => c.id === selectedCategoryId);
+    if (!exists || hasChildren(selectedCategoryId, visibleCategories)) {
+      const firstLeaf = leafPaths(visibleCategories)[0];
       setSelectedCategoryId(firstLeaf?.id ?? null);
       setSelectedPost(null);
     }
-  }, [categories, selectedCategoryId, deepLinkResolving]);
+  }, [visibleCategories, selectedCategoryId, deepLinkResolving]);
 
   // 선택 게시물을 ref로도 들고 있어, loadFirst가 목록을 채울 때 딥링크 글을 끼워 넣을 수 있게 한다.
   useEffect(() => {
     selectedPostRef.current = selectedPost;
   }, [selectedPost]);
+
+  // 최신 카테고리 목록을 ref로 동기화 — fetchPosts 호출 시 boardTeacherUid 조회용.
+  useEffect(() => {
+    categoriesRef.current = categories;
+  }, [categories]);
+
+  // 카테고리 id → 보드 소유자 uid(공개=null) 조회.
+  const boardTeacherUidOf = (categoryId: string): string | null =>
+    categoriesRef.current.find((c) => c.id === categoryId)?.teacherUid ?? null;
 
   // 공유 링크(?post=)로 진입한 경우 해당 게시물 로드.
   // params에 반응한다 — 정적 프리렌더 페이지에서 useSearchParams가 마운트 직후에야 채워질 수 있어
@@ -117,7 +161,7 @@ export default function BoardView() {
     setLoading(true);
     setLoadError(false);
     try {
-      const page = await fetchPosts(categoryId);
+      const page = await fetchPosts(categoryId, boardTeacherUidOf(categoryId));
       // 공유링크로 연 글이 이 카테고리에 속하는데 첫 페이지에 없으면, 목록 맨 위에 끼워 선택 표시되게 한다.
       const sel = selectedPostRef.current;
       const list =
@@ -144,7 +188,11 @@ export default function BoardView() {
     if (!selectedCategoryId || !hasMore || loadingMore) return;
     setLoadingMore(true);
     try {
-      const page = await fetchPosts(selectedCategoryId, cursorRef.current);
+      const page = await fetchPosts(
+        selectedCategoryId,
+        boardTeacherUidOf(selectedCategoryId),
+        cursorRef.current,
+      );
       // 딥링크로 위에 끼워 둔 글이 다음 페이지에 또 나올 수 있어 중복 제거
       setPosts((prev) => {
         const seen = new Set(prev.map((p) => p.id));
@@ -243,7 +291,7 @@ export default function BoardView() {
           </button>
         </div>
         <CategoryTree
-          categories={categories}
+          categories={visibleCategories}
           selectedId={selectedCategoryId}
           onSelect={selectCategory}
         />

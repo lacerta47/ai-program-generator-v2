@@ -137,9 +137,12 @@ export default function UploadDialog({ open, onClose, code, plan, prompt, defaul
           return;
         }
       }
+      const selectedCat = categories.find((c) => c.id === categoryId);
+      const boardTeacherUid = selectedCat?.teacherUid ?? null;
       const postId = await createPost({
         title: title.trim(),
         categoryId,
+        boardTeacherUid,
         ownerUid: user.uid,
         authorName: name,
         code,
