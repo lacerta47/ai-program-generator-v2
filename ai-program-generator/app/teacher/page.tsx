@@ -14,6 +14,7 @@ import { useConfirm } from '@/components/ui/ConfirmProvider';
 import { listStudents, createStudents, patchStudent, deleteStudent, type Student } from '@/lib/teacher/students';
 import { listBoardPosts, deleteBoardPost, type BoardPost } from '@/lib/teacher/posts';
 import { listTeacherReports, dismissReportedPost, deleteReportedPost, type TeacherReportGroup } from '@/lib/teacher/reports';
+import { getViewPinStatus, setViewPin } from '@/lib/teacher/viewPin';
 import { formatDate } from '@/lib/program';
 
 interface TeacherInfo {
@@ -77,6 +78,10 @@ function Console() {
   const [createdSchool, setCreatedSchool] = useState('');
   const [editTarget, setEditTarget] = useState<Student | null>(null); // 한도 수정 모달 대상
   const [editVal, setEditVal] = useState('');
+  const [hasPin, setHasPin] = useState(false); // 관람 PIN 설정 여부
+  const [pinOpen, setPinOpen] = useState(false); // 관람 PIN 모달
+  const [pinVal, setPinVal] = useState('');
+  const [pinBusy, setPinBusy] = useState(false);
 
   const reload = () => {
     setLoadingList(true);
@@ -104,6 +109,9 @@ function Console() {
     listTeacherReports()
       .then((r) => setReports(r.reports))
       .catch((e) => console.error('신고 조회 실패:', e));
+    getViewPinStatus()
+      .then((r) => setHasPin(r.hasPin))
+      .catch((e) => console.error('관람 PIN 상태 조회 실패:', e));
   };
 
   useEffect(() => {
@@ -158,6 +166,21 @@ function Console() {
       reload();
     } catch (err) {
       toast(err instanceof Error ? err.message : '바꾸지 못했어요.');
+    }
+  }
+
+  async function savePin() {
+    setPinBusy(true);
+    try {
+      await setViewPin(pinVal);
+      setHasPin(true);
+      setPinOpen(false);
+      setPinVal('');
+      toast('관람 PIN을 정했어요.', 'success');
+    } catch (err) {
+      toast(err instanceof Error ? err.message : '정하지 못했어요.');
+    } finally {
+      setPinBusy(false);
     }
   }
 
@@ -228,6 +251,29 @@ function Console() {
       <p className="mt-1 text-[14px] text-muted">
         우리 반 한도 <span className="text-ink">{info ? `${info.usedTotal}/${info.totalQuota}` : '…'}</span>
       </p>
+
+      <section className="mt-5 rounded-[var(--r-lg)] border-2 border-line bg-surface p-5">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h2 className="text-[18px]">관람 PIN</h2>
+            <p className="mt-1 text-[14px] text-muted">
+              {hasPin
+                ? '관람 PIN: 설정됨'
+                : '관람 PIN이 아직 없어요 — 정하면 학부모가 공유 링크로 작품을 볼 수 있어요.'}
+            </p>
+          </div>
+          <Button
+            variant="soft"
+            className="shrink-0"
+            onClick={() => {
+              setPinVal('');
+              setPinOpen(true);
+            }}
+          >
+            {hasPin ? '관람 PIN 바꾸기' : '관람 PIN 정하기'}
+          </Button>
+        </div>
+      </section>
 
       {reports.length > 0 && (
         <section className="mt-5">
@@ -392,6 +438,35 @@ function Console() {
           <div className="flex justify-end gap-2">
             <Button type="button" variant="ghost" onClick={() => setEditTarget(null)}>취소</Button>
             <Button type="submit" variant="primary">저장</Button>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal open={pinOpen} onClose={() => setPinOpen(false)} label="관람 PIN 정하기" className="max-w-xs p-6">
+        <h2 className="mb-1 text-[19px]">관람 PIN</h2>
+        <p className="mb-4 text-[13px] text-muted">숫자 4~8자리로 정해 주세요. 공유 링크로 작품을 볼 때 쓰여요.</p>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            savePin();
+          }}
+          className="flex flex-col gap-3"
+        >
+          <Label text="관람 PIN (숫자 4~8자리)" required>
+            <TextInput
+              inputMode="numeric"
+              maxLength={8}
+              value={pinVal}
+              onChange={(e) => setPinVal(e.target.value)}
+              autoFocus
+              required
+            />
+          </Label>
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="ghost" onClick={() => setPinOpen(false)}>취소</Button>
+            <Button type="submit" variant="primary" disabled={pinBusy}>
+              {pinBusy ? '저장 중…' : '저장'}
+            </Button>
           </div>
         </form>
       </Modal>

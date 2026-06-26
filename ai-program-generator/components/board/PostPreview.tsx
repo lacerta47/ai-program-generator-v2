@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { FileText, Download, MonitorPlay, Pencil, X, Link2, Check, GitFork, Heart, Eye, Flag } from 'lucide-react';
+import { FileText, Download, MonitorPlay, Pencil, X, Link2, Check, GitFork, Heart, Eye, Flag, Share2 } from 'lucide-react';
 import Modal from '@/components/ui/Modal';
 import ReportDialog from './ReportDialog';
 import type { Post } from '@/lib/firebase/types';
@@ -72,6 +72,19 @@ export default function PostPreview({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [post?.id, currentUserUid]);
+
+  // 교실(비공개) 글은 공개 URL이 없어 /share/<id> + 관람 PIN으로만 외부 공유.
+  async function copyShareLink() {
+    if (!post) return;
+    const url = `${window.location.origin}/share/${post.id}`;
+    try {
+      if (!navigator.clipboard) throw new Error('clipboard unavailable');
+      await navigator.clipboard.writeText(url);
+      toast('링크를 복사했어요. 관람 PIN과 함께 알려주세요.', 'success');
+    } catch {
+      toast('링크 복사를 못 했어요.');
+    }
+  }
 
   function handleLike() {
     if (!post) return;
@@ -170,6 +183,11 @@ export default function PostPreview({
           >
             {copied ? <Check size={18} className="text-mint-ink" aria-hidden /> : <Link2 size={18} aria-hidden />}
           </Button>
+          {post.boardTeacherUid && (
+            <Button variant="ghost" size="icon" onClick={copyShareLink} aria-label="공유 링크 복사" title="공유 링크 복사" className="rounded-full">
+              <Share2 size={18} aria-hidden />
+            </Button>
+          )}
           <Button variant="ghost" size="icon" onClick={() => downloadProgram(post.code, post.title, toast)} aria-label="ZIP 저장" title="ZIP 저장" className="rounded-full">
             <Download size={18} aria-hidden />
           </Button>
