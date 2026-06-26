@@ -50,7 +50,7 @@ service cloud.firestore {
 
     // 게시물 생성 문서 형태/크기 검증
     function validPost(d) {
-      return d.keys().hasOnly(['title', 'categoryId', 'ownerUid', 'authorName', 'code', 'plan', 'prompt', 'createdAt', 'updatedAt', 'forkedFrom', 'forkedFromAuthor'])
+      return d.keys().hasOnly(['title', 'categoryId', 'ownerUid', 'authorName', 'code', 'plan', 'prompt', 'createdAt', 'updatedAt', 'forkedFrom', 'forkedFromAuthor', 'boardTeacherUid'])
         && d.title is string && d.title.size() > 0 && d.title.size() <= 100
         && d.categoryId is string && d.categoryId.size() > 0 && d.categoryId.size() <= 128
         && d.ownerUid is string
@@ -60,7 +60,8 @@ service cloud.firestore {
         && validCode(d.code)
         && (!('plan' in d) || validPlan(d.plan))
         && (!('forkedFrom' in d) || (d.forkedFrom is string && d.forkedFrom.size() <= 128))
-        && (!('forkedFromAuthor' in d) || (d.forkedFromAuthor is string && d.forkedFromAuthor.size() <= 20));
+        && (!('forkedFromAuthor' in d) || (d.forkedFromAuthor is string && d.forkedFromAuthor.size() <= 20))
+        && (d.boardTeacherUid == null || (d.boardTeacherUid is string && d.boardTeacherUid.size() <= 128));
     }
 
     // 신고의 postOwnerUid가 실제 글 주인과 일치하는지(위조 차단). 글이 없으면 거부.
@@ -79,6 +80,11 @@ service cloud.firestore {
         || cat.teacherUid == null            // 공개보드(teacherUid 없음/null) — 누구나
         || cat.teacherUid == uid             // 그 교사 본인
         || isStudentOf(uid, cat.teacherUid); // 그 교사의 학생
+    }
+    // 카테고리의 보드 소유자(teacherUid 없으면 null) — boardTeacherUid 위조 차단용.
+    function catBoardOwner(catId) {
+      let c = get(/databases/$(database)/documents/categories/$(catId)).data;
+      return 'teacherUid' in c ? c.teacherUid : null;
     }
     function isStudentOf(uid, teacherUid) {
       return exists(/databases/$(database)/documents/students/$(uid))
@@ -117,7 +123,8 @@ service cloud.firestore {
         && (isAdmin() || isVerified() || isRoleAccount())
         && request.resource.data.ownerUid == request.auth.uid
         && validPost(request.resource.data)
-        && (isAdmin() || categoryAllowed(request.resource.data.categoryId, request.auth.uid));
+        && (isAdmin() || categoryAllowed(request.resource.data.categoryId, request.auth.uid))
+        && (isAdmin() || request.resource.data.boardTeacherUid == catBoardOwner(request.resource.data.categoryId));
       // 수정: 본인/관리자만. 변경 가능 필드는 제목·작성자명·계획서·코드·수정시각으로 제한
       // (ownerUid·categoryId·createdAt 변조 차단). 변경되는 값은 형태·크기 재검증.
       // 본인/관리자 콘텐츠 편집만. 카운터(좋아요·조회·포크)는 서버 API(Admin SDK) 전용 — 클라 직접 쓰기 차단.

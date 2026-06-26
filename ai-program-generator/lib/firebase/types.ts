@@ -46,6 +46,8 @@ export interface Post {
   viewCount?: number;
   /** 이어 만든 횟수(비정규화) */
   forkCount?: number;
+  /** 보드 소유자 비정규화: 공개 보드=null, 교실 보드=그 교사 uid. 읽기 권한 분기·목록 쿼리 인가용. 구버전 글엔 없음(마이그레이션 백필). */
+  boardTeacherUid?: string | null;
 }
 
 /** 새 게시물 생성 시 입력 (id 제외) */
