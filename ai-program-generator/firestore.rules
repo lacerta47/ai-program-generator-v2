@@ -118,7 +118,14 @@ service cloud.firestore {
     // 게시물: 누구나 읽기 / 로그인 사용자가 본인 소유로 생성(형태 검증) /
     // 수정은 제목만 가능(소유권·코드 변조 차단), 본인 또는 관리자만 / 삭제는 본인 또는 관리자
     match /posts/{postId} {
-      allow read: if true;
+      // 공개 보드(boardTeacherUid=null/없음)는 누구나. 교실 보드는 그 교사·그 반 학생·관리자만.
+      // .get(...,null)로 구버전(필드 없는) 글은 공개로 취급(마이그레이션 전/중 안전망).
+      allow read: if resource.data.get('boardTeacherUid', null) == null
+        || (isSignedIn() && (
+             isAdmin()
+             || resource.data.get('boardTeacherUid', null) == request.auth.uid
+             || resource.data.get('boardTeacherUid', null) == request.auth.token.get('classTeacherUid', '')
+           ));
       allow create: if isSignedIn()
         && (isAdmin() || isVerified() || isRoleAccount())
         && request.resource.data.ownerUid == request.auth.uid
