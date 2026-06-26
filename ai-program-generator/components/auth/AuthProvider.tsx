@@ -26,6 +26,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isStudent, setIsStudent] = useState(false);
   const [loading, setLoading] = useState(true);
   const [kicked, setKicked] = useState(false); // 다른 기기 로그인으로 밀려났을 때 안내 배너
+  const [needsReauth, setNeedsReauth] = useState(false); // 학생인데 classTeacherUid 클레임이 없을 때(재로그인 필요)
   const sessionUnsub = useRef<Unsubscribe | null>(null);
 
   useEffect(() => {
@@ -39,6 +40,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setIsTeacher(token.claims.teacher === true);
         const student = token.claims.student === true;
         setIsStudent(student);
+        setNeedsReauth(student && token.claims.classTeacherUid === undefined);
         if (student) {
           try {
             const myId = await claimSession(u.uid);
@@ -54,6 +56,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setIsAdmin(false);
         setIsTeacher(false);
         setIsStudent(false);
+        setNeedsReauth(false);
       }
       setLoading(false);
     });
@@ -77,6 +80,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           >
             다른 기기에서 로그인해서 이 화면은 로그아웃했어요.
             <button onClick={() => setKicked(false)} className="press rounded-full px-2 py-0.5 underline underline-offset-2">
+              닫기
+            </button>
+          </div>,
+          document.body,
+        )}
+      {needsReauth && typeof document !== 'undefined' &&
+        createPortal(
+          <div
+            role="status"
+            className="anim-pop-in fixed left-1/2 top-4 z-[100] flex -translate-x-1/2 items-center gap-3 rounded-[var(--r-md)] border-2 border-coral/40 bg-coral-soft px-4 py-3 text-[15px] text-coral-ink shadow-lg"
+          >
+            우리 반 게시판을 보려면 한 번 더 로그인해 주세요.
+            <button onClick={() => setNeedsReauth(false)} className="press rounded-full px-2 py-0.5 underline underline-offset-2">
               닫기
             </button>
           </div>,

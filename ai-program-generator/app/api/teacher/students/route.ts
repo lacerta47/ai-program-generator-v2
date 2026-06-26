@@ -82,7 +82,7 @@ export async function POST(req: NextRequest) {
     const email = `${schoolCode}-${hakbun}@${DOMAIN}`;
     try {
       const user = await adminAuth.createUser({ email, password });
-      await adminAuth.setCustomUserClaims(user.uid, { student: true });
+      await adminAuth.setCustomUserClaims(user.uid, { student: true, classTeacherUid: gate.uid });
       await adminDb.doc(`students/${user.uid}`).set({
         teacherUid: gate.uid,
         schoolCode,
