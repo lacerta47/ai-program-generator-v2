@@ -266,6 +266,7 @@ export default function SurveyWizard() {
       const result = await requestGenerateStream(prompt, 'modify', 'survey', {
         signal: ctrl.signal,
         onDelta: onStageDelta,
+        photo: photo ?? undefined,
       });
       setCode(result);
       setPreviewKey((k) => k + 1);
