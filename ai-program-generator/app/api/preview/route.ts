@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: '코드가 너무 큽니다.' }, { status: 413 });
     }
   }
-  if (typeof photo === 'string' && photo.length > 400000) {
+  if (typeof photo === 'string' && photo.length > 350000) { // 저장 rule(validPost photo<=350000)과 일치
     return NextResponse.json({ error: '사진이 너무 커요.' }, { status: 413 });
   }
   // 토큰 코드 + 사진을 그대로 저장한다. __PHOTO__ 치환·doc 빌드는 서빙(getPreview) 시점에 일어나

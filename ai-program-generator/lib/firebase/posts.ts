@@ -9,7 +9,6 @@ import {
   getDoc,
   addDoc,
   updateDoc,
-  deleteDoc,
   doc,
   type QueryDocumentSnapshot,
   type DocumentData,
@@ -17,6 +16,7 @@ import {
 import { db } from './client';
 import { assertClean, isReservedNickname, ProfanityError } from '@/lib/moderation';
 import { forkPost } from '@/lib/client/postCount';
+import { authedJson } from '@/lib/client/authedFetch';
 import type { Post, NewPost, PostEdit } from './types';
 
 const COL = 'posts';
@@ -103,8 +103,9 @@ export async function updatePostContent(id: string, edit: PostEdit): Promise<voi
   await updateDoc(doc(db, COL, id), { ...edit });
 }
 
+// 삭제는 서버 경유 — 글과 그 글의 신고(reports)를 함께 지운다(클라 직접삭제는 reports 못 지워 고아 발생).
 export async function deletePost(id: string): Promise<void> {
-  await deleteDoc(doc(db, COL, id));
+  await authedJson(`/api/posts/${id}`, { method: 'DELETE' });
 }
 
 /** 이어 만들기 저장 시 원본의 forkCount +1 — 서버 API로(클라 직접 쓰기는 규칙 차단) */

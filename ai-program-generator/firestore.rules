@@ -164,7 +164,9 @@ service cloud.firestore {
         && (!('plan' in request.resource.data) || validPlan(request.resource.data.plan))
         // updatedAt도 숫자+미래상한(정렬키는 아니나 위조 방지). createdAt은 affectedKeys에서 빠져 변경 불가.
         && (!('updatedAt' in request.resource.data) || (request.resource.data.updatedAt is number && request.resource.data.updatedAt <= request.time.toMillis() + 3600000));
-      allow delete: if isAdmin() || isOwner(resource.data.ownerUid);
+      // 삭제는 서버 라우트(DELETE /api/posts/[id], Admin SDK)로 일원화 — 글과 신고를 함께 지운다.
+      // 클라 직접삭제는 reports(admin 전용 삭제)를 못 지워 고아가 생기므로 본인 직접삭제를 막고 admin만 허용.
+      allow delete: if isAdmin();
 
       // likes/views 서브문서는 서버(Admin SDK)만 쓴다. 클라는 '내가 좋아요 했나' 읽기만.
       match /likes/{uid} {
