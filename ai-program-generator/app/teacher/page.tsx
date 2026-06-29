@@ -70,6 +70,7 @@ function Console() {
   const [grade, setGrade] = useState('');
   const [classNo, setClassNo] = useState('');
   const [count, setCount] = useState('');
+  const [startNo, setStartNo] = useState('1');
   const [password, setPassword] = useState('');
   const [limitType, setLimitType] = useState<'daily' | 'total'>('daily');
   const [limitValue, setLimitValue] = useState('');
@@ -124,21 +125,24 @@ function Console() {
     const g = Number(grade);
     const c = Number(classNo);
     const n = Number(count);
+    const s = Number(startNo);
     const v = Number(limitValue);
     if (!Number.isInteger(g) || g < 1 || g > 6) return toast('학년은 1~6으로 적어 주세요.');
     if (!Number.isInteger(c) || c < 1 || c > 99) return toast('반은 1~99로 적어 주세요.');
     if (!Number.isInteger(n) || n < 1 || n > 50) return toast('인원수는 1~50명으로 적어 주세요.');
+    if (!Number.isInteger(s) || s < 1 || s + n - 1 > 99) return toast('학생 번호(시작 번호+인원수)는 1~99 범위로 해주세요.');
     if (password.length < 6) return toast('PIN은 6자 이상으로 적어 주세요.');
     if (!Number.isInteger(v) || v < 1) return toast('한도는 1 이상의 정수로 적어 주세요.');
     setBusy(true);
     try {
-      const r = await createStudents({ grade: g, classNo: c, count: n, password, limitType, limitValue: v });
+      const r = await createStudents({ grade: g, classNo: c, count: n, startNo: s, password, limitType, limitValue: v });
       setCreated(r.created);
       setCreatedSchool(r.schoolCode);
       if (r.skipped.length) toast(`${r.skipped.length}명은 이미 있는 학번이라 건너뛰었어요.`);
       setGrade('');
       setClassNo('');
       setCount('');
+      setStartNo('1');
       setPassword('');
       setLimitValue('');
       toast(`${r.created.length}명 만들었어요.`, 'success');
@@ -324,9 +328,15 @@ function Console() {
             <TextInput inputMode="numeric" value={classNo} onChange={(e) => setClassNo(e.target.value)} placeholder="1" required />
           </Label>
         </div>
-        <Label text="인원수 (1~50)" required>
-          <TextInput inputMode="numeric" value={count} onChange={(e) => setCount(e.target.value)} placeholder="20" required />
-        </Label>
+        <div className="flex gap-3">
+          <Label text="시작 번호" required>
+            <TextInput inputMode="numeric" value={startNo} onChange={(e) => setStartNo(e.target.value)} placeholder="1" required />
+          </Label>
+          <Label text="인원수 (1~50)" required>
+            <TextInput inputMode="numeric" value={count} onChange={(e) => setCount(e.target.value)} placeholder="20" required />
+          </Label>
+        </div>
+        <p className="-mt-1 text-[12px] text-muted">전학생 등 이어서 추가할 땐 시작 번호를 다음 번호로 바꿔요(예: 이미 10명이면 11).</p>
         <Label text="공용 PIN (6자리 이상)" required>
           <TextInput type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
         </Label>

@@ -12,5 +12,5 @@ function call<T>(postId: string, action: Action): Promise<T> {
 }
 
 export const likePost = (postId: string) => call<{ liked: boolean; likeCount: number }>(postId, 'like');
-export const viewPost = (postId: string) => call<{ counted: boolean; viewCount: number }>(postId, 'view');
+export const viewPost = (postId: string) => call<{ counted: boolean }>(postId, 'view');
 export const forkPost = (postId: string) => call<{ ok: true }>(postId, 'fork');
