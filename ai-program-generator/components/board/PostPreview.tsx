@@ -184,7 +184,7 @@ export default function PostPreview({
             {copied ? <Check size={18} className="text-mint-ink" aria-hidden /> : <Link2 size={18} aria-hidden />}
           </Button>
           {post.boardTeacherUid && (
-            <Button variant="ghost" size="icon" onClick={copyShareLink} aria-label="공유 링크 복사" title="공유 링크 복사" className="rounded-full">
+            <Button variant="ghost" size="icon" onClick={copyShareLink} aria-label="관람 링크 복사" title="관람 링크 복사 (관람 PIN으로 열려요)" className="rounded-full">
               <Share2 size={18} aria-hidden />
             </Button>
           )}
