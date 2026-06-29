@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAIProvider } from '@/lib/ai/provider';
-import { SYSTEM_PROMPTS, MODIFY_SYSTEM_SUFFIX, type SystemPromptVariant } from '@/lib/ai/prompts';
+import { SYSTEM_PROMPTS, MODIFY_SYSTEM_SUFFIX, PHOTO_INSTRUCTION, type SystemPromptVariant } from '@/lib/ai/prompts';
 import { getExemplar } from '@/lib/admin/exemplars';
 import { buildExemplarBlock } from '@/lib/ai/exemplars';
 import type { GenerateMode } from '@/lib/ai/types';
@@ -66,10 +66,11 @@ export async function POST(req: NextRequest) {
   }
 
   // system 텍스트는 클라이언트가 보내도 무시(주입 차단). 대신 variant 키로 서버가 선택.
-  const { prompt, mode, variant } = (body ?? {}) as {
+  const { prompt, mode, variant, photo } = (body ?? {}) as {
     prompt?: unknown;
     mode?: unknown;
     variant?: unknown;
+    photo?: unknown;
   };
   const promptVariant: SystemPromptVariant = variant === 'survey' ? 'survey' : 'default';
 
@@ -84,6 +85,19 @@ export async function POST(req: NextRequest) {
       { error: "mode는 'generate' 또는 'modify' 여야 합니다." },
       { status: 400 },
     );
+  }
+
+  // 사진(선택) — data-URI 검증·분해. 잘못/과대 사진은 한도 차감 전에 거절(횟수 소모 방지).
+  let parsedPhoto: { data: string; mimeType: string } | undefined;
+  if (typeof photo === 'string' && photo) {
+    if (photo.length > 400000) {
+      return NextResponse.json({ error: '사진이 너무 커요.' }, { status: 413 });
+    }
+    const m = /^data:(image\/[a-zA-Z+.-]+);base64,(.+)$/.exec(photo);
+    if (!m) {
+      return NextResponse.json({ error: '사진 형식이 올바르지 않아요.' }, { status: 400 });
+    }
+    parsedPhoto = { mimeType: m[1], data: m[2] };
   }
 
   // 3) 한도 선점 (트랜잭션). 생성이 실패하면 4)에서 환불한다.
@@ -140,6 +154,8 @@ export async function POST(req: NextRequest) {
     const exemplar = await getExemplar(promptVariant);
     if (exemplar) finalPrompt = buildExemplarBlock(exemplar) + prompt;
   }
+  // 사진이 첨부됐으면 그 사진을 활용하라는 지시를 시스템 프롬프트에 덧붙인다.
+  if (parsedPhoto) system = system + PHOTO_INSTRUCTION;
 
   const encoder = new TextEncoder();
   let refunded = false;
@@ -155,7 +171,7 @@ export async function POST(req: NextRequest) {
       const send = (obj: unknown) =>
         controller.enqueue(encoder.encode(JSON.stringify(obj) + '\n'));
       try {
-        for await (const chunk of provider.generateStream({ prompt: finalPrompt, system, mode }, req.signal)) {
+        for await (const chunk of provider.generateStream({ prompt: finalPrompt, system, mode, photo: parsedPhoto }, req.signal)) {
           if (req.signal.aborted) throw new Error('ABORTED');
           send(chunk);
         }

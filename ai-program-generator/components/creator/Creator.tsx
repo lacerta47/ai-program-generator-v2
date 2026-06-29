@@ -159,6 +159,7 @@ export default function Creator() {
       const result = await requestGenerateStream(promptText, 'generate', 'default', {
         signal: ctrl.signal,
         onDelta: setStreamingPartial,
+        photo: photo ?? undefined,
       });
       setCode(result);
       setResultTab('preview');
@@ -204,6 +205,7 @@ export default function Creator() {
       const result = await requestGenerateStream(buildModifyPrompt(plan, code, modifyText), 'modify', 'default', {
         signal: ctrl.signal,
         onDelta: setStreamingPartial,
+        photo: photo ?? undefined,
       });
       setCode(result);
       setModifyText('');

@@ -6,6 +6,8 @@ interface StreamOpts {
   /** 부분 코드 도착 콜백(라이브 표시용). */
   onDelta?: (partial: Partial<GeneratedCode>) => void;
   signal?: AbortSignal;
+  /** 사진 1장(data-URI). 멀티모달 생성용 — 서버가 검증·전달. */
+  photo?: string;
 }
 
 /** 클라이언트에서 /api/generate(NDJSON 스트림)를 호출. onDelta로 부분 코드를 받고 최종을 반환. */
@@ -18,7 +20,7 @@ export async function requestGenerateStream(
   const res = await authedFetch('/api/generate', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ prompt, mode, variant }),
+    body: JSON.stringify({ prompt, mode, variant, photo: opts.photo }),
     signal: opts.signal,
   });
 
