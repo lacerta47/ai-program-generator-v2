@@ -101,10 +101,12 @@ export async function POST(req: NextRequest) {
   }
 
   // 3) 한도 선점 (트랜잭션). 생성이 실패하면 4)에서 환불한다.
+  // 사진 생성은 멀티모달이라 비용이 더 들어 2칸을 차감한다(일반 생성은 1칸).
+  const cost = parsedPhoto ? 2 : 1;
   const day = todayKeyKST();
   const usageRef = adminDb.collection('usage').doc(`${uid}_${day}`);
   if (isStudent) {
-    const r = await reserveStudentQuota(uid);
+    const r = await reserveStudentQuota(uid, cost);
     if (!r.ok) {
       const msg =
         r.reason === 'pool'
@@ -123,8 +125,8 @@ export async function POST(req: NextRequest) {
       const allowed = await adminDb.runTransaction(async (tx) => {
         const snap = await tx.get(usageRef);
         const count = (snap.data()?.count as number | undefined) ?? 0;
-        if (count >= dailyLimit) return false;
-        tx.set(usageRef, { uid, day, count: count + 1, updatedAt: Date.now() }, { merge: true });
+        if (count + cost > dailyLimit) return false;
+        tx.set(usageRef, { uid, day, count: count + cost, updatedAt: Date.now() }, { merge: true });
         return true;
       });
       if (!allowed) {
@@ -162,8 +164,8 @@ export async function POST(req: NextRequest) {
   const refundOnce = async () => {
     if (refunded) return;
     refunded = true;
-    if (isStudent) await refundStudentQuota(uid);
-    else await refundQuota(usageRef);
+    if (isStudent) await refundStudentQuota(uid, cost);
+    else await refundQuota(usageRef, cost);
   };
 
   const stream = new ReadableStream<Uint8Array>({
@@ -206,13 +208,13 @@ export async function POST(req: NextRequest) {
   });
 }
 
-/** 생성 실패 시 선점했던 한도 1회를 되돌린다(0 미만으로는 안 내려감). */
-async function refundQuota(ref: FirebaseFirestore.DocumentReference): Promise<void> {
+/** 생성 실패 시 선점했던 한도(cost칸)를 되돌린다(0 미만으로는 안 내려감). */
+async function refundQuota(ref: FirebaseFirestore.DocumentReference, cost = 1): Promise<void> {
   try {
     await adminDb.runTransaction(async (tx) => {
       const snap = await tx.get(ref);
       const count = (snap.data()?.count as number | undefined) ?? 0;
-      if (count > 0) tx.update(ref, { count: count - 1, updatedAt: Date.now() });
+      tx.update(ref, { count: Math.max(0, count - cost), updatedAt: Date.now() });
     });
   } catch (e) {
     console.error('[/api/generate] 한도 환불 실패:', e);
