@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { buildPreviewDoc } from '@/lib/program';
 import { putPreview } from '@/lib/preview-store';
 import { adminAuth } from '@/lib/firebase/admin';
-import { substitutePhoto } from '@/lib/ai/photo';
 
 export const runtime = 'nodejs';
 
@@ -41,11 +39,11 @@ export async function POST(req: NextRequest) {
   if (typeof photo === 'string' && photo.length > 400000) {
     return NextResponse.json({ error: '사진이 너무 커요.' }, { status: 413 });
   }
-  const code = substitutePhoto(
+  // 토큰 코드 + 사진을 그대로 저장한다. __PHOTO__ 치환·doc 빌드는 서빙(getPreview) 시점에 일어나
+  // N회 참조여도 저장 문서가 1MB를 넘지 않는다. 위의 길이 캡(MAX_PART·photo)이 저장 크기를 보장.
+  const id = await putPreview(
     { html: html as string, css: css as string, javascript: javascript as string },
     typeof photo === 'string' ? photo : undefined,
   );
-  const doc = buildPreviewDoc(code);
-  const id = await putPreview(doc);
   return NextResponse.json({ id });
 }
