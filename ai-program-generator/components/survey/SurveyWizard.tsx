@@ -54,7 +54,7 @@ export default function SurveyWizard() {
   const [guideOpen, setGuideOpen] = useState(false);
   // 로그인 전에 고른 종류 — 로그인 끝나면 이 종류로 자동 진입
   const [pendingType, setPendingType] = useState<ProgramType | null>(null);
-  // 생성 화면 사진 1장(학생/교사 전용) — 상태만 보유, 전송 배선은 후속 작업
+  // 생성 화면 사진 1장(학생/교사 전용) — 생성(requestGenerateStream)·업로드(createPost)에 전달
   const [photo, setPhoto] = useState<string | null>(null);
   // 생성 취소용 — busy 화면에서 '그만 만들기'를 누르면 진행 중 요청을 중단
   const abortRef = useRef<AbortController | null>(null);
