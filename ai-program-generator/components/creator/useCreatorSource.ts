@@ -9,7 +9,7 @@ import { useAuth } from '@/components/auth/AuthProvider';
 import { useToast } from '@/components/ui/Toast';
 import { buildGeneratePrompt } from './prompts';
 
-type Loaded = { plan: PlanFields; code: GeneratedCode; genPrompt: string };
+type Loaded = { plan: PlanFields; code: GeneratedCode; genPrompt: string; photo: string | null };
 type EditState = { id: string; title: string; authorName: string };
 type ForkState = { id: string; author: string; categoryId: string };
 
@@ -49,7 +49,7 @@ export function useCreatorSource(applyLoaded: (d: Loaded) => void) {
         return;
       }
       setEditing({ id: p.id, title: p.title, authorName: p.authorName || '' });
-      applyRef.current({ plan: p.plan ?? EMPTY_PLAN, code: p.code, genPrompt: p.prompt ?? '' });
+      applyRef.current({ plan: p.plan ?? EMPTY_PLAN, code: p.code, genPrompt: p.prompt ?? '', photo: p.photo ?? null });
     }).catch((e) => {
       console.error('편집 작품 불러오기 실패:', e);
       loadedEditId.current = null; // 재시도 허용
@@ -75,6 +75,7 @@ export function useCreatorSource(applyLoaded: (d: Loaded) => void) {
         plan: srcPlan,
         code: p.code,
         genPrompt: p.plan ? buildGeneratePrompt(srcPlan) : p.prompt ?? '',
+        photo: p.photo ?? null,
       });
       setForkSource({ id: p.id, author: p.authorName || '익명', categoryId: p.categoryId });
     }).catch((e) => {

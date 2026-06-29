@@ -11,6 +11,7 @@ import { buildFixRequest } from '@/lib/survey/fixes';
 import { requestGenerateStream } from '@/lib/client/generate';
 import { currentStage, STAGE_ORDER, STAGE_LABEL_EASY, type StreamStage } from '@/lib/ai/streamStages';
 import { buildModifyPrompt } from '@/components/creator/prompts';
+import PhotoUpload from '@/components/creator/PhotoUpload';
 import { playSelect, playSuccess } from '@/lib/client/sound';
 import { useAuth } from '@/components/auth/AuthProvider';
 import LoginDialog from '@/components/auth/LoginDialog';
@@ -53,10 +54,12 @@ export default function SurveyWizard() {
   const [guideOpen, setGuideOpen] = useState(false);
   // 로그인 전에 고른 종류 — 로그인 끝나면 이 종류로 자동 진입
   const [pendingType, setPendingType] = useState<ProgramType | null>(null);
+  // 생성 화면 사진 1장(학생/교사 전용) — 상태만 보유, 전송 배선은 후속 작업
+  const [photo, setPhoto] = useState<string | null>(null);
   // 생성 취소용 — busy 화면에서 '그만 만들기'를 누르면 진행 중 요청을 중단
   const abortRef = useRef<AbortController | null>(null);
 
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, isStudent, isTeacher } = useAuth();
   const { toast } = useToast();
 
   const steps = useMemo(() => (type ? visibleSteps(type, answers) : []), [type, answers]);
@@ -222,6 +225,7 @@ export default function SurveyWizard() {
       const result = await requestGenerateStream(prompt, 'generate', 'survey', {
         signal: ctrl.signal,
         onDelta: onStageDelta,
+        photo: photo ?? undefined,
       });
       setCode(result);
       setPreviewKey((k) => k + 1);
@@ -262,6 +266,7 @@ export default function SurveyWizard() {
       const result = await requestGenerateStream(prompt, 'modify', 'survey', {
         signal: ctrl.signal,
         onDelta: onStageDelta,
+        photo: photo ?? undefined,
       });
       setCode(result);
       setPreviewKey((k) => k + 1);
@@ -320,6 +325,7 @@ export default function SurveyWizard() {
         <FullscreenFrame
           frameKey={previewKey}
           code={code}
+          photo={photo ?? undefined}
           title={type.label}
           className="h-[78vh] w-full overflow-hidden rounded-[var(--r-md)] border-2 border-line"
         />
@@ -337,6 +343,7 @@ export default function SurveyWizard() {
           plan={surveyToPlan(type, answers)}
           prompt={genPrompt || assemblePrompt(type, answers)}
           defaultTitle={type.buildName(answers)}
+          photo={photo ?? undefined}
         />
       </div>
     );
@@ -460,6 +467,11 @@ export default function SurveyWizard() {
           <div className="anim-pop-in text-center">
             <h2 className="text-[24px]">다 골랐어요! 만들어 볼까요?</h2>
             <p className="mt-1 text-[16px] text-muted">고른 대로 AI가 만들어 줄 거예요</p>
+            {(isStudent || isTeacher) && (
+              <div className="mt-5 flex justify-center">
+                <PhotoUpload value={photo} onChange={setPhoto} />
+              </div>
+            )}
             <Button variant="primary" size="lg" onClick={generate} className="mt-6">
               <Wand2 size={21} aria-hidden /> 만들기!
             </Button>

@@ -188,7 +188,7 @@ export default function PostPreview({
               <Share2 size={18} aria-hidden />
             </Button>
           )}
-          <Button variant="ghost" size="icon" onClick={() => downloadProgram(post.code, post.title, toast)} aria-label="ZIP 저장" title="ZIP 저장" className="rounded-full">
+          <Button variant="ghost" size="icon" onClick={() => downloadProgram(post.code, post.title, toast, post.photo)} aria-label="ZIP 저장" title="ZIP 저장" className="rounded-full">
             <Download size={18} aria-hidden />
           </Button>
           {canEdit && (
@@ -226,6 +226,7 @@ export default function PostPreview({
         frameKey={post.id}
         postId={post.boardTeacherUid ? undefined : post.id}
         code={post.code}
+        photo={post.boardTeacherUid ? post.photo : undefined}
         title={post.title}
         className="min-h-[65vh] w-full flex-1 overflow-hidden rounded-[var(--r-md)] border-2 border-line"
       />

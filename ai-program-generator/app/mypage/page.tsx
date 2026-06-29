@@ -436,7 +436,7 @@ function MyWorks({ uid }: { uid: string }) {
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={() => downloadProgram(post.code, post.title, toast)}
+                  onClick={() => downloadProgram(post.code, post.title, toast, post.photo)}
                   aria-label="다운로드"
                   title="다운로드"
                   className="rounded-full"

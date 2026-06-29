@@ -50,7 +50,7 @@ service cloud.firestore {
 
     // 게시물 생성 문서 형태/크기 검증
     function validPost(d) {
-      return d.keys().hasOnly(['title', 'categoryId', 'ownerUid', 'authorName', 'code', 'plan', 'prompt', 'createdAt', 'updatedAt', 'forkedFrom', 'forkedFromAuthor', 'boardTeacherUid'])
+      return d.keys().hasOnly(['title', 'categoryId', 'ownerUid', 'authorName', 'code', 'plan', 'prompt', 'createdAt', 'updatedAt', 'forkedFrom', 'forkedFromAuthor', 'boardTeacherUid', 'photo'])
         && d.title is string && d.title.size() > 0 && d.title.size() <= 100
         && d.categoryId is string && d.categoryId.size() > 0 && d.categoryId.size() <= 128
         && d.ownerUid is string
@@ -61,7 +61,13 @@ service cloud.firestore {
         && (!('plan' in d) || validPlan(d.plan))
         && (!('forkedFrom' in d) || (d.forkedFrom is string && d.forkedFrom.size() <= 128))
         && (!('forkedFromAuthor' in d) || (d.forkedFromAuthor is string && d.forkedFromAuthor.size() <= 20))
-        && (d.boardTeacherUid == null || (d.boardTeacherUid is string && d.boardTeacherUid.size() <= 128));
+        && (d.boardTeacherUid == null || (d.boardTeacherUid is string && d.boardTeacherUid.size() <= 128))
+        && (!('photo' in d) || (
+             d.photo is string
+             && d.photo.matches('data:image/.*')
+             && d.photo.size() <= 350000
+             && d.boardTeacherUid != null
+           ));
     }
 
     // 신고의 postOwnerUid가 실제 글 주인과 일치하는지(위조 차단). 글이 없으면 거부.

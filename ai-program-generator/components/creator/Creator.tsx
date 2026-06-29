@@ -23,6 +23,7 @@ import { buildGeneratePrompt, buildModifyPrompt } from './prompts';
 import { useCreatorSource } from './useCreatorSource';
 import { Tip } from './Tip';
 import ResultPanel from './ResultPanel';
+import PhotoUpload from './PhotoUpload';
 
 type ResultTab = 'preview' | 'code';
 
@@ -42,8 +43,9 @@ export default function Creator() {
   const [uploadOpen, setUploadOpen] = useState(false);
   const [loginOpen, setLoginOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [photo, setPhoto] = useState<string | null>(null);
 
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, isStudent, isTeacher } = useAuth();
   const { toast } = useToast();
   const router = useRouter();
   const nameRef = useRef<HTMLInputElement>(null);
@@ -53,10 +55,11 @@ export default function Creator() {
   const busy = loading !== 'idle';
 
   // ?edit= / ?fork= URL 소스 로딩은 훅으로 분리(불러온 값만 받아 생성 상태에 반영).
-  const applyLoaded = (d: { plan: PlanFields; code: GeneratedCode; genPrompt: string }) => {
+  const applyLoaded = (d: { plan: PlanFields; code: GeneratedCode; genPrompt: string; photo: string | null }) => {
     setPlan(d.plan);
     setCode(d.code);
     setGenPrompt(d.genPrompt);
+    setPhoto(d.photo);
     setResultTab('preview');
     setPreviewKey((k) => k + 1);
   };
@@ -157,6 +160,7 @@ export default function Creator() {
       const result = await requestGenerateStream(promptText, 'generate', 'default', {
         signal: ctrl.signal,
         onDelta: setStreamingPartial,
+        photo: photo ?? undefined,
       });
       setCode(result);
       setResultTab('preview');
@@ -202,6 +206,7 @@ export default function Creator() {
       const result = await requestGenerateStream(buildModifyPrompt(plan, code, modifyText), 'modify', 'default', {
         signal: ctrl.signal,
         onDelta: setStreamingPartial,
+        photo: photo ?? undefined,
       });
       setCode(result);
       setModifyText('');
@@ -228,7 +233,7 @@ export default function Creator() {
   }
 
   function handleDownload() {
-    downloadProgram(code, editing?.title || plan.name || '내작품', toast);
+    downloadProgram(code, editing?.title || plan.name || '내작품', toast, photo ?? undefined);
   }
 
   function handleReset() {
@@ -335,6 +340,8 @@ export default function Creator() {
           </Button>
         </div>
 
+        {(isStudent || isTeacher) && <PhotoUpload value={photo} onChange={setPhoto} />}
+
         <Button variant="primary" size="lg" onClick={handleGenerate} disabled={busy} className="w-full">
           <Wand2 size={21} aria-hidden />
           {loading === 'generating' ? '만드는 중…' : '프로그램 만들기'}
@@ -362,6 +369,7 @@ export default function Creator() {
         onModify={handleModify}
         modifyRef={modifyRef}
         onNeedLogin={() => setLoginOpen(true)}
+        photo={photo ?? undefined}
       />
 
       <LoginDialog open={loginOpen} onClose={() => setLoginOpen(false)} />
@@ -375,6 +383,7 @@ export default function Creator() {
         forkedFrom={forkSource?.id}
         forkedFromAuthor={forkSource?.author}
         defaultCategoryId={forkSource?.categoryId}
+        photo={photo ?? undefined}
       />
     </div>
   );

@@ -3,6 +3,7 @@ import { adminDb } from '@/lib/firebase/admin';
 import { buildPreviewDoc } from '@/lib/program';
 import { putPreview } from '@/lib/preview-store';
 import { verifyPin, allowShareAttempt } from '@/lib/server/sharePin';
+import { substitutePhoto } from '@/lib/ai/photo';
 import type { GeneratedCode } from '@/lib/ai/types';
 
 export const runtime = 'nodejs';
@@ -28,6 +29,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ pos
     return NextResponse.json({ error: '관람 PIN이 맞지 않아요.' }, { status: 403 });
   }
   const code = post!.code as GeneratedCode;
-  const previewId = await putPreview(buildPreviewDoc(code));
+  const previewId = await putPreview(buildPreviewDoc(substitutePhoto(code, post!.photo as string | undefined)));
   return NextResponse.json({ previewId, title: (post!.title as string) ?? '작품', authorName: (post!.authorName as string) ?? '' });
 }

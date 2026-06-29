@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAIProvider } from '@/lib/ai/provider';
-import { SYSTEM_PROMPTS, MODIFY_SYSTEM_SUFFIX, type SystemPromptVariant } from '@/lib/ai/prompts';
+import { SYSTEM_PROMPTS, MODIFY_SYSTEM_SUFFIX, PHOTO_INSTRUCTION, type SystemPromptVariant } from '@/lib/ai/prompts';
 import { getExemplar } from '@/lib/admin/exemplars';
 import { buildExemplarBlock } from '@/lib/ai/exemplars';
 import type { GenerateMode } from '@/lib/ai/types';
@@ -66,10 +66,11 @@ export async function POST(req: NextRequest) {
   }
 
   // system 텍스트는 클라이언트가 보내도 무시(주입 차단). 대신 variant 키로 서버가 선택.
-  const { prompt, mode, variant } = (body ?? {}) as {
+  const { prompt, mode, variant, photo } = (body ?? {}) as {
     prompt?: unknown;
     mode?: unknown;
     variant?: unknown;
+    photo?: unknown;
   };
   const promptVariant: SystemPromptVariant = variant === 'survey' ? 'survey' : 'default';
 
@@ -86,11 +87,26 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  // 사진(선택) — data-URI 검증·분해. 잘못/과대 사진은 한도 차감 전에 거절(횟수 소모 방지).
+  let parsedPhoto: { data: string; mimeType: string } | undefined;
+  if (typeof photo === 'string' && photo) {
+    if (photo.length > 400000) {
+      return NextResponse.json({ error: '사진이 너무 커요.' }, { status: 413 });
+    }
+    const m = /^data:(image\/[a-zA-Z+.-]+);base64,(.+)$/.exec(photo);
+    if (!m) {
+      return NextResponse.json({ error: '사진 형식이 올바르지 않아요.' }, { status: 400 });
+    }
+    parsedPhoto = { mimeType: m[1], data: m[2] };
+  }
+
   // 3) 한도 선점 (트랜잭션). 생성이 실패하면 4)에서 환불한다.
+  // 사진 생성은 멀티모달이라 비용이 더 들어 2칸을 차감한다(일반 생성은 1칸).
+  const cost = parsedPhoto ? 2 : 1;
   const day = todayKeyKST();
   const usageRef = adminDb.collection('usage').doc(`${uid}_${day}`);
   if (isStudent) {
-    const r = await reserveStudentQuota(uid);
+    const r = await reserveStudentQuota(uid, cost);
     if (!r.ok) {
       const msg =
         r.reason === 'pool'
@@ -109,8 +125,8 @@ export async function POST(req: NextRequest) {
       const allowed = await adminDb.runTransaction(async (tx) => {
         const snap = await tx.get(usageRef);
         const count = (snap.data()?.count as number | undefined) ?? 0;
-        if (count >= dailyLimit) return false;
-        tx.set(usageRef, { uid, day, count: count + 1, updatedAt: Date.now() }, { merge: true });
+        if (count + cost > dailyLimit) return false;
+        tx.set(usageRef, { uid, day, count: count + cost, updatedAt: Date.now() }, { merge: true });
         return true;
       });
       if (!allowed) {
@@ -140,14 +156,16 @@ export async function POST(req: NextRequest) {
     const exemplar = await getExemplar(promptVariant);
     if (exemplar) finalPrompt = buildExemplarBlock(exemplar) + prompt;
   }
+  // 사진이 첨부됐으면 그 사진을 활용하라는 지시를 시스템 프롬프트에 덧붙인다.
+  if (parsedPhoto) system = system + PHOTO_INSTRUCTION;
 
   const encoder = new TextEncoder();
   let refunded = false;
   const refundOnce = async () => {
     if (refunded) return;
     refunded = true;
-    if (isStudent) await refundStudentQuota(uid);
-    else await refundQuota(usageRef);
+    if (isStudent) await refundStudentQuota(uid, cost);
+    else await refundQuota(usageRef, cost);
   };
 
   const stream = new ReadableStream<Uint8Array>({
@@ -155,7 +173,7 @@ export async function POST(req: NextRequest) {
       const send = (obj: unknown) =>
         controller.enqueue(encoder.encode(JSON.stringify(obj) + '\n'));
       try {
-        for await (const chunk of provider.generateStream({ prompt: finalPrompt, system, mode }, req.signal)) {
+        for await (const chunk of provider.generateStream({ prompt: finalPrompt, system, mode, photo: parsedPhoto }, req.signal)) {
           if (req.signal.aborted) throw new Error('ABORTED');
           send(chunk);
         }
@@ -190,13 +208,13 @@ export async function POST(req: NextRequest) {
   });
 }
 
-/** 생성 실패 시 선점했던 한도 1회를 되돌린다(0 미만으로는 안 내려감). */
-async function refundQuota(ref: FirebaseFirestore.DocumentReference): Promise<void> {
+/** 생성 실패 시 선점했던 한도(cost칸)를 되돌린다(0 미만으로는 안 내려감). */
+async function refundQuota(ref: FirebaseFirestore.DocumentReference, cost = 1): Promise<void> {
   try {
     await adminDb.runTransaction(async (tx) => {
       const snap = await tx.get(ref);
       const count = (snap.data()?.count as number | undefined) ?? 0;
-      if (count > 0) tx.update(ref, { count: count - 1, updatedAt: Date.now() });
+      tx.update(ref, { count: Math.max(0, count - cost), updatedAt: Date.now() });
     });
   } catch (e) {
     console.error('[/api/generate] 한도 환불 실패:', e);

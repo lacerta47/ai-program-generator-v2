@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { buildPreviewDoc } from '@/lib/program';
 import { putPreview } from '@/lib/preview-store';
 import { adminAuth } from '@/lib/firebase/admin';
+import { substitutePhoto } from '@/lib/ai/photo';
 
 export const runtime = 'nodejs';
 
@@ -28,7 +29,7 @@ export async function POST(req: NextRequest) {
   } catch {
     return NextResponse.json({ error: 'JSON이 아닙니다.' }, { status: 400 });
   }
-  const { html, css, javascript } = (body ?? {}) as Record<string, unknown>;
+  const { html, css, javascript, photo } = (body ?? {}) as Record<string, unknown>;
   for (const part of [html, css, javascript]) {
     if (typeof part !== 'string') {
       return NextResponse.json({ error: 'html/css/javascript 문자열이 필요합니다.' }, { status: 400 });
@@ -37,11 +38,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: '코드가 너무 큽니다.' }, { status: 413 });
     }
   }
-  const doc = buildPreviewDoc({
-    html: html as string,
-    css: css as string,
-    javascript: javascript as string,
-  });
+  if (typeof photo === 'string' && photo.length > 400000) {
+    return NextResponse.json({ error: '사진이 너무 커요.' }, { status: 413 });
+  }
+  const code = substitutePhoto(
+    { html: html as string, css: css as string, javascript: javascript as string },
+    typeof photo === 'string' ? photo : undefined,
+  );
+  const doc = buildPreviewDoc(code);
   const id = await putPreview(doc);
   return NextResponse.json({ id });
 }

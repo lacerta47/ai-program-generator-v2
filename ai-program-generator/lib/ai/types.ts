@@ -11,6 +11,8 @@ export interface GenerateInput {
   system: string;
   /** 신규 생성인지 기존 코드 수정인지 */
   mode: GenerateMode;
+  /** 멀티모달: 첨부 사진(없으면 텍스트-only). data=순수 base64(접두 제외), mimeType=image/jpeg 등 */
+  photo?: { data: string; mimeType: string };
 }
 
 export interface GeneratedCode {

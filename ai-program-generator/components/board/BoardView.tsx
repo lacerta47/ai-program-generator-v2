@@ -325,7 +325,7 @@ export default function BoardView() {
               currentUserUid={user?.uid ?? null}
               isAdmin={isAdmin}
               onDelete={handleDelete}
-              onDownload={(p) => downloadProgram(p.code, p.title, toast)}
+              onDownload={(p) => downloadProgram(p.code, p.title, toast, p.photo)}
               onTitleSaved={handleTitleSaved}
               hasMore={hasMore}
               loadingMore={loadingMore}

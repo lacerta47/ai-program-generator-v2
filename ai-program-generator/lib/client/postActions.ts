@@ -7,10 +7,10 @@ import { downloadProgramZip } from './downloadZip';
 
 type ToastFn = (msg: string, kind?: 'error' | 'success') => void;
 
-/** 코드를 ZIP으로 받기 + 실패 시 안내 토스트(스스로 처리하므로 호출부는 await 불필요). */
-export async function downloadProgram(code: GeneratedCode, title: string, toast: ToastFn): Promise<void> {
+/** 코드를 ZIP으로 받기 + 실패 시 안내 토스트(스스로 처리하므로 호출부는 await 불필요). photo가 있으면 __PHOTO__ 토큰을 실제 사진으로 치환해 담는다. */
+export async function downloadProgram(code: GeneratedCode, title: string, toast: ToastFn, photo?: string): Promise<void> {
   try {
-    await downloadProgramZip(code, title);
+    await downloadProgramZip(code, title, photo);
   } catch (e) {
     console.error('ZIP 저장 실패:', e);
     toast('저장에 실패했어요. 잠시 후 다시 해주세요.');

@@ -88,10 +88,13 @@ export class GeminiProvider implements AIProvider {
 
 /** 모델 스트림 시작(초기화)만 담당 — 503 일시 과부하는 callWithRetry로. signal로 모델 호출 취소. */
 function startStream(ai: GoogleGenAI, model: string, input: GenerateInput, signal?: AbortSignal) {
+  const contents = input.photo
+    ? [{ role: 'user', parts: [{ text: input.prompt }, { inlineData: { mimeType: input.photo.mimeType, data: input.photo.data } }] }]
+    : input.prompt;
   return callWithRetry(() =>
     ai.models.generateContentStream({
       model,
-      contents: input.prompt,
+      contents,
       config: {
         systemInstruction: input.system,
         responseMimeType: 'application/json',
