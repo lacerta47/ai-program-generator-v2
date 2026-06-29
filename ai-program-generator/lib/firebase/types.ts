@@ -48,6 +48,8 @@ export interface Post {
   forkCount?: number;
   /** 보드 소유자 비정규화: 공개 보드=null, 교실 보드=그 교사 uid. 읽기 권한 분기·목록 쿼리 인가용. 구버전 글엔 없음(마이그레이션 백필). */
   boardTeacherUid?: string | null;
+  /** 업로드 사진 1장(data-URI). 교실 보드 글에만. code의 __PHOTO__ 토큰을 렌더 시 이걸로 치환. 구버전/비사진 글엔 없음. */
+  photo?: string;
 }
 
 /** 새 게시물 생성 시 입력 (id 제외) */
