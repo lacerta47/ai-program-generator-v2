@@ -55,10 +55,11 @@ export default function Creator() {
   const busy = loading !== 'idle';
 
   // ?edit= / ?fork= URL 소스 로딩은 훅으로 분리(불러온 값만 받아 생성 상태에 반영).
-  const applyLoaded = (d: { plan: PlanFields; code: GeneratedCode; genPrompt: string }) => {
+  const applyLoaded = (d: { plan: PlanFields; code: GeneratedCode; genPrompt: string; photo: string | null }) => {
     setPlan(d.plan);
     setCode(d.code);
     setGenPrompt(d.genPrompt);
+    setPhoto(d.photo);
     setResultTab('preview');
     setPreviewKey((k) => k + 1);
   };
@@ -232,7 +233,7 @@ export default function Creator() {
   }
 
   function handleDownload() {
-    downloadProgram(code, editing?.title || plan.name || '내작품', toast);
+    downloadProgram(code, editing?.title || plan.name || '내작품', toast, photo ?? undefined);
   }
 
   function handleReset() {
