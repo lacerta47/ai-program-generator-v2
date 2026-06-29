@@ -39,6 +39,7 @@ interface Props {
   onModify: () => void;
   modifyRef: React.RefObject<HTMLTextAreaElement | null>;
   onNeedLogin: () => void;
+  photo?: string;
 }
 
 /** 생성기 오른쪽 '결과' 패널 — 로딩/빈상태/결과(미리보기·코드·수정요청)를 담당. */
@@ -62,6 +63,7 @@ export default function ResultPanel({
   onModify,
   modifyRef,
   onNeedLogin,
+  photo,
 }: Props) {
   const [codeTab, setCodeTab] = useState<CodeTab>('html');
   const [copied, setCopied] = useState(false);
@@ -186,6 +188,7 @@ export default function ResultPanel({
               <FullscreenFrame
                 frameKey={previewKey}
                 code={code}
+                photo={photo}
                 onNeedLogin={onNeedLogin}
                 title="내가 만든 프로그램 미리보기"
                 className="h-full min-h-[52vh] w-full"

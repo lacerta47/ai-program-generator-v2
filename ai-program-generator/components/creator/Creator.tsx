@@ -366,6 +366,7 @@ export default function Creator() {
         onModify={handleModify}
         modifyRef={modifyRef}
         onNeedLogin={() => setLoginOpen(true)}
+        photo={photo ?? undefined}
       />
 
       <LoginDialog open={loginOpen} onClose={() => setLoginOpen(false)} />
@@ -379,6 +380,7 @@ export default function Creator() {
         forkedFrom={forkSource?.id}
         forkedFromAuthor={forkSource?.author}
         defaultCategoryId={forkSource?.categoryId}
+        photo={photo ?? undefined}
       />
     </div>
   );

@@ -226,6 +226,7 @@ export default function PostPreview({
         frameKey={post.id}
         postId={post.boardTeacherUid ? undefined : post.id}
         code={post.code}
+        photo={post.boardTeacherUid ? post.photo : undefined}
         title={post.title}
         className="min-h-[65vh] w-full flex-1 overflow-hidden rounded-[var(--r-md)] border-2 border-line"
       />

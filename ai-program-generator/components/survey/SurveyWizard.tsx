@@ -323,6 +323,7 @@ export default function SurveyWizard() {
         <FullscreenFrame
           frameKey={previewKey}
           code={code}
+          photo={photo ?? undefined}
           title={type.label}
           className="h-[78vh] w-full overflow-hidden rounded-[var(--r-md)] border-2 border-line"
         />
@@ -340,6 +341,7 @@ export default function SurveyWizard() {
           plan={surveyToPlan(type, answers)}
           prompt={genPrompt || assemblePrompt(type, answers)}
           defaultTitle={type.buildName(answers)}
+          photo={photo ?? undefined}
         />
       </div>
     );

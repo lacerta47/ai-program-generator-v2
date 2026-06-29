@@ -15,6 +15,8 @@ interface Props {
    * 없으면(즉석 생성 코드) 로그인 토큰으로 POST /api/preview.
    */
   postId?: string;
+  /** 교실 한정 사진(data URI) — 주면 미리보기 서버가 __PHOTO__ 토큰을 치환한다(즉석 POST 경로에서만). */
+  photo?: string;
   /** 로그인이 필요할 때(즉석 미리보기 비로그인) 노출할 로그인 동작 — 주면 안내에 버튼이 생긴다. */
   onNeedLogin?: () => void;
   /** iframe 강제 리마운트용 key */
@@ -46,7 +48,7 @@ function previewOrigin(): string {
 // WeakMap이라 code 객체가 GC되면 함께 정리됨(누수 없음).
 const previewIdCache = new WeakMap<GeneratedCode, Promise<string>>();
 
-function requestPreviewId(code: GeneratedCode): Promise<string> {
+function requestPreviewId(code: GeneratedCode, photo?: string): Promise<string> {
   const cached = previewIdCache.get(code);
   if (cached) return cached;
   const p = (async () => {
@@ -55,7 +57,7 @@ function requestPreviewId(code: GeneratedCode): Promise<string> {
       r = await authedFetch('/api/preview', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(code),
+        body: JSON.stringify({ ...code, photo }),
       });
     } catch {
       throw new Error('AUTH_REQUIRED'); // 로그아웃 상태(예: 직접 ?fork= URL) — 미리보기 POST 불가
@@ -76,7 +78,7 @@ function requestPreviewId(code: GeneratedCode): Promise<string> {
 const FIT_SCALE = 0.5;
 
 /** 생성된 프로그램 미리보기 iframe(프로세스 격리) + 전체화면 토글 + "맞춤" 축소배율 토글 */
-export default function FullscreenFrame({ code, title, postId, onNeedLogin, frameKey, className = '' }: Props) {
+export default function FullscreenFrame({ code, title, postId, photo, onNeedLogin, frameKey, className = '' }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [fit, setFit] = useState(false);
@@ -106,7 +108,7 @@ export default function FullscreenFrame({ code, title, postId, onNeedLogin, fram
       return;
     }
     // 즉석 생성 코드: 로그인 토큰으로 POST
-    requestPreviewId(code)
+    requestPreviewId(code, photo)
       .then((id) => {
         if (alive) setSrc(`${previewOrigin()}/api/preview/${id}`);
       })

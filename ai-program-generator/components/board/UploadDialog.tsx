@@ -27,9 +27,11 @@ interface Props {
   forkedFrom?: string;
   forkedFromAuthor?: string;
   defaultCategoryId?: string;
+  /** 교실 한정 사진(data URI) — 교사보드 게시 시에만 저장(규칙이 공개보드 photo 거부). */
+  photo?: string;
 }
 
-export default function UploadDialog({ open, onClose, code, plan, prompt, defaultTitle, forkedFrom, forkedFromAuthor, defaultCategoryId }: Props) {
+export default function UploadDialog({ open, onClose, code, plan, prompt, defaultTitle, forkedFrom, forkedFromAuthor, defaultCategoryId, photo }: Props) {
   const { user, isTeacher, isStudent } = useAuth();
   const router = useRouter();
   const [categories, setCategories] = useState<Category[]>([]);
@@ -150,6 +152,7 @@ export default function UploadDialog({ open, onClose, code, plan, prompt, defaul
         prompt,
         createdAt: Date.now(),
         ...(forkedFrom ? { forkedFrom, forkedFromAuthor: forkedFromAuthor ?? '익명' } : {}),
+        ...(photo && boardTeacherUid ? { photo } : {}),
       });
       if (forkedFrom) {
         incrementForkCount(forkedFrom).catch((e) => console.error('forkCount 증가 실패:', e));
