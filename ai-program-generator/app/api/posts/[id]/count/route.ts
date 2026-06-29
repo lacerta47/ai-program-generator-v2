@@ -71,7 +71,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       try {
         await postRef.update({ viewCount: FieldValue.increment(1) });
       } catch {
-        // 글이 막 삭제된 드문 경우 — 조회수는 부가정보라 실패해도 치명적 아님(서브문서는 남을 수 있음)
+        // 증가 실패(글 삭제·일시 오류) 시 방금 만든 view 문서를 롤백 삭제한다 — 트랜잭션이 아니라
+        // 보상 처리. 안 지우면 create는 성공·increment는 실패한 채 굳어, 그 사용자의 다음 조회가
+        // create ALREADY_EXISTS로 막혀 그 1조회가 영구 미집계된다(롤백하면 다음 조회에서 재시도됨).
+        await viewRef.delete().catch(() => {});
         return NextResponse.json({ counted: false });
       }
       return NextResponse.json({ counted: true });
