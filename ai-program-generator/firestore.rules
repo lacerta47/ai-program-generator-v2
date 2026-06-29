@@ -62,7 +62,8 @@ service cloud.firestore {
         && d.ownerUid is string
         && d.authorName is string && d.authorName.size() > 0 && d.authorName.size() <= 20 && notImpersonating(d.authorName)
         && d.prompt is string && d.prompt.size() <= 50000
-        && d.createdAt is number
+        // createdAt 미래조작(상단 영구고정) 차단 — 보드가 createdAt desc 정렬이라 미래값이면 도배. 신고 규칙과 동일 상한.
+        && d.createdAt is number && d.createdAt <= request.time.toMillis() + 3600000
         && validCode(d.code)
         && (!('plan' in d) || validPlan(d.plan))
         && (!('forkedFrom' in d) || (d.forkedFrom is string && d.forkedFrom.size() <= 128))
@@ -87,6 +88,9 @@ service cloud.firestore {
       return exists(/databases/$(database)/documents/categories/$(catId))
         && allowedForCat(get(/databases/$(database)/documents/categories/$(catId)).data, uid);
     }
+    // [정책 — 리뷰 주의] 공개보드는 학생 포함 로그인 누구나 게시 가능(아이의 공개 작품 공유 의도).
+    // 사진은 교실한정으로 차단되고, 부적절 글 모더레이션은 신고함(postOwnerUid∈내학생) + admin 전체삭제로 대처.
+    // (교사 보드삭제 API가 학생 공개글을 못 지우는 건 그 API가 '우리 반 보드'로 스코프된 설계 — 사각지대 아님.)
     function allowedForCat(cat, uid) {
       return !('teacherUid' in cat)
         || cat.teacherUid == null            // 공개보드(teacherUid 없음/null) — 누구나
@@ -157,7 +161,9 @@ service cloud.firestore {
         && notImpersonating(request.resource.data.authorName)
         && request.resource.data.prompt is string && request.resource.data.prompt.size() <= 50000
         && validCode(request.resource.data.code)
-        && (!('plan' in request.resource.data) || validPlan(request.resource.data.plan));
+        && (!('plan' in request.resource.data) || validPlan(request.resource.data.plan))
+        // updatedAt도 숫자+미래상한(정렬키는 아니나 위조 방지). createdAt은 affectedKeys에서 빠져 변경 불가.
+        && (!('updatedAt' in request.resource.data) || (request.resource.data.updatedAt is number && request.resource.data.updatedAt <= request.time.toMillis() + 3600000));
       allow delete: if isAdmin() || isOwner(resource.data.ownerUid);
 
       // likes/views 서브문서는 서버(Admin SDK)만 쓴다. 클라는 '내가 좋아요 했나' 읽기만.
@@ -208,6 +214,9 @@ service cloud.firestore {
     }
 
     // 닉네임 점유 — 문서ID=소문자별명, 값={uid}. 한 번 점유하면 그 계정 영구 소유(재활용 없음).
+    // [알려진 한계 — 리뷰 주의] users.nickname 쓰기는 이 점유를 교차검증하지 않아 SDK 직접쓰기로 '표시
+    // 닉네임' 중복(사용자 사칭)이 가능. 규칙엔 소문자 변환이 없어 nicknames 키를 유도해 getAfter로 강제하는
+    // 표준 픽스가 불가하므로 미강제 — 예약어 사칭은 notImpersonating으로 차단, 사용자간 사칭은 신고로 대처.
     match /nicknames/{key} {
       allow read: if true;
       allow create: if isSignedIn()
