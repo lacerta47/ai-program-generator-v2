@@ -4,6 +4,12 @@ rules_version = '2';
 // 핵심: 게시물은 공개 읽기, 작성은 로그인 사용자, 수정/삭제는 "작성자 본인 또는 관리자"만.
 // 관리자는 Auth custom claim { admin: true } 로 판별 (scripts/set-admin.mjs 로 부여).
 // usage(생성 한도 카운터)는 서버 Admin SDK 전용 — 클라이언트 접근 규칙 없음(기본 거부).
+//
+// ── 설계 경계 (리뷰·유지보수 주의) ──────────────────────────────────
+// posts·categories·users·nicknames는 클라가 SDK로 직접 write 한다(게시물 생성을 서버 경유로
+// 돌리는 길은 의도적으로 비채택). → 크기·필드 화이트리스트·사칭(notImpersonating)·교실보드
+// (boardTeacherUid) 검증이 많아 보여도 규칙이 '유일한' 강제점이다. 서버 라우트로 옮기면 보안
+// 경계 자체가 사라지므로 일부러 여기 둔다(현 규칙량은 Firestore 복잡도 한계와는 무관하게 여유).
 service cloud.firestore {
   match /databases/{database}/documents {
 

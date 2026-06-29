@@ -119,7 +119,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: msg }, { status: r.reason === 'misconfig' ? 500 : 429 });
     }
   } else {
-    // 교사·admin도 무제한이 아니라 넉넉한 일일 상한 경유. 일반 사용자는 설정 한도.
+    // 교사·admin도 무제한이 아니라 넉넉한 일일 상한(키 남용 방어용) 경유. 일반 사용자는 설정 한도.
+    // 참고(리뷰 오해 방지): '교사별' 한도는 이 일일캡이 아니라 공유 풀(teachers.totalQuota,
+    // admin이 PATCH로 보충)로 따로 존재한다. 요금제별 개별 한도는 출시 전 YAGNI라 단순 분기로 두며,
+    // 확장 시엔 readEffectiveLimit(config·per-user override) 쪽 국소 변경으로 흡수된다(스파게티 아님).
     const dailyLimit = isAdmin || isTeacher ? ROLE_DAILY_LIMIT : await readEffectiveLimit(uid);
     try {
       const allowed = await adminDb.runTransaction(async (tx) => {
@@ -160,6 +163,10 @@ export async function POST(req: NextRequest) {
   if (parsedPhoto) system = system + PHOTO_INSTRUCTION;
 
   const encoder = new TextEncoder();
+  // [의도된 trade-off — 리뷰 오해 방지] 실패뿐 아니라 '취소(abort)'에도 환불한다: 네트워크 끊김 등으로
+  // 결과를 못 받은 정당 사용자가 한도를 까이지 않게 하려는 것. 부분 스트리밍분만 받고 고의로 abort하는
+  // 어뷰징이 이론상 가능하나, 이 쿼터의 목적은 매출 보호가 아니라 Gemini 키 남용(DoS) 방지(무료 티어)라
+  // 수용한 것. 정책을 바꾸려면 'done 도달분만 과금' 또는 '상당량 전송 시 환불 생략'을 검토.
   let refunded = false;
   const refundOnce = async () => {
     if (refunded) return;
