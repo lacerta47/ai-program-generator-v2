@@ -23,6 +23,7 @@ import { buildGeneratePrompt, buildModifyPrompt } from './prompts';
 import { useCreatorSource } from './useCreatorSource';
 import { Tip } from './Tip';
 import ResultPanel from './ResultPanel';
+import PhotoUpload from './PhotoUpload';
 
 type ResultTab = 'preview' | 'code';
 
@@ -42,8 +43,9 @@ export default function Creator() {
   const [uploadOpen, setUploadOpen] = useState(false);
   const [loginOpen, setLoginOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [photo, setPhoto] = useState<string | null>(null);
 
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, isStudent, isTeacher } = useAuth();
   const { toast } = useToast();
   const router = useRouter();
   const nameRef = useRef<HTMLInputElement>(null);
@@ -334,6 +336,8 @@ export default function Creator() {
             이 예시 가져오기
           </Button>
         </div>
+
+        {(isStudent || isTeacher) && <PhotoUpload value={photo} onChange={setPhoto} />}
 
         <Button variant="primary" size="lg" onClick={handleGenerate} disabled={busy} className="w-full">
           <Wand2 size={21} aria-hidden />
