@@ -5,7 +5,13 @@ export type ReserveResult =
   | { ok: true }
   | { ok: false; reason: 'pool' | 'cap-daily' | 'cap-total' | 'misconfig' };
 
-/** 학생 생성 한도 선점: 선생님 공유 풀 + 학생 캡을 한 트랜잭션에서 체크·차감. */
+/**
+ * 학생 생성 한도 선점: 선생님 공유 풀 + 학생 캡을 한 트랜잭션에서 체크·차감.
+ * [의도 — 리뷰 오해 방지] 교사 풀(teachers.usedTotal)을 '같은' 트랜잭션에서 갱신해야
+ * usedTotal ≤ totalQuota 하드캡이 정확히 보장된다. 분산 카운터(샤딩)는 이 정확한 캡과 충돌해
+ * 비채택 — 생성이 Gemini-bound(수 초)라 한 반 동시요청에도 교사 문서 쓰기율이 낮아 경합은
+ * 실무상 경미(자동 재시도도 있음). 트래픽 증가 시 재검토할 모니터링 대상.
+ */
 export async function reserveStudentQuota(uid: string, cost = 1): Promise<ReserveResult> {
   const studentRef = adminDb.doc(`students/${uid}`);
   const day = todayKeyKST();
