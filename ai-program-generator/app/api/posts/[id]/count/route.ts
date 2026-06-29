@@ -58,19 +58,23 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     }
 
     if (action === 'view') {
-      // 첫 조회만 +1(멱등). 이미 본 사용자면 그대로.
-      const result = await adminDb.runTransaction(async (tx) => {
-        const viewRef = postRef.collection('views').doc(uid);
-        const [postSnap, viewSnap] = await Promise.all([tx.get(postRef), tx.get(viewRef)]);
-        if (!postSnap.exists) throw new Error('POST_NOT_FOUND');
-        const cur = (postSnap.data()?.viewCount as number | undefined) ?? 0;
-        if (viewSnap.exists) return { counted: false, viewCount: cur };
-        const next = cur + 1;
-        tx.set(viewRef, { createdAt: Date.now() });
-        tx.update(postRef, { viewCount: next });
-        return { counted: true, viewCount: next };
-      });
-      return NextResponse.json(result);
+      // 첫 조회만 +1(멱등). views/{uid}.create()로 '1인 1회'를 원자 보장하고, 카운트는
+      // FieldValue.increment로 갱신한다 — 인기글에 반 전체가 동시 접속해도 단일 post 문서를
+      // read-modify-write로 묶는 트랜잭션 경합을 피한다(viewCount는 정렬용 단일 필드라 샤딩과
+      // 달리 무충돌). 클라(recordView)는 counted만 쓰므로 viewCount는 응답에서 뺀다.
+      const viewRef = postRef.collection('views').doc(uid);
+      try {
+        await viewRef.create({ createdAt: Date.now() }); // 이미 있으면 throw → 멱등
+      } catch {
+        return NextResponse.json({ counted: false }); // 이미 본 사용자(또는 동시요청 경합 패자)
+      }
+      try {
+        await postRef.update({ viewCount: FieldValue.increment(1) });
+      } catch {
+        // 글이 막 삭제된 드문 경우 — 조회수는 부가정보라 실패해도 치명적 아님(서브문서는 남을 수 있음)
+        return NextResponse.json({ counted: false });
+      }
+      return NextResponse.json({ counted: true });
     }
 
     // fork: 중복 제한 없이 +1

@@ -49,6 +49,7 @@ export async function POST(req: NextRequest) {
   const grade = typeof b.grade === 'number' ? Math.floor(b.grade) : NaN;
   const classNo = typeof b.classNo === 'number' ? Math.floor(b.classNo) : NaN;
   const count = typeof b.count === 'number' ? Math.floor(b.count) : 0;
+  const startNo = typeof b.startNo === 'number' ? Math.floor(b.startNo) : 1; // 이어서 추가용 시작 번호(기본 1)
   const password = typeof b.password === 'string' ? b.password : '';
   const limitType = b.limitType === 'total' ? 'total' : 'daily';
   const limitValue = typeof b.limitValue === 'number' ? Math.floor(b.limitValue) : NaN;
@@ -61,6 +62,10 @@ export async function POST(req: NextRequest) {
   }
   if (count < 1 || count > 50) {
     return NextResponse.json({ error: '인원수는 1~50명까지예요.' }, { status: 400 });
+  }
+  // 학번 뒷자리는 2자리(pad2)라 시작+인원이 99를 넘으면 형식이 깨진다. 이어서 추가도 이 범위 안에서.
+  if (!Number.isInteger(startNo) || startNo < 1 || startNo + count - 1 > 99) {
+    return NextResponse.json({ error: '학생 번호(시작 번호+인원수)는 1~99 범위여야 해요.' }, { status: 400 });
   }
   if (password.length < 6) {
     return NextResponse.json({ error: 'PIN은 6자 이상이어야 해요.' }, { status: 400 });
@@ -77,7 +82,7 @@ export async function POST(req: NextRequest) {
 
   const created: { email: string; hakbun: string; password: string }[] = [];
   const skipped: { hakbun: string; reason: string }[] = [];
-  for (let i = 1; i <= count; i++) {
+  for (let i = startNo; i < startNo + count; i++) {
     const hakbun = `${grade}${pad2(classNo)}${pad2(i)}`;
     const email = `${schoolCode}-${hakbun}@${DOMAIN}`;
     try {

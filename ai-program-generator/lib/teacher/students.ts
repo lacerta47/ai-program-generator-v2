@@ -18,6 +18,7 @@ export function createStudents(body: {
   grade: number;
   classNo: number;
   count: number;
+  startNo: number;
   password: string;
   limitType: 'daily' | 'total';
   limitValue: number;
