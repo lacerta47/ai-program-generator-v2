@@ -90,7 +90,9 @@ export async function POST(req: NextRequest) {
   // 사진(선택) — data-URI 검증·분해. 잘못/과대 사진은 한도 차감 전에 거절(횟수 소모 방지).
   let parsedPhoto: { data: string; mimeType: string } | undefined;
   if (typeof photo === 'string' && photo) {
-    if (photo.length > 400000) {
+    // 저장 rule(validPost photo<=350000)과 동일 상한. generate만 크게 받으면 생성(쿼터 차감)은 되고
+    // 저장은 규칙 위반으로 거부돼 '쿼터 증발'이 되므로 두 캡을 일치시킨다.
+    if (photo.length > 350000) {
       return NextResponse.json({ error: '사진이 너무 커요.' }, { status: 413 });
     }
     const m = /^data:(image\/[a-zA-Z+.-]+);base64,(.+)$/.exec(photo);
