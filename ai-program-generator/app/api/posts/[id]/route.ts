@@ -28,12 +28,13 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     if (!isAdmin && snap.data()?.ownerUid !== uid) {
       return NextResponse.json({ error: '내 작품만 지울 수 있어요.' }, { status: 403 });
     }
-    await postRef.delete();
-    // 그 글의 신고도 함께 정리(고아 신고 방지).
+    // 글+신고를 한 batch로 원자 삭제 — 글만 지워지고 신고가 남는 고아 방지(중간 크래시 창 제거).
+    // batch 500-op 한도: 신고 ≤449면 글까지 한 배치로 완전 원자, 초과분만 후속 배치.
     const reps = await adminDb.collection('reports').where('postId', '==', id).get();
-    for (let i = 0; i < reps.docs.length; i += 450) {
+    for (let i = 0; i < Math.max(1, reps.docs.length); i += 449) {
       const batch = adminDb.batch();
-      reps.docs.slice(i, i + 450).forEach((d) => batch.delete(d.ref));
+      if (i === 0) batch.delete(postRef);
+      reps.docs.slice(i, i + 449).forEach((d) => batch.delete(d.ref));
       await batch.commit();
     }
     return NextResponse.json({ ok: true });

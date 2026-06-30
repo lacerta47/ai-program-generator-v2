@@ -17,12 +17,12 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     if (pSnap.data()?.categoryId !== board.boardId) {
       return NextResponse.json({ error: '우리 반 게시판 글이 아니에요.' }, { status: 403 });
     }
-    await postRef.delete();
-    // 그 글의 신고도 함께 정리(유령 미처리 신고 카운트 방지). 관리자 글삭제와 동일한 청소.
+    // 글+신고를 한 batch로 원자 삭제(글만 지워지고 신고가 남는 고아 방지). 신고 ≤449면 완전 원자.
     const reps = await adminDb.collection('reports').where('postId', '==', id).get();
-    for (let i = 0; i < reps.docs.length; i += 450) {
+    for (let i = 0; i < Math.max(1, reps.docs.length); i += 449) {
       const batch = adminDb.batch();
-      reps.docs.slice(i, i + 450).forEach((d) => batch.delete(d.ref));
+      if (i === 0) batch.delete(postRef);
+      reps.docs.slice(i, i + 449).forEach((d) => batch.delete(d.ref));
       await batch.commit();
     }
     return NextResponse.json({ ok: true });

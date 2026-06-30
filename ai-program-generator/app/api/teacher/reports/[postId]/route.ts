@@ -33,12 +33,11 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ p
       : repSnap.docs.some((d) => studentUids.has(d.data().postOwnerUid as string));
     if (!mine) return NextResponse.json({ error: '우리 반 신고가 아니에요.' }, { status: 403 });
 
-    if (deletePost) {
-      await adminDb.doc(`posts/${postId}`).delete();
-    }
-    for (let i = 0; i < repSnap.docs.length; i += 450) {
+    // 글(요청 시)+신고를 한 batch로 원자 삭제 — 글만 지워지고 신고가 남는 고아 방지.
+    for (let i = 0; i < repSnap.docs.length; i += 449) {
       const batch = adminDb.batch();
-      repSnap.docs.slice(i, i + 450).forEach((d) => batch.delete(d.ref));
+      if (i === 0 && deletePost) batch.delete(adminDb.doc(`posts/${postId}`));
+      repSnap.docs.slice(i, i + 449).forEach((d) => batch.delete(d.ref));
       await batch.commit();
     }
     return NextResponse.json({ ok: true });
