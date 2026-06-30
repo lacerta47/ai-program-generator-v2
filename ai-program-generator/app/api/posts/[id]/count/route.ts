@@ -80,7 +80,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       return NextResponse.json({ counted: true });
     }
 
-    // fork: 중복 제한 없이 +1
+    // fork: 중복 제한 없이 +1.
+    // [알려진 경미 어뷰징 — 리뷰 주의] like/view와 달리 1인1회 dedup이 없어 직접 API 반복호출로
+    // forkCount를 부풀릴 수 있다. 단 forkCount는 쿼터·정합성·자동 랭킹에 안 쓰이고(예시 선정은 admin 수동),
+    // 부풀려도 게시글의 '이어 만든 횟수'가 시각적으로 커질 뿐이라 출시 블로커 아님으로 수용.
+    // 문제가 되면 view와 동일하게 forks/{uid}.create()(1인1회)+increment로 닫을 수 있다(깃허브식 '이어 만든 사람 수').
     const snap = await postRef.get();
     if (!snap.exists) return NextResponse.json({ error: '글을 찾을 수 없어요.' }, { status: 404 });
     await postRef.update({ forkCount: FieldValue.increment(1) });
