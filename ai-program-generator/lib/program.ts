@@ -16,6 +16,11 @@ ${code.html}
 </html>`;
 }
 
+/** HTML 텍스트/타이틀 삽입용 최소 이스케이프 — 제목의 <, >, & 를 무해화(</title><script> 주입 방지). */
+function escapeHtml(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
 /** ZIP 다운로드 용: css/js를 외부 파일로 분리한 index.html */
 export function buildIndexHtml(code: GeneratedCode, title: string): string {
   return `<!DOCTYPE html>
@@ -23,7 +28,7 @@ export function buildIndexHtml(code: GeneratedCode, title: string): string {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>${title || 'AI Generated Program'}</title>
+<title>${escapeHtml(title || 'AI Generated Program')}</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>

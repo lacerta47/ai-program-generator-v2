@@ -25,6 +25,13 @@ export async function downloadProgramZip(code: GeneratedCode, title: string, pho
   const a = document.createElement('a');
   a.href = url;
   a.download = `${toSafeFileName(title)}.zip`;
+  // FF/일부 Safari는 앵커가 DOM에 없거나 blob URL을 읽기 전에 revoke하면 다운로드가 조용히 실패한다.
+  // → body에 붙여 클릭하고, revoke·제거는 다음 틱으로 미룬다.
+  a.style.display = 'none';
+  document.body.appendChild(a);
   a.click();
-  URL.revokeObjectURL(url);
+  setTimeout(() => {
+    URL.revokeObjectURL(url);
+    a.remove();
+  }, 0);
 }

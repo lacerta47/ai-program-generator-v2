@@ -11,9 +11,13 @@ export async function GET(req: NextRequest) {
   try {
     const board = await ensureTeacherBoard(gate.uid);
     const LIMIT = 50; // 모더레이션 콘솔 — 최근 글만. 과대 조회 방지(글 누적 시 성능).
+    // boardTeacherUid==까지 함께 필터해 복합 인덱스 [categoryId, boardTeacherUid, createdAt]를 재사용한다.
+    // (categoryId==만 두면 [categoryId, createdAt] 인덱스가 없어 FAILED_PRECONDITION→500. 이 보드 글은
+    //  전부 boardTeacherUid==gate.uid라 결과는 동일하고 인덱스만 맞춰진다.)
     const snap = await adminDb
       .collection('posts')
       .where('categoryId', '==', board.boardId)
+      .where('boardTeacherUid', '==', gate.uid)
       .orderBy('createdAt', 'desc')
       .limit(LIMIT)
       .get();
