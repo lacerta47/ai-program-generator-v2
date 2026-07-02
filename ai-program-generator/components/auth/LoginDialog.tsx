@@ -16,6 +16,18 @@ import Modal from '@/components/ui/Modal';
 import { TextInput, Select, Label } from '@/components/ui/Field';
 import { listSchools, type School } from '@/lib/firebase/schools';
 
+// App Check 강제 상태에서 reCAPTCHA 토큰을 못 얻으면(학교·회사 방화벽이 Google/reCAPTCHA 차단,
+// 광고차단 확장, 네트워크 불안정) 로그인이 막힌다. 이때 '비밀번호 오류'로 오인하지 않게 원인 안내를 준다.
+const BLOCKED_MSG =
+  '로그인하지 못했어요. 인터넷 연결이 불안정하거나 학교·회사의 보안 프로그램(방화벽)이 막고 있을 수 있어요. 잠시 후 다시 하거나 다른 인터넷(예: 휴대폰 핫스팟)에서 해보세요.';
+
+/** 자격증명 오류가 아니라 App Check/네트워크 차단 계열인지 — 이 경우 원인 안내가 필요. */
+function isBlockedError(e: unknown): boolean {
+  const code = (e as { code?: string })?.code ?? '';
+  const msg = String((e as { message?: string })?.message ?? '').toLowerCase();
+  return /app-?check|network-request-failed|internal-error/.test(code) || /app.?check|attestation|recaptcha/.test(msg);
+}
+
 function toMessage(e: unknown): string {
   const code = (e as { code?: string })?.code ?? '';
   const map: Record<string, string> = {
@@ -26,8 +38,12 @@ function toMessage(e: unknown): string {
     'auth/email-already-in-use': '이미 가입된 이메일이에요. 로그인해 보세요.',
     'auth/weak-password': '비밀번호는 6글자 이상으로 만들어 주세요.',
     'auth/popup-closed-by-user': '로그인 창이 닫혔어요. 다시 시도해 주세요.',
+    'auth/too-many-requests': '너무 여러 번 시도했어요. 잠시 후 다시 해주세요.',
   };
-  return map[code] || (e instanceof Error ? e.message : '로그인이 안 됐어요. 다시 해볼까요?');
+  if (map[code]) return map[code];
+  if (isBlockedError(e)) return BLOCKED_MSG;
+  // 알 수 없는 오류: raw SDK 메시지(영문·기술적) 노출 대신 일반 안내.
+  return '로그인이 안 됐어요. 잠시 후 다시 해볼까요?';
 }
 
 export default function LoginDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -132,8 +148,9 @@ export default function LoginDialog({ open, onClose }: { open: boolean; onClose:
       const email = `${schoolCode}-${hakbun.trim()}@class.kr`;
       await signInWithEmailAndPassword(auth, email, pin);
       onClose();
-    } catch {
-      setError('학교·학번·비밀번호를 다시 확인해 주세요.');
+    } catch (err) {
+      // App Check/네트워크 차단이면 '학번·비번 확인' 대신 원인 안내(학교 방화벽 등). 그 외엔 자격 재확인.
+      setError(isBlockedError(err) ? BLOCKED_MSG : '학교·학번·비밀번호를 다시 확인해 주세요.');
     } finally {
       setBusy(false);
     }
