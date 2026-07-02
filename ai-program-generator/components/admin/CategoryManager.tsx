@@ -106,7 +106,7 @@ export default function CategoryManager() {
     )
       return;
     try {
-      await deleteCategoryTree(node.id, categories);
+      await deleteCategoryTree(node.id);
     } catch (e) {
       console.error('삭제 실패:', e);
       toast(FAIL);

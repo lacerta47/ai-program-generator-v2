@@ -7,7 +7,9 @@ export async function requireTeacher(req: NextRequest): Promise<{ uid: string } 
   const idToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
   if (!idToken) return NextResponse.json({ error: '로그인이 필요해요.' }, { status: 401 });
   try {
-    const decoded = await adminAuth.verifyIdToken(idToken);
+    // 고권한 라우트(학생 계정 생성/삭제 캐스케이드·view-pin·글삭제)라 checkRevoked=true —
+    // 비활성/권한해제된 교사 토큰을 즉시 무효화한다(미사용 시 ~1h 유효). 교사 라우트는 저트래픽.
+    const decoded = await adminAuth.verifyIdToken(idToken, true);
     if (decoded.teacher !== true) {
       return NextResponse.json({ error: '선생님만 할 수 있어요.' }, { status: 403 });
     }

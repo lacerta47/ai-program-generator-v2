@@ -13,7 +13,7 @@ import {
 } from 'firebase/firestore';
 import { db } from './client';
 import type { Category } from './types';
-import { descendantIds } from '@/lib/board/categoryTree';
+import { authedJson } from '@/lib/client/authedFetch';
 
 const COL = 'categories';
 
@@ -68,24 +68,10 @@ export async function swapCategoryOrder(a: Category, b: Category): Promise<void>
 }
 
 /**
- * 카테고리 + 모든 후손 카테고리 + 그 하위 게시물 일괄 삭제.
- * descendantIds로 자기+후손 id를 모아, 각 카테고리의 게시물을 450건 배치로 지우고,
- * 마지막에 카테고리 문서들을 배치 삭제한다. (Firestore엔 컬렉션 cascade가 없음.)
+ * 카테고리 + 모든 후손 카테고리 + 그 하위 게시물 일괄 삭제 — 서버 경유(Admin SDK).
+ * 각 하위 글의 서브컬렉션(likes·views)과 신고(reports)까지 캐스케이드로 지운다(#M5).
+ * (클라 배치 삭제는 글 문서만 지워 서브컬렉션이 고아로 남고, reports는 규칙상 삭제 불가였음.)
  */
-export async function deleteCategoryTree(id: string, all: Category[]): Promise<void> {
-  const ids = descendantIds(id, all);
-  for (const cid of ids) {
-    const postsSnap = await getDocs(query(collection(db, 'posts'), where('categoryId', '==', cid)));
-    const docs = postsSnap.docs;
-    for (let i = 0; i < docs.length; i += 450) {
-      const batch = writeBatch(db);
-      docs.slice(i, i + 450).forEach((d) => batch.delete(d.ref));
-      await batch.commit();
-    }
-  }
-  for (let i = 0; i < ids.length; i += 450) {
-    const batch = writeBatch(db);
-    ids.slice(i, i + 450).forEach((cid) => batch.delete(doc(db, COL, cid)));
-    await batch.commit();
-  }
+export async function deleteCategoryTree(id: string): Promise<void> {
+  await authedJson(`/api/admin/categories/${id}`, { method: 'DELETE' });
 }

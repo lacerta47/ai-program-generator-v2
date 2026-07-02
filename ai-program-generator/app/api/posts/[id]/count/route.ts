@@ -1,10 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { FieldValue } from 'firebase-admin/firestore';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
+import { allowFixedWindow } from '@/lib/server/rateLimit';
 
 // 카운터(좋아요·조회·포크)는 서버에서만 갱신한다(클라 직접 쓰기는 규칙으로 차단).
 // 서브문서로 1인1회 dedup을 서버가 권위적으로 처리 → 임의 부풀리기 불가.
 export const runtime = 'nodejs';
+
+// uid별 카운트 호출 레이트리밋 — like 토글/fork를 타이트 루프로 스팸해 같은 문서에 read+write를
+// 분당 수천 건 유발하는 쓰기 증폭/hot-doc DoS를 상한(#M3). 정상 열람(조회당 1회)엔 넉넉.
+const COUNT_WINDOW_MS = 10 * 60 * 1000;
+const COUNT_MAX = Number(process.env.COUNT_RATE_MAX) || 200;
 
 type Action = 'like' | 'view' | 'fork';
 const isAction = (v: unknown): v is Action => v === 'like' || v === 'view' || v === 'fork';
@@ -19,6 +25,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     uid = (await adminAuth.verifyIdToken(idToken)).uid;
   } catch {
     return NextResponse.json({ error: '로그인이 만료됐어요. 다시 로그인해 주세요.' }, { status: 401 });
+  }
+
+  // 레이트리밋(비환불) — 타이트 루프 스팸으로 인한 Firestore 쓰기 증폭 차단(#M3).
+  if (!(await allowFixedWindow('countRate', uid, COUNT_WINDOW_MS, COUNT_MAX))) {
+    return NextResponse.json({ error: '너무 빠르게 여러 번 눌렀어요. 잠시 후 다시 해주세요.' }, { status: 429 });
   }
 
   const { id } = await params;
