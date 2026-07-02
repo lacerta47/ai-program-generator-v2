@@ -1,10 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { putPreview } from '@/lib/preview-store';
 import { adminAuth } from '@/lib/firebase/admin';
+import { allowFixedWindow } from '@/lib/server/rateLimit';
 
 export const runtime = 'nodejs';
 
 const MAX_PART = 150000; // firestore.rules 의 게시물 코드 한도와 동일
+// uid별 미리보기 생성 레이트리밋 — 인증 사용자가 ~1MB 문서를 반복 생성해 Firestore 쓰기/스토리지를
+// 소진하는 것을 상한(#10). 생성보다 자주 불리므로 넉넉히(창 10분/기본 60, env PREVIEW_RATE_MAX).
+const PREVIEW_WINDOW_MS = 10 * 60 * 1000;
+const PREVIEW_MAX = Number(process.env.PREVIEW_RATE_MAX) || 60;
 
 /**
  * 즉석 생성 코드를 임시 저장하고 미리보기 id를 돌려준다.
@@ -15,10 +20,16 @@ export async function POST(req: NextRequest) {
   const authHeader = req.headers.get('authorization') ?? '';
   const idToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
   if (!idToken) return NextResponse.json({ error: '로그인이 필요해요.' }, { status: 401 });
+  let uid: string;
   try {
-    await adminAuth.verifyIdToken(idToken);
+    uid = (await adminAuth.verifyIdToken(idToken)).uid;
   } catch {
     return NextResponse.json({ error: '로그인이 만료됐어요. 다시 로그인해 주세요.' }, { status: 401 });
+  }
+
+  // uid별 미리보기 생성 레이트리밋(비환불) — 반복 생성으로 Firestore 쓰기/스토리지 소진 방지(#10).
+  if (!(await allowFixedWindow('previewRate', uid, PREVIEW_WINDOW_MS, PREVIEW_MAX))) {
+    return NextResponse.json({ error: '미리보기를 너무 자주 만들었어요. 잠시 후 다시 해주세요.' }, { status: 429 });
   }
 
   let body: unknown;

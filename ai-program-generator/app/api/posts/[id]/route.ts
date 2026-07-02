@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
+import { deletePostSubcollections } from '@/lib/server/deletePost';
 
 export const runtime = 'nodejs';
 
@@ -28,6 +29,9 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     if (!isAdmin && snap.data()?.ownerUid !== uid) {
       return NextResponse.json({ error: '내 작품만 지울 수 있어요.' }, { status: 403 });
     }
+    // 카운터 서브컬렉션(likes·views)을 먼저 비운다 — 글을 지워도 서브컬렉션은 자동삭제 안 돼 고아로 남음(#3).
+    // 글 삭제 전에 지우므로, 중간 실패해도 글이 남아 재시도 가능(고아 악화 없음).
+    await deletePostSubcollections(postRef);
     // 글+신고를 한 batch로 원자 삭제 — 글만 지워지고 신고가 남는 고아 방지(중간 크래시 창 제거).
     // batch 500-op 한도: 신고 ≤449면 글까지 한 배치로 완전 원자, 초과분만 후속 배치.
     const reps = await adminDb.collection('reports').where('postId', '==', id).get();

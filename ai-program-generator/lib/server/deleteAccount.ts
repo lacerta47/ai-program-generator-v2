@@ -1,16 +1,21 @@
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
+import { deletePostSubcollections } from './deletePost';
 
 /**
  * uid의 모든 흔적을 삭제한다: Firestore(작품·닉네임·본인 글 신고·users·limits·teachers·students,
  * 선생님이면 schools/{schoolCode})를 먼저 지우고(중간 실패 시 고아 닉네임 방지), Auth 계정을 마지막에 삭제.
  * - 본인 글에 대한 신고(postOwnerUid==uid)는 글과 함께 삭제.
  * - 본인이 '낸' 신고(reporterUid==uid)는 남긴다(대상 글은 그대로라 유효).
- * usage 날짜문서·다른 글의 likes/views는 삭제하지 않는다(무해·경미).
+ * - 본인 글의 likes/views 서브컬렉션은 함께 삭제(고아 방지, #3). 본인이 '남의 글'에 남긴 likes/views는
+ *   남긴다(무해·경미). usage 날짜문서도 남긴다.
  */
 export async function deleteAccountCascade(uid: string): Promise<void> {
   const refs: FirebaseFirestore.DocumentReference[] = [];
   const posts = await adminDb.collection('posts').where('ownerUid', '==', uid).get();
-  posts.forEach((d) => refs.push(d.ref));
+  for (const d of posts.docs) {
+    await deletePostSubcollections(d.ref); // 글 삭제 전에 서브컬렉션(likes·views)부터 비움
+    refs.push(d.ref);
+  }
   const nicks = await adminDb.collection('nicknames').where('uid', '==', uid).get();
   nicks.forEach((d) => refs.push(d.ref));
   // 본인 글에 대한 신고는 글과 함께 삭제(내가 낸 신고 reporterUid는 남김).
