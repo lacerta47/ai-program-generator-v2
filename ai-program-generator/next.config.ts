@@ -16,7 +16,8 @@ const safeHeaders = [
 ];
 
 // 메인 앱 CSP. 인라인(테마·Next 하이드레이션) 때문에 'unsafe-inline' 허용하되 외부 스크립트 주입은 차단.
-// 우선 Report-Only로 배포해 위반 관찰 후 'Content-Security-Policy'로 승격한다.
+// 롤아웃 완료: Report-Only로 먼저 배포→라이브에서 위반 0 확인 후 강제('Content-Security-Policy')로 승격함(PR #73).
+// (script-src의 'unsafe-inline'은 인라인 테마/하이드레이션 때문에 남긴 의도된 트레이드오프 — nonce/hash 전환은 후속.)
 const csp = [
   "default-src 'self'",
   "script-src 'self' 'unsafe-inline' https://www.gstatic.com https://www.google.com https://apis.google.com",
