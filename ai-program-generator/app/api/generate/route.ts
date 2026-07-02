@@ -122,7 +122,7 @@ export async function POST(req: NextRequest) {
   const day = todayKeyKST();
   const usageRef = adminDb.collection('usage').doc(`${uid}_${day}`);
   if (isStudent) {
-    const r = await reserveStudentQuota(uid, cost);
+    const r = await reserveStudentQuota(uid, cost, day); // day를 고정 전달 → 환불도 같은 날 문서(L8)
     if (!r.ok) {
       const msg =
         r.reason === 'pool'
@@ -187,7 +187,7 @@ export async function POST(req: NextRequest) {
   const refundOnce = async () => {
     if (refunded) return;
     refunded = true;
-    if (isStudent) await refundStudentQuota(uid, cost);
+    if (isStudent) await refundStudentQuota(uid, cost, day); // 예약과 같은 day로 환불(L8)
     else await refundQuota(usageRef, cost);
   };
 

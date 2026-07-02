@@ -1,7 +1,7 @@
 import { randomBytes, scryptSync, timingSafeEqual, createHash } from 'node:crypto';
 import { adminDb } from '@/lib/firebase/admin';
 
-const PIN_RE = /^[0-9]{4,8}$/; // 4~8자리 숫자
+const PIN_RE = /^[0-9]{6,8}$/; // 6~8자리 숫자 (4자리는 IP 로테이션 브루트포스에 취약 — L4)
 
 export function isValidPinFormat(pin: string): boolean {
   return PIN_RE.test(pin);

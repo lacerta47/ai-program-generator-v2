@@ -2,7 +2,9 @@ import type { NextConfig } from 'next';
 
 // 보안 응답 헤더. 미리보기(생성 코드)는 교차오리진 iframe으로 로드되므로,
 // 전역 X-Frame-Options: DENY를 걸면 미리보기가 깨진다 → /api/preview/* 는 경로별로 분리한다.
-const APP = 'https://ai-program-generator-v2.vercel.app';
+// 앱(프로덕션) 오리진 — 미리보기 라우트의 frame-ancestors 허용목록에 쓰인다(미리보기는 교차오리진이라
+// 'self'로는 부족). 커스텀 도메인/도메인 변경 시 NEXT_PUBLIC_APP_ORIGIN을 설정(PREVIEW_ORIGIN과 동일 패턴) — L6.
+const APP = process.env.NEXT_PUBLIC_APP_ORIGIN || 'https://ai-program-generator-v2.vercel.app';
 const PREVIEW = process.env.NEXT_PUBLIC_PREVIEW_ORIGIN || 'https://ai-program-generator-v2-preview.vercel.app';
 const AUTHDOMAIN = process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
   ? `https://${process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN}`

@@ -454,7 +454,7 @@ function Console() {
 
       <Modal open={pinOpen} onClose={() => setPinOpen(false)} label="관람 PIN 정하기" className="max-w-xs p-6">
         <h2 className="mb-1 text-[19px]">관람 PIN</h2>
-        <p className="mb-4 text-[13px] text-muted">숫자 4~8자리로 정해 주세요. 공유 링크로 작품을 볼 때 쓰여요.</p>
+        <p className="mb-4 text-[13px] text-muted">숫자 6~8자리로 정해 주세요. 공유 링크로 작품을 볼 때 쓰여요.</p>
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -462,7 +462,7 @@ function Console() {
           }}
           className="flex flex-col gap-3"
         >
-          <Label text="관람 PIN (숫자 4~8자리)" required>
+          <Label text="관람 PIN (숫자 6~8자리)" required>
             <TextInput
               inputMode="numeric"
               maxLength={8}
