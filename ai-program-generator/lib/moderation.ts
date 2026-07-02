@@ -39,9 +39,26 @@ const EN_PATTERNS = [
   'faggot', 'slut', 'whore', 'bastard', 'motherfuck', 'retard',
 ].map((w) => new RegExp(w.split('').map((c) => `${c}+`).join('')));
 
-// 공백·문장부호 모두 제거(한글·영문·숫자만), 반복 축약 — 보강 단어 부분일치용('씨 발'→'씨발').
+// 유니코드 혼동문자(confusables) 폴딩 — 호모글리프 사칭/우회를 막는다.
+// NFKC가 전각(ａｄｍｉｎ→admin) 등 호환형을 접고, 아래 맵이 키릴/그리스 룩얼라이크(аdmin의 а=U+0430)를
+// 라틴으로 접는다. 접지 않으면 normEn이 비-[a-z]인 키릴 글자를 지워 'аdmin'→'dmin'이 돼 예약어를 통과함.
+const CONFUSABLES: Record<string, string> = {
+  // 키릴 소문자 → 라틴
+  а: 'a', ӓ: 'a', е: 'e', ё: 'e', о: 'o', р: 'p', с: 'c', х: 'x', у: 'y', к: 'k',
+  м: 'm', н: 'h', т: 't', в: 'b', і: 'i', ј: 'j', ѕ: 's', ԁ: 'd', ո: 'n', ս: 'u', ց: 'g', ԛ: 'q', ԝ: 'w',
+  // 그리스 소문자 → 라틴
+  α: 'a', ο: 'o', ρ: 'p', ε: 'e', ι: 'i', κ: 'k', ν: 'v', τ: 't', χ: 'x', ς: 's', σ: 's', μ: 'm', υ: 'u',
+};
+function foldConfusables(s: string): string {
+  let out = '';
+  for (const ch of (s ?? '').normalize('NFKC')) out += CONFUSABLES[ch.toLowerCase()] ?? ch;
+  return out;
+}
+
+// 공백·문장부호 모두 제거(한글·영문·숫자만), 반복 축약 — 보강 단어 부분일치용('씨 발'→'씨발'). NFKC로 전각도 접음.
 function stripKo(s: string): string {
-  return s
+  return (s ?? '')
+    .normalize('NFKC')
     .replace(/[^가-힣ㄱ-ㅣa-zA-Z0-9]/g, '')
     .replace(/(.)\1{2,}/g, '$1$1');
 }
@@ -52,9 +69,10 @@ function dePunctKo(s: string): string {
     .replace(/[^가-힣ㄱ-ㅣa-zA-Z0-9\s]/g, '')
     .replace(/(.)\1{2,}/g, '$1$1');
 }
-// 영어 정규화: 소문자 영문자만 남김('f.u.c.k', 'f u c k' 우회 차단)
+// 영어 정규화: 혼동문자 폴딩(NFKC+키릴/그리스→라틴) 후 소문자 영문자만 남김
+// ('f.u.c.k'·'f u c k'·전각 'ａｄｍｉｎ'·키릴 'аdmin'·'fuсk' 우회 차단).
 function normEn(s: string): string {
-  return s.toLowerCase().replace(/[^a-z]/g, '');
+  return foldConfusables(s).toLowerCase().replace(/[^a-z]/g, '');
 }
 
 /** 텍스트에 비속어가 들어있으면 true. 빈 문자열은 안전 처리. */
@@ -79,8 +97,8 @@ export async function hasProfanity(text: string): Promise<boolean> {
 }
 
 // 관리자/운영자 사칭 우려가 있는 예약어 — 닉네임 전용(제목·일반 텍스트엔 적용하지 않음).
-// 정규화 부분일치: 한글은 stripKo(공백·기호 제거)에서, 영문은 normEn(소문자·영문자만)에서 검사
-// → '관 리 자', 'ADMIN9', 'ad-min' 모두 차단.
+// 정규화 부분일치: 한글은 stripKo(공백·기호 제거)에서, 영문은 normEn(혼동문자 폴딩+소문자·영문자만)에서 검사
+// → '관 리 자', 'ADMIN9', 'ad-min', 전각 'ａｄｍｉｎ', 키릴 'аdmin' 모두 차단.
 const RESERVED_NICK_KO = ['관리자', '운영자', '운영진', '운영팀', '관리팀', '매니저', '스태프'];
 const RESERVED_NICK_EN = ['admin', 'administrator', 'manager', 'staff', 'moderator', 'official'];
 
