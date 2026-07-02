@@ -179,10 +179,15 @@ export default function BoardView() {
     }
   }, []);
 
-  // 카테고리 변경 시 첫 페이지 로드
+  // 선택 카테고리의 보드 소유자(공개=null). 콜드로드에서 categories가 뒤늦게 도착하면 null→교사uid로
+  // 바뀌므로 deps에 넣어 loadFirst를 재실행한다 — 교실 딥링크(?post=)가 boardTeacherUid=null로 조회돼
+  // 빈 목록으로 굳던 레이스 방지(#8). 공개글은 teacherUid가 계속 null이라 재실행 없음(영향 0).
+  const selectedTeacherUid = categories.find((c) => c.id === selectedCategoryId)?.teacherUid ?? null;
+
+  // 카테고리 변경 시(또는 교사uid가 뒤늦게 확정될 때) 첫 페이지 로드
   useEffect(() => {
     if (selectedCategoryId) loadFirst(selectedCategoryId);
-  }, [selectedCategoryId, loadFirst]);
+  }, [selectedCategoryId, selectedTeacherUid, loadFirst]);
 
   async function loadMore() {
     if (!selectedCategoryId || !hasMore || loadingMore) return;

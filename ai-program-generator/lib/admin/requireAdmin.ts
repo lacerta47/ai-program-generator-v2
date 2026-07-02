@@ -8,7 +8,9 @@ export async function requireAdmin(req: NextRequest): Promise<{ uid: string } | 
   const idToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
   if (!idToken) return NextResponse.json({ error: '로그인이 필요해요.' }, { status: 401 });
   try {
-    const decoded = await adminAuth.verifyIdToken(idToken);
+    // 고권한 라우트라 checkRevoked=true — 비활성/권한해제된 계정의 토큰을 즉시 무효화한다
+    // (미사용 시 최대 ~1h 유효). admin 라우트는 저트래픽이라 getUser 추가호출 비용 무시 가능.
+    const decoded = await adminAuth.verifyIdToken(idToken, true);
     if (decoded.admin !== true) {
       return NextResponse.json({ error: '관리자만 할 수 있어요.' }, { status: 403 });
     }
