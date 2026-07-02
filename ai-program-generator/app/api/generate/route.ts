@@ -8,6 +8,8 @@ import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { todayKeyKST } from '@/lib/usageDay';
 import { readEffectiveLimit } from '@/lib/admin/usageConfig';
 import { reserveStudentQuota, refundStudentQuota } from '@/lib/server/studentQuota';
+import { allowGenerate } from '@/lib/server/genRate';
+import { UserFacingError } from '@/lib/ai/errors';
 
 // AI 호출은 반드시 서버에서만 실행한다(키 노출 방지).
 export const runtime = 'nodejs';
@@ -100,6 +102,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: '사진 형식이 올바르지 않아요.' }, { status: 400 });
     }
     parsedPhoto = { mimeType: m[1], data: m[2] };
+  }
+
+  // 2.5) 생성 시작 레이트리밋(비환불) — 입력검증 후·한도선점 전에 체크.
+  // 일일 쿼터는 취소 시 환불되므로, '부분 스트리밍만 받고 abort→환불'을 반복하면 카운터가 안 쌓여
+  // 유료 Gemini 호출을 무제한 낼 수 있다(abort-파밍). 이 카운터는 환불되지 않아 빈도의 천장이 된다. (B2)
+  if (!(await allowGenerate(uid))) {
+    return NextResponse.json(
+      { error: '너무 빠르게 여러 번 만들고 있어요. 잠깐 쉬었다가 다시 해주세요.' },
+      { status: 429 },
+    );
   }
 
   // 3) 한도 선점 (트랜잭션). 생성이 실패하면 4)에서 환불한다.
@@ -195,7 +207,10 @@ export async function POST(req: NextRequest) {
         if (!aborted) {
           console.error('[/api/generate] 스트리밍 실패:', e);
           try {
-            send({ type: 'error', error: e instanceof Error ? e.message : '앗, 만들다가 문제가 생겼어요. 잠깐 뒤 다시 해볼까요?' });
+            // 내부 정보 누출 방지: 안전하다고 표시된(UserFacingError) 메시지만 그대로 전달하고,
+            // raw Gemini/SDK 에러 등은 일반 메시지로 치환한다(서버 로그엔 위에서 e 원본 기록). (B4)
+            const msg = e instanceof UserFacingError ? e.message : '앗, 만들다가 문제가 생겼어요. 잠깐 뒤 다시 해볼까요?';
+            send({ type: 'error', error: msg });
           } catch {}
         }
         try {

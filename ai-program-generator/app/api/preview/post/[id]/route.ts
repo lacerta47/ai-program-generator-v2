@@ -15,6 +15,15 @@ const SECURITY_HEADERS = {
   'Content-Security-Policy': 'sandbox allow-scripts',
 };
 
+// 성공(공개글) 응답만 짧게 엣지 캐시 → 같은 공개글을 반복 조회하는 Firestore read 증폭(비용/DoS)을 상한. (B5)
+// 공개글 코드는 수정 시에만 바뀌므로 60초 staleness 허용(삭제된 글이 최대 60초 잔존할 수 있으나 공개 콘텐츠라 무해).
+// 교실글은 아래에서 404(no-store)라 캐시되지 않는다. Vary: Sec-Fetch-Dest로 iframe 캐시가 직접탐색 게이트를 무력화하지 않게 한다.
+const CACHED_HEADERS = {
+  ...SECURITY_HEADERS,
+  'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300, max-age=0',
+  Vary: 'Sec-Fetch-Dest',
+};
+
 function isCode(v: unknown): v is GeneratedCode {
   const c = v as Record<string, unknown> | null;
   return !!c && typeof c.html === 'string' && typeof c.css === 'string' && typeof c.javascript === 'string';
@@ -64,5 +73,5 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       { status: 404, headers: SECURITY_HEADERS },
     );
   }
-  return new Response(buildPreviewDoc(code), { headers: SECURITY_HEADERS });
+  return new Response(buildPreviewDoc(code), { headers: CACHED_HEADERS });
 }

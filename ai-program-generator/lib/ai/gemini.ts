@@ -1,6 +1,7 @@
 import { GoogleGenAI, Type } from '@google/genai';
 import type { AIProvider, GeneratedCode, GenerateInput, GenerationChunk } from './types';
 import { parsePartialCode } from './partialJson';
+import { UserFacingError } from './errors';
 
 // 제공자별 세부사항(모델 선택, JSON 모드, 파싱, 폴백)을 이 파일 안에 가둔다.
 // 다른 제공자로 교체할 때는 이 파일에 대응하는 구현만 추가하면 된다.
@@ -40,11 +41,11 @@ export class GeminiProvider implements AIProvider {
         stream = await startStream(ai, FALLBACK_MODEL, input, signal);
       } catch (e2) {
         if (isQuotaExhausted(e2)) {
-          throw new Error(
+          throw new UserFacingError(
             '오늘 사용할 수 있는 무료 AI 횟수를 모두 썼어요. 내일 다시 해보세요! (무료 한도는 매일 새로 채워져요)',
           );
         }
-        throw e2;
+        throw e2; // raw SDK 에러 — 클라엔 일반 메시지로 치환됨(B4)
       }
     }
 
@@ -67,11 +68,11 @@ export class GeminiProvider implements AIProvider {
     try {
       parsed = JSON.parse(acc);
     } catch {
-      throw new Error('앗, 결과를 정리하다 살짝 꼬였어요. 다시 한 번 만들어 볼까요?');
+      throw new UserFacingError('앗, 결과를 정리하다 살짝 꼬였어요. 다시 한 번 만들어 볼까요?');
     }
     const code = normalize(parsed);
     if (!code.html.trim()) {
-      throw new Error('AI가 빈 결과를 만들었어요. 다시 한 번 만들어 볼까요?');
+      throw new UserFacingError('AI가 빈 결과를 만들었어요. 다시 한 번 만들어 볼까요?');
     }
     yield { type: 'done', code };
   }

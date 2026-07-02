@@ -31,7 +31,7 @@ const MAX_ATTEMPTS = 10;
 export async function allowShareAttempt(postId: string, ip: string): Promise<boolean> {
   const ipHash = createHash('sha256').update(ip).digest('hex').slice(0, 16);
   const ref = adminDb.doc(`shareAttempts/${postId}_${ipHash}`);
-  return adminDb.runTransaction(async (tx) => {
+  const allowed = await adminDb.runTransaction(async (tx) => {
     const snap = await tx.get(ref);
     const now = Date.now();
     const d = snap.data();
@@ -43,4 +43,38 @@ export async function allowShareAttempt(postId: string, ip: string): Promise<boo
     tx.update(ref, { count: (d.count as number) + 1 });
     return true;
   });
+  // 기회적 청소: 만료된 카운터 몇 개 정리(putPreview와 동일 패턴, 비용 미미).
+  // shareAttempts는 TTL이 없어 postId/ip를 돌려가며 시도하면 정크 문서가 무한 누적되므로 상시 청소한다. (B3)
+  adminDb
+    .collection('shareAttempts')
+    .where('windowStart', '<', Date.now() - WINDOW_MS)
+    .limit(20)
+    .get()
+    .then((snap) => Promise.all(snap.docs.map((doc) => doc.ref.delete())))
+    .catch(() => {});
+  return allowed;
+}
+
+/**
+ * 만료된 shareAttempts(윈도가 지난 카운터)를 일괄 삭제(스케줄 cron용). 한 번에 최대 maxDocs건.
+ * 윈도가 끝나면 다음 시도가 어차피 카운터를 리셋하므로 만료분 삭제는 안전(레이트리밋에 무영향).
+ * windowStart 단일필드 범위쿼리라 자동 인덱스 사용(복합 인덱스 불필요).
+ */
+export async function deleteExpiredShareAttempts(maxDocs = 5000): Promise<number> {
+  const cutoff = Date.now() - WINDOW_MS;
+  let deleted = 0;
+  while (deleted < maxDocs) {
+    const snap = await adminDb
+      .collection('shareAttempts')
+      .where('windowStart', '<', cutoff)
+      .limit(450)
+      .get();
+    if (snap.empty) break;
+    const batch = adminDb.batch();
+    snap.docs.forEach((d) => batch.delete(d.ref));
+    await batch.commit();
+    deleted += snap.size;
+    if (snap.size < 450) break; // 마지막 배치
+  }
+  return deleted;
 }
