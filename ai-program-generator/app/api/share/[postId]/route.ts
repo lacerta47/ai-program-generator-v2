@@ -8,7 +8,10 @@ export const runtime = 'nodejs';
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ postId: string }> }) {
   const { postId } = await params;
-  const ip = (req.headers.get('x-forwarded-for') ?? 'unknown').split(',')[0].trim();
+  // 신뢰 가능한 클라 IP: Vercel이 세팅하는 x-real-ip 우선, 없으면 x-forwarded-for의 '마지막'(신뢰 프록시가 추가).
+  // XFF의 [0](첫 값)은 클라가 위조 가능 → 요청마다 바꿔 레이트리밋을 우회할 수 있어 쓰지 않는다.
+  const xff = req.headers.get('x-forwarded-for');
+  const ip = (req.headers.get('x-real-ip') || (xff ? xff.split(',').pop() : '') || 'unknown').trim();
   if (!(await allowShareAttempt(postId, ip))) {
     return NextResponse.json({ error: '너무 여러 번 시도했어요. 잠시 후 다시 해주세요.' }, { status: 429 });
   }
