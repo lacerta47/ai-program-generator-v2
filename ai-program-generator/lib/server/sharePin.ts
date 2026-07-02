@@ -27,7 +27,7 @@ export function verifyPin(pin: string, stored: string | undefined): boolean {
 const WINDOW_MS = 10 * 60 * 1000;
 const MAX_ATTEMPTS = 10;
 
-/** postId+ip 별 슬라이딩 카운터. 한도 초과면 false(차단). Admin SDK 전용(shareAttempts는 클라 규칙 없음=기본 거부). */
+/** postId+ip 별 고정 윈도 카운터(경계 2x 버스트 허용, PIN 무차별 방지 목적엔 무방). 한도 초과면 false(차단). Admin SDK 전용(shareAttempts는 클라 규칙 없음=기본 거부). */
 export async function allowShareAttempt(postId: string, ip: string): Promise<boolean> {
   const ipHash = createHash('sha256').update(ip).digest('hex').slice(0, 16);
   const ref = adminDb.doc(`shareAttempts/${postId}_${ipHash}`);

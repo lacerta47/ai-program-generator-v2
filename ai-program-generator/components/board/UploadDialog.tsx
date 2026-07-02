@@ -92,7 +92,11 @@ export default function UploadDialog({ open, onClose, code, plan, prompt, defaul
   // 이미 정한 별명이 있으면 그대로 사용(읽기전용). 없으면 최초 입력받음.
   useEffect(() => {
     if (open && user) {
-      getUserProfile(user.uid).then((p) => setSavedNickname(p?.nickname ?? null));
+      // 실패 시 unhandled rejection 방지 + 안전 폴백(null=입력 모드). 조회 실패로 기존 사용자를 신규처럼 취급해도
+      // 제출 단계에서 닉네임 유일성 검증이 잡으므로 데이터 손상은 없다.
+      getUserProfile(user.uid)
+        .then((p) => setSavedNickname(p?.nickname ?? null))
+        .catch(() => setSavedNickname(null));
     }
   }, [open, user]);
 
