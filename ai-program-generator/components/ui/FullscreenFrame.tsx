@@ -44,12 +44,14 @@ function previewOrigin(): string {
   return configured;
 }
 
-// code 객체 동일성 기준 미리보기 id 캐시 — 탭 토글로 remount돼도 같은 결과면 재요청하지 않는다.
-// WeakMap이라 code 객체가 GC되면 함께 정리됨(누수 없음).
-const previewIdCache = new WeakMap<GeneratedCode, Promise<string>>();
+// code 객체 + photo 값 기준 미리보기 id 캐시 — 탭 토글로 remount돼도 같은 (code, photo)면 재요청하지 않는다.
+// 바깥은 WeakMap(code)이라 code 객체가 GC되면 함께 정리됨(누수 없음). 안쪽은 photo값(없으면 '')별 Map.
+// (code 참조는 그대로인데 photo만 바뀌는 경우 옛 미리보기를 돌려주지 않도록 photo까지 키에 포함.)
+const previewIdCache = new WeakMap<GeneratedCode, Map<string, Promise<string>>>();
 
 function requestPreviewId(code: GeneratedCode, photo?: string): Promise<string> {
-  const cached = previewIdCache.get(code);
+  const key = photo ?? '';
+  const cached = previewIdCache.get(code)?.get(key);
   if (cached) return cached;
   const p = (async () => {
     let r: Response;
@@ -68,8 +70,13 @@ function requestPreviewId(code: GeneratedCode, photo?: string): Promise<string> 
     return id as string;
   })();
   // 실패한 약속은 캐시에서 빼서 다음 시도가 재요청하도록
-  p.catch(() => previewIdCache.delete(code));
-  previewIdCache.set(code, p);
+  p.catch(() => previewIdCache.get(code)?.delete(key));
+  let byPhoto = previewIdCache.get(code);
+  if (!byPhoto) {
+    byPhoto = new Map();
+    previewIdCache.set(code, byPhoto);
+  }
+  byPhoto.set(key, p);
   return p;
 }
 
@@ -120,7 +127,7 @@ export default function FullscreenFrame({ code, title, postId, photo, onNeedLogi
     return () => {
       alive = false;
     };
-  }, [code, postId, frameKey, retry]);
+  }, [code, postId, photo, frameKey, retry]);
 
   function toggle() {
     if (!document.fullscreenElement) {

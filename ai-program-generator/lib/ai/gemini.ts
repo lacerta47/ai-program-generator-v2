@@ -100,6 +100,10 @@ function startStream(ai: GoogleGenAI, model: string, input: GenerateInput, signa
         systemInstruction: input.system,
         responseMimeType: 'application/json',
         responseSchema: RESPONSE_SCHEMA,
+        // 콜당 출력 토큰 상한(비용/폭주 방어). 저학년 프로그램 크기엔 매우 넉넉(~수십 KB)하되
+        // 모델 최대(65536)의 절반이라 무한 반복 시 최악 비용을 절반으로 바운드. thinking 예산은
+        // 품질 트레이드오프라 의도적으로 손대지 않음(기본 유지). 대형 출력 잘림이 보이면 상향.
+        maxOutputTokens: 32768,
         abortSignal: signal,
       },
     }),
