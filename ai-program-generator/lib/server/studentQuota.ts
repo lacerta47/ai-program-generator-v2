@@ -11,10 +11,12 @@ export type ReserveResult =
  * usedTotal ≤ totalQuota 하드캡이 정확히 보장된다. 분산 카운터(샤딩)는 이 정확한 캡과 충돌해
  * 비채택 — 생성이 Gemini-bound(수 초)라 한 반 동시요청에도 교사 문서 쓰기율이 낮아 경합은
  * 실무상 경미(자동 재시도도 있음). 트래픽 증가 시 재검토할 모니터링 대상.
+ *
+ * [의도 — L9] usedTotal은 '누적 예산'이라 성공 생성마다 영구 증가하고, 되돌리는 건 실패/취소 환불뿐.
+ * 학생 삭제로는 감소하지 않는다(deleteAccount 참고). 풀 소진 시 admin이 totalQuota를 보충하는 모델.
  */
-export async function reserveStudentQuota(uid: string, cost = 1): Promise<ReserveResult> {
+export async function reserveStudentQuota(uid: string, cost = 1, day = todayKeyKST()): Promise<ReserveResult> {
   const studentRef = adminDb.doc(`students/${uid}`);
-  const day = todayKeyKST();
   const usageRef = adminDb.collection('usage').doc(`${uid}_${day}`);
   try {
     return await adminDb.runTransaction<ReserveResult>(async (tx) => {
@@ -63,10 +65,13 @@ export async function reserveStudentQuota(uid: string, cost = 1): Promise<Reserv
   }
 }
 
-/** 학생 생성 실패/취소 시 선점분 환불(풀·학생 누적·일일 모두, 0 미만 방지). */
-export async function refundStudentQuota(uid: string, cost = 1): Promise<void> {
+/**
+ * 학생 생성 실패/취소 시 선점분 환불(풀·학생 누적·일일 모두, 0 미만 방지).
+ * [L8] day는 예약 시점 값을 호출부가 그대로 넘긴다 — 재계산하면 KST 자정 경계에서 예약(day1)과
+ * 환불(day2)이 다른 usage 문서를 건드려 day1 일일카운터가 안 돌아온다(풀·총형은 day 무관이라 영향 없음).
+ */
+export async function refundStudentQuota(uid: string, cost = 1, day = todayKeyKST()): Promise<void> {
   const studentRef = adminDb.doc(`students/${uid}`);
-  const day = todayKeyKST();
   const usageRef = adminDb.collection('usage').doc(`${uid}_${day}`);
   try {
     await adminDb.runTransaction(async (tx) => {
