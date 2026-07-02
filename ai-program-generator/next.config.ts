@@ -48,12 +48,13 @@ const nextConfig: NextConfig = {
         ],
       },
 
-      // (C) 미리보기 외 전 경로: 클릭재킹 차단 + CSP(Report-Only)
+      // (C) 미리보기 외 전 경로: 클릭재킹 차단 + CSP 강제
+      // (라이브 브라우저에서 로그인·파이어스토어·생성·미리보기 iframe 전 경로 CSP 위반 0 확인 후 강제로 승격)
       {
         source: '/((?!api/preview/).*)',
         headers: [
           { key: 'X-Frame-Options', value: 'DENY' },
-          { key: 'Content-Security-Policy-Report-Only', value: csp },
+          { key: 'Content-Security-Policy', value: csp },
         ],
       },
     ];
