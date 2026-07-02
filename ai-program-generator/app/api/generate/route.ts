@@ -38,7 +38,9 @@ export async function POST(req: NextRequest) {
   let isStudent = false;
   let emailVerified = false;
   try {
-    const decoded = await adminAuth.verifyIdToken(idToken);
+    // checkRevoked=true — 비활성/권한해제된(예: 삭제된 학생) 계정이 공유 Gemini 풀을 계속
+    // 소모하지 못하게 즉시 무효화. Gemini 호출 대비 getUser 지연은 무시 가능.
+    const decoded = await adminAuth.verifyIdToken(idToken, true);
     uid = decoded.uid;
     isAdmin = decoded.admin === true;
     isTeacher = decoded.teacher === true;
