@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Jua, Gowun_Dodum, Chakra_Petch, Geist_Mono } from 'next/font/google';
 import './globals.css';
 import { ThemeProvider } from '@/components/common/ThemeProvider';
+import VisitBeacon from '@/components/common/VisitBeacon';
 import { AuthProvider } from '@/components/auth/AuthProvider';
 import { ToastProvider } from '@/components/ui/Toast';
 import { ConfirmProvider } from '@/components/ui/ConfirmProvider';
@@ -29,6 +30,7 @@ export default function RootLayout({
     <html lang="ko" suppressHydrationWarning className={`${jua.variable} ${gowun.variable} ${chakra.variable} ${geistMono.variable}`}>
       <body className="antialiased">
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+        <VisitBeacon />
         <ThemeProvider>
           <ToastProvider>
             <AuthProvider>
