@@ -15,6 +15,7 @@ import EmptyParticles from '@/components/fx/EmptyParticles';
 import { useToast } from '@/components/ui/Toast';
 import { currentStage, STAGE_LABEL, STAGE_CONCEPT, STAGE_ORDER } from '@/lib/ai/streamStages';
 import { Tip } from './Tip';
+import LogicCard from '@/components/common/LogicCard';
 
 type CodeTab = 'html' | 'css' | 'javascript';
 type ResultTab = 'preview' | 'code';
@@ -43,6 +44,8 @@ interface Props {
   showChangeHint: boolean;
   onNeedLogin: () => void;
   photo?: string;
+  /** 교육(#1) — 생성물 로직 설명. 있으면 미리보기 위에 카드로 표시. */
+  logicSummary?: string;
 }
 
 /** 생성기 오른쪽 '결과' 패널 — 로딩/빈상태/결과(미리보기·코드·수정요청)를 담당. */
@@ -70,6 +73,7 @@ export default function ResultPanel({
   showChangeHint,
   onNeedLogin,
   photo,
+  logicSummary,
 }: Props) {
   const [codeTab, setCodeTab] = useState<CodeTab>('html');
   const [copied, setCopied] = useState(false);
@@ -197,6 +201,8 @@ export default function ResultPanel({
               <Search size={18} aria-hidden /> 무엇이 바뀌었을까요? 미리보기에서 찾아보세요!
             </div>
           )}
+
+          <LogicCard logicSummary={logicSummary} />
 
           <div className="min-h-0 flex-1 overflow-hidden rounded-[var(--r-md)] border-2 border-line">
             {resultTab === 'preview' ? (

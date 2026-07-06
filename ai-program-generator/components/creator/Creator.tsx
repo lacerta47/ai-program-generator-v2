@@ -439,6 +439,7 @@ export default function Creator() {
         showChangeHint={showChangeHint}
         onNeedLogin={() => setLoginOpen(true)}
         photo={photo ?? undefined}
+        logicSummary={meta?.logicSummary}
       />
 
       <LoginDialog open={loginOpen} onClose={() => setLoginOpen(false)} />

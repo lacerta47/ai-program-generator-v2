@@ -13,6 +13,7 @@ import { recordView } from '@/lib/firebase/views';
 import Button from '@/components/ui/Button';
 import FloatingShapes from '@/components/ui/FloatingShapes';
 import FullscreenFrame from '@/components/ui/FullscreenFrame';
+import LogicCard from '@/components/common/LogicCard';
 import EmptyParticles from '@/components/fx/EmptyParticles';
 import { useToast } from '@/components/ui/Toast';
 
@@ -221,6 +222,8 @@ export default function PostPreview({
           <Eye size={16} aria-hidden /> <span className="tabular-nums">{viewCount}</span>
         </span>
       </div>
+
+      <LogicCard logicSummary={post.logicSummary} />
 
       <FullscreenFrame
         frameKey={post.id}
