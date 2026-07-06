@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Eye, Code2, Copy, Check, Download, Upload, RotateCcw, Save, Sparkles } from 'lucide-react';
+import { Eye, Code2, Copy, Check, Download, Upload, RotateCcw, Save, Sparkles, Search } from 'lucide-react';
 import type { GeneratedCode } from '@/lib/ai/types';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
@@ -34,10 +34,13 @@ interface Props {
   onUpload: () => void;
   onDownload: () => void;
   onReset: () => void;
-  modifyText: string;
-  setModifyText: (s: string) => void;
+  modifyWant: string;
+  setModifyWant: (s: string) => void;
+  modifyActual: string;
+  setModifyActual: (s: string) => void;
   onModify: () => void;
   modifyRef: React.RefObject<HTMLTextAreaElement | null>;
+  showChangeHint: boolean;
   onNeedLogin: () => void;
   photo?: string;
 }
@@ -58,10 +61,13 @@ export default function ResultPanel({
   onUpload,
   onDownload,
   onReset,
-  modifyText,
-  setModifyText,
+  modifyWant,
+  setModifyWant,
+  modifyActual,
+  setModifyActual,
   onModify,
   modifyRef,
+  showChangeHint,
   onNeedLogin,
   photo,
 }: Props) {
@@ -183,6 +189,15 @@ export default function ResultPanel({
             </div>
           </div>
 
+          {showChangeHint && (
+            <div
+              role="status"
+              className="anim-pop-in flex items-center gap-2 rounded-[var(--r-md)] border-2 border-grape/30 bg-grape-soft px-4 py-2.5 text-[15.5px] font-medium text-grape-ink"
+            >
+              <Search size={18} aria-hidden /> 무엇이 바뀌었을까요? 미리보기에서 찾아보세요!
+            </div>
+          )}
+
           <div className="min-h-0 flex-1 overflow-hidden rounded-[var(--r-md)] border-2 border-line">
             {resultTab === 'preview' ? (
               <FullscreenFrame
@@ -228,31 +243,46 @@ export default function ResultPanel({
             )}
           </div>
 
-          {/* 수정 요청 */}
+          {/* 수정 요청(디버깅 대화) — 기대(필수) + 실제(선택) */}
           <div className="flex flex-col gap-2.5 rounded-[var(--r-md)] bg-surface-2 p-4">
             <div className="flex items-center gap-1.5 text-[15px] font-medium text-muted">
               <Sparkles size={16} className="text-grape" aria-hidden />
-              바꾸고 싶은 게 있나요? 말해 보세요
+              고치고 싶은 게 있나요? 어떻게 되면 좋을지 말해 보세요
               <HelpTip>
                 <Tip
-                  lead="한 번에 한 가지씩, 어디를 어떻게 바꿀지 말해요. 여러 번 고쳐도 돼요!"
-                  examples={['버튼을 더 크게 만들어 줘', '배경을 분홍색으로 바꿔 줘', '점수가 화면에 보이게 해 줘']}
+                  lead="바라는 모습을 적고, 지금 뭐가 이상한지도 알려주면 더 잘 고쳐요. 여러 번 고쳐도 돼요!"
+                  examples={['버튼을 누르면 점수가 올라가길 원해 / 지금은 눌러도 그대로야', '배경을 분홍색으로 바꿔 줘', '점수가 화면에 보이게 해 줘']}
                 />
               </HelpTip>
             </div>
-            <div className="flex flex-col gap-2 sm:flex-row">
+            <div className="flex flex-col gap-1">
+              <span className="text-[13.5px] font-medium text-ink">어떻게 되길 원해?</span>
               <TextArea
                 ref={modifyRef}
-                value={modifyText}
-                onChange={(e) => setModifyText(e.target.value)}
-                placeholder="예: 버튼을 빨간색으로 바꿔 줘"
+                value={modifyWant}
+                onChange={(e) => setModifyWant(e.target.value)}
+                placeholder="예: 버튼을 누르면 점수가 1점 올라가길 원해"
                 rows={2}
-                className="min-h-12 flex-1"
+                maxLength={2000}
+                aria-label="어떻게 되길 원해? (바라는 모습)"
+                className="min-h-12"
               />
-              <Button variant="primary" onClick={onModify} disabled={busy} className="sm:self-end">
-                고쳐 줘!
-              </Button>
             </div>
+            <div className="flex flex-col gap-1">
+              <span className="text-[13.5px] font-medium text-muted">지금은 어떻게 돼? <span className="text-[12.5px] font-normal">(없으면 비워도 돼요)</span></span>
+              <TextArea
+                value={modifyActual}
+                onChange={(e) => setModifyActual(e.target.value)}
+                placeholder="예: 눌러도 점수가 그대로예요"
+                rows={2}
+                maxLength={2000}
+                aria-label="지금은 어떻게 돼? (지금 모습, 선택)"
+                className="min-h-12"
+              />
+            </div>
+            <Button variant="primary" onClick={onModify} disabled={busy} className="self-end">
+              고쳐 줘!
+            </Button>
           </div>
         </>
       )}
