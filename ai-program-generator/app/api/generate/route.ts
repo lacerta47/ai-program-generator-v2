@@ -3,7 +3,8 @@ import { getAIProvider } from '@/lib/ai/provider';
 import { SYSTEM_PROMPTS, MODIFY_SYSTEM_SUFFIX, PHOTO_INSTRUCTION, type SystemPromptVariant } from '@/lib/ai/prompts';
 import { getExemplar } from '@/lib/admin/exemplars';
 import { buildExemplarBlock } from '@/lib/ai/exemplars';
-import type { GenerateMode } from '@/lib/ai/types';
+import type { GenerateMode, TokenUsage } from '@/lib/ai/types';
+import { FieldValue } from 'firebase-admin/firestore';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { todayKeyKST } from '@/lib/usageDay';
 import { readEffectiveLimit } from '@/lib/admin/usageConfig';
@@ -19,6 +20,23 @@ const ROLE_DAILY_LIMIT = Number(process.env.ROLE_GEN_DAILY_LIMIT) || 100;
 
 function isMode(v: unknown): v is GenerateMode {
   return v === 'generate' || v === 'modify';
+}
+
+/** 생성 성공 1건의 토큰 사용량을 stats/{day}에 누적(비용 실측용). fire-and-forget — 실패해도 응답 무영향. */
+function recordTokenUsage(day: string, usage?: TokenUsage): void {
+  if (!usage) return;
+  adminDb
+    .doc(`stats/${day}`)
+    .set(
+      {
+        genCount: FieldValue.increment(1),
+        tokensIn: FieldValue.increment(usage.input),
+        tokensOut: FieldValue.increment(usage.output),
+        tokensThinking: FieldValue.increment(usage.thinking),
+      },
+      { merge: true },
+    )
+    .catch(() => {});
 }
 
 export async function POST(req: NextRequest) {
@@ -198,7 +216,12 @@ export async function POST(req: NextRequest) {
       try {
         for await (const chunk of provider.generateStream({ prompt: finalPrompt, system, mode, photo: parsedPhoto }, req.signal)) {
           if (req.signal.aborted) throw new Error('ABORTED');
-          send(chunk);
+          if (chunk.type === 'done') {
+            recordTokenUsage(day, chunk.usage); // 토큰 사용량 집계(비용 실측)
+            send({ type: 'done', code: chunk.code }); // usage는 서버 집계 전용 — 클라엔 미전송
+          } else {
+            send(chunk);
+          }
         }
         controller.close();
       } catch (e) {
