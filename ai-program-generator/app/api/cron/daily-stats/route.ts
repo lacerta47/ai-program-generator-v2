@@ -29,10 +29,45 @@ async function sumUsage(fromKey: string, toKey: string): Promise<number> {
   return snap.docs.reduce((s, d) => s + ((d.data().count as number) || 0), 0);
 }
 
-/** stats/{day}.visits 합산(문서ID=날짜키 범위). */
-async function sumVisits(fromKey: string, toKey: string): Promise<number> {
+// Gemini 2.5-flash 요율(비용 실측 — 변경 시 갱신). thinking은 출력으로 과금. flash-lite 폴백은 더 싸 약간 과대추정.
+const PRICE_IN_PER_TOKEN = 0.3 / 1_000_000;
+const PRICE_OUT_PER_TOKEN = 2.5 / 1_000_000;
+
+interface StatsAgg {
+  visits: number;
+  genCount: number;
+  tokensIn: number;
+  tokensOut: number;
+  tokensThinking: number;
+}
+
+/** stats/{day} 문서(방문·토큰) 범위 합산. */
+async function sumStats(fromKey: string, toKey: string): Promise<StatsAgg> {
   const snap = await adminDb.collection('stats').orderBy(FieldPath.documentId()).startAt(fromKey).endAt(toKey).get();
-  return snap.docs.reduce((s, d) => s + ((d.data().visits as number) || 0), 0);
+  const a: StatsAgg = { visits: 0, genCount: 0, tokensIn: 0, tokensOut: 0, tokensThinking: 0 };
+  for (const d of snap.docs) {
+    const x = d.data();
+    a.visits += (x.visits as number) || 0;
+    a.genCount += (x.genCount as number) || 0;
+    a.tokensIn += (x.tokensIn as number) || 0;
+    a.tokensOut += (x.tokensOut as number) || 0;
+    a.tokensThinking += (x.tokensThinking as number) || 0;
+  }
+  return a;
+}
+
+/** 토큰 집계 → 달러 비용 + 건당 비용(4자리 반올림). thinking은 출력으로 과금. */
+function cost(a: StatsAgg) {
+  const usd = a.tokensIn * PRICE_IN_PER_TOKEN + (a.tokensOut + a.tokensThinking) * PRICE_OUT_PER_TOKEN;
+  const round = (n: number) => Math.round(n * 10000) / 10000;
+  return {
+    genCount: a.genCount,
+    tokensIn: a.tokensIn,
+    tokensOut: a.tokensOut,
+    tokensThinking: a.tokensThinking,
+    usd: round(usd),
+    usdPerGen: a.genCount ? round(usd / a.genCount) : 0,
+  };
 }
 
 /** createdAt(ms) 범위 count(). toMs 생략 시 fromMs 이상 전체. */
@@ -53,14 +88,14 @@ async function dailyStats() {
   const signupToday = creations.filter((c) => c >= todayStartMs).length;
   const signupMonth = creations.filter((c) => c >= monthStartMs).length;
 
+  const todayAgg = await sumStats(todayKey, todayKey);
+  const monthAgg = await sumStats(monthStartKey, todayKey);
+
   return {
     date: todayKey,
     signups: { today: signupToday, month: signupMonth, total },
     generate: { today: await sumUsage(todayKey, todayKey), month: await sumUsage(monthStartKey, todayKey) },
-    visitors: {
-      today: ((await adminDb.doc(`stats/${todayKey}`).get()).data()?.visits as number) || 0,
-      month: await sumVisits(monthStartKey, todayKey),
-    },
+    visitors: { today: todayAgg.visits, month: monthAgg.visits },
     reports: {
       today: await countByCreatedAt('reports', todayStartMs),
       pending: (await adminDb.collection('reports').count().get()).data().count,
@@ -69,6 +104,7 @@ async function dailyStats() {
       today: await countByCreatedAt('posts', todayStartMs),
       total: (await adminDb.collection('posts').count().get()).data().count,
     },
+    cost: { today: cost(todayAgg), month: cost(monthAgg) },
   };
 }
 
@@ -86,13 +122,17 @@ async function weeklyStats() {
   const creations = await allUserCreationMs();
   const inRange = (from: number, to: number) => creations.filter((c) => c >= from && c < to).length;
 
-  const build = async (kFrom: string, kTo: string, mFrom: number, mTo: number) => ({
-    signups: inRange(mFrom, mTo),
-    generate: await sumUsage(kFrom, kTo),
-    visitors: await sumVisits(kFrom, kTo),
-    posts: await countByCreatedAt('posts', mFrom, mTo),
-    reports: await countByCreatedAt('reports', mFrom, mTo),
-  });
+  const build = async (kFrom: string, kTo: string, mFrom: number, mTo: number) => {
+    const agg = await sumStats(kFrom, kTo);
+    return {
+      signups: inRange(mFrom, mTo),
+      generate: await sumUsage(kFrom, kTo),
+      visitors: agg.visits,
+      posts: await countByCreatedAt('posts', mFrom, mTo),
+      reports: await countByCreatedAt('reports', mFrom, mTo),
+      cost: cost(agg),
+    };
+  };
 
   return {
     period: 'week',

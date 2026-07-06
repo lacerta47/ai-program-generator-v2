@@ -51,7 +51,9 @@ export class GeminiProvider implements AIProvider {
 
     let acc = '';
     let lastSig = '';
+    let lastUsage: { promptTokenCount?: number; candidatesTokenCount?: number; thoughtsTokenCount?: number } | undefined;
     for await (const chunk of stream) {
+      if (chunk.usageMetadata) lastUsage = chunk.usageMetadata; // usageMetadata는 보통 마지막 청크에 누적치로 온다
       const t = chunk.text;
       if (!t) continue;
       acc += t;
@@ -74,7 +76,15 @@ export class GeminiProvider implements AIProvider {
     if (!code.html.trim()) {
       throw new UserFacingError('AI가 빈 결과를 만들었어요. 다시 한 번 만들어 볼까요?');
     }
-    yield { type: 'done', code };
+    // 토큰 사용량(비용 실측용). thoughtsTokenCount=thinking(출력으로 과금됨).
+    const usage = lastUsage
+      ? {
+          input: lastUsage.promptTokenCount ?? 0,
+          output: lastUsage.candidatesTokenCount ?? 0,
+          thinking: lastUsage.thoughtsTokenCount ?? 0,
+        }
+      : undefined;
+    yield { type: 'done', code, usage };
   }
 
   async generate(input: GenerateInput): Promise<GeneratedCode> {

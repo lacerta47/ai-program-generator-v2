@@ -21,10 +21,17 @@ export interface GeneratedCode {
   javascript: string;
 }
 
-/** 스트리밍 청크: 진행 중 부분 코드(delta) → 검증 통과한 최종(done). */
+/** 생성 1건의 토큰 사용량(비용 실측용). thinking은 출력으로 과금됨. */
+export interface TokenUsage {
+  input: number;
+  output: number;
+  thinking: number;
+}
+
+/** 스트리밍 청크: 진행 중 부분 코드(delta) → 검증 통과한 최종(done). done엔 토큰 사용량(있으면) 동봉. */
 export type GenerationChunk =
   | { type: 'delta'; partial: Partial<GeneratedCode> }
-  | { type: 'done'; code: GeneratedCode };
+  | { type: 'done'; code: GeneratedCode; usage?: TokenUsage };
 
 export interface AIProvider {
   /** 점진 생성: 부분 코드를 delta로 흘리고 마지막에 검증된 최종을 done으로 emit. signal로 모델 호출 자체를 취소. */
