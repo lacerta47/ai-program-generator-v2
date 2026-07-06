@@ -25,6 +25,7 @@ import StepScreen from './StepScreen';
 import SurveySummary from './SurveySummary';
 import FixPanel from './FixPanel';
 import GuideModal from './GuideModal';
+import LogicCard from '@/components/common/LogicCard';
 
 const GUIDE_SEEN_KEY = 'easy-guide-seen';
 
@@ -336,6 +337,7 @@ export default function SurveyWizard() {
             <Search size={18} aria-hidden /> 무엇이 바뀌었을까요? 미리보기에서 찾아보세요!
           </div>
         )}
+        <LogicCard logicSummary={meta?.logicSummary} className="mb-3" />
         <FullscreenFrame
           frameKey={previewKey}
           code={code}
