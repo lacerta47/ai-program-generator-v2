@@ -50,6 +50,10 @@ export interface Post {
   boardTeacherUid?: string | null;
   /** 업로드 사진 1장(data-URI). 교실 보드 글에만. code의 __PHOTO__ 토큰을 렌더 시 이걸로 치환. 구버전/비사진 글엔 없음. */
   photo?: string;
+  /** 교육 메타(Phase 0) — 저학년 쉬운말 로직 설명. 생성 시 AI가 채움. 구버전/미측정 글엔 없음(옵셔널). */
+  logicSummary?: string;
+  /** 교육 메타(Phase 0) — 사용한 컴퓨팅 개념 태그(순서·조건·반복·입력·출력 부분집합). */
+  conceptTags?: string[];
 }
 
 /** 새 게시물 생성 시 입력 (id 제외) */
