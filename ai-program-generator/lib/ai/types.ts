@@ -28,10 +28,18 @@ export interface TokenUsage {
   thinking: number;
 }
 
-/** 스트리밍 청크: 진행 중 부분 코드(delta) → 검증 통과한 최종(done). done엔 토큰 사용량(있으면) 동봉. */
+/** 교육 메타(교육 Phase 0) — 생성물의 논리를 데이터로 보유. 저학년 설명·컴퓨팅 개념 태그. */
+export interface GenerationMeta {
+  /** 저학년 쉬운말 로직 설명(3~4문장) */
+  logicSummary: string;
+  /** 사용한 컴퓨팅 개념 — ['순서','조건','반복','입력','출력'] 부분집합 */
+  conceptTags: string[];
+}
+
+/** 스트리밍 청크: 진행 중 부분 코드(delta) → 검증 통과한 최종(done). done엔 토큰 사용량·교육 메타(있으면) 동봉. */
 export type GenerationChunk =
   | { type: 'delta'; partial: Partial<GeneratedCode> }
-  | { type: 'done'; code: GeneratedCode; usage?: TokenUsage };
+  | { type: 'done'; code: GeneratedCode; usage?: TokenUsage; meta?: GenerationMeta };
 
 export interface AIProvider {
   /** 점진 생성: 부분 코드를 delta로 흘리고 마지막에 검증된 최종을 done으로 emit. signal로 모델 호출 자체를 취소. */

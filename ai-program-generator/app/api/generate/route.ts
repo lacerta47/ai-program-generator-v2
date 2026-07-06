@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAIProvider } from '@/lib/ai/provider';
-import { SYSTEM_PROMPTS, MODIFY_SYSTEM_SUFFIX, PHOTO_INSTRUCTION, type SystemPromptVariant } from '@/lib/ai/prompts';
+import { SYSTEM_PROMPTS, MODIFY_SYSTEM_SUFFIX, PHOTO_INSTRUCTION, LOGIC_META_INSTRUCTION, type SystemPromptVariant } from '@/lib/ai/prompts';
 import { getExemplar } from '@/lib/admin/exemplars';
 import { buildExemplarBlock } from '@/lib/ai/exemplars';
 import type { GenerateMode, TokenUsage } from '@/lib/ai/types';
@@ -195,6 +195,8 @@ export async function POST(req: NextRequest) {
   }
   // 사진이 첨부됐으면 그 사진을 활용하라는 지시를 시스템 프롬프트에 덧붙인다.
   if (parsedPhoto) system = system + PHOTO_INSTRUCTION;
+  // 교육 메타(Phase 0) — logicSummary·conceptTags 필드 채우기 지시(생성·수정 공통).
+  system = system + LOGIC_META_INSTRUCTION;
 
   const encoder = new TextEncoder();
   // [의도된 trade-off — 리뷰 오해 방지] 실패뿐 아니라 '취소(abort)'에도 환불한다: 네트워크 끊김 등으로
@@ -218,7 +220,8 @@ export async function POST(req: NextRequest) {
           if (req.signal.aborted) throw new Error('ABORTED');
           if (chunk.type === 'done') {
             recordTokenUsage(day, chunk.usage); // 토큰 사용량 집계(비용 실측)
-            send({ type: 'done', code: chunk.code }); // usage는 서버 집계 전용 — 클라엔 미전송
+            // usage는 서버 집계 전용(미전송), meta(교육)는 클라가 게시물에 저장하도록 전달.
+            send({ type: 'done', code: chunk.code, meta: chunk.meta });
           } else {
             send(chunk);
           }

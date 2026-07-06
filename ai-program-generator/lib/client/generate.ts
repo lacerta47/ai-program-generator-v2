@@ -1,10 +1,12 @@
 import { authedFetch } from '@/lib/client/authedFetch';
-import type { GeneratedCode, GenerateMode } from '@/lib/ai/types';
+import type { GeneratedCode, GenerateMode, GenerationMeta } from '@/lib/ai/types';
 import type { SystemPromptVariant } from '@/lib/ai/prompts';
 
 interface StreamOpts {
   /** 부분 코드 도착 콜백(라이브 표시용). */
   onDelta?: (partial: Partial<GeneratedCode>) => void;
+  /** 교육 메타(logicSummary·conceptTags) 도착 콜백 — 게시물 저장용(있을 때만 호출). */
+  onMeta?: (meta: GenerationMeta) => void;
   signal?: AbortSignal;
   /** 사진 1장(data-URI). 멀티모달 생성용 — 서버가 검증·전달. */
   photo?: string;
@@ -46,7 +48,7 @@ export async function requestGenerateStream(
       if (!line) continue;
       let msg:
         | { type: 'delta'; partial: Partial<GeneratedCode> }
-        | { type: 'done'; code: GeneratedCode }
+        | { type: 'done'; code: GeneratedCode; meta?: GenerationMeta }
         | { type: 'error'; error: string };
       try {
         msg = JSON.parse(line);
@@ -55,8 +57,10 @@ export async function requestGenerateStream(
         continue;
       }
       if (msg.type === 'delta') opts.onDelta?.(msg.partial);
-      else if (msg.type === 'done') final = msg.code;
-      else if (msg.type === 'error') throw new Error(msg.error);
+      else if (msg.type === 'done') {
+        final = msg.code;
+        if (msg.meta) opts.onMeta?.(msg.meta);
+      } else if (msg.type === 'error') throw new Error(msg.error);
     }
   }
 

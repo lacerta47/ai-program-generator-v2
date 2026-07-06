@@ -29,9 +29,13 @@ interface Props {
   defaultCategoryId?: string;
   /** 교실 한정 사진(data URI) — 교사보드 게시 시에만 저장(규칙이 공개보드 photo 거부). */
   photo?: string;
+  /** 교육 메타(Phase 0) — 저학년 로직 설명. 있으면 게시물에 저장. */
+  logicSummary?: string;
+  /** 교육 메타(Phase 0) — 컴퓨팅 개념 태그. 있으면 게시물에 저장. */
+  conceptTags?: string[];
 }
 
-export default function UploadDialog({ open, onClose, code, plan, prompt, defaultTitle, forkedFrom, forkedFromAuthor, defaultCategoryId, photo }: Props) {
+export default function UploadDialog({ open, onClose, code, plan, prompt, defaultTitle, forkedFrom, forkedFromAuthor, defaultCategoryId, photo, logicSummary, conceptTags }: Props) {
   const { user, isTeacher, isStudent } = useAuth();
   const router = useRouter();
   const [categories, setCategories] = useState<Category[]>([]);
@@ -157,6 +161,8 @@ export default function UploadDialog({ open, onClose, code, plan, prompt, defaul
         createdAt: Date.now(),
         ...(forkedFrom ? { forkedFrom, forkedFromAuthor: forkedFromAuthor ?? '익명' } : {}),
         ...(photo && boardTeacherUid ? { photo } : {}),
+        ...(logicSummary ? { logicSummary } : {}),
+        ...(conceptTags && conceptTags.length ? { conceptTags } : {}),
       });
       if (forkedFrom) {
         incrementForkCount(forkedFrom).catch((e) => console.error('forkCount 증가 실패:', e));

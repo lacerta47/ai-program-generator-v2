@@ -56,7 +56,7 @@ service cloud.firestore {
 
     // 게시물 생성 문서 형태/크기 검증
     function validPost(d) {
-      return d.keys().hasOnly(['title', 'categoryId', 'ownerUid', 'authorName', 'code', 'plan', 'prompt', 'createdAt', 'updatedAt', 'forkedFrom', 'forkedFromAuthor', 'boardTeacherUid', 'photo'])
+      return d.keys().hasOnly(['title', 'categoryId', 'ownerUid', 'authorName', 'code', 'plan', 'prompt', 'createdAt', 'updatedAt', 'forkedFrom', 'forkedFromAuthor', 'boardTeacherUid', 'photo', 'logicSummary', 'conceptTags'])
         && d.title is string && d.title.size() > 0 && d.title.size() <= 100
         && d.categoryId is string && d.categoryId.size() > 0 && d.categoryId.size() <= 128
         && d.ownerUid is string
@@ -74,7 +74,10 @@ service cloud.firestore {
              && d.photo.matches('data:image/.*')
              && d.photo.size() <= 350000
              && d.boardTeacherUid != null
-           ));
+           ))
+        // 교육 메타(Phase 0) — 옵셔널. 로직 설명 문자열 + 개념 태그 리스트(길이만 제한, 표시용).
+        && (!('logicSummary' in d) || (d.logicSummary is string && d.logicSummary.size() <= 2000))
+        && (!('conceptTags' in d) || (d.conceptTags is list && d.conceptTags.size() <= 5));
     }
 
     // 신고의 postOwnerUid가 실제 글 주인과 일치하는지(위조 차단). 글이 없으면 거부.

@@ -18,9 +18,14 @@ const RESPONSE_SCHEMA = {
     html: { type: Type.STRING },
     css: { type: Type.STRING },
     javascript: { type: Type.STRING },
+    // 교육 메타(Phase 0) — 코드 뒤에 오게 배치(라이브 미리보기는 code 3필드로만 진행).
+    logicSummary: { type: Type.STRING },
+    conceptTags: { type: Type.ARRAY, items: { type: Type.STRING } },
   },
-  required: ['html', 'css', 'javascript'],
+  required: ['html', 'css', 'javascript', 'logicSummary', 'conceptTags'],
 };
+
+const CONCEPT_SET = ['순서', '조건', '반복', '입력', '출력'];
 
 export class GeminiProvider implements AIProvider {
   async *generateStream(input: GenerateInput, signal?: AbortSignal): AsyncGenerator<GenerationChunk> {
@@ -84,7 +89,15 @@ export class GeminiProvider implements AIProvider {
           thinking: lastUsage.thoughtsTokenCount ?? 0,
         }
       : undefined;
-    yield { type: 'done', code, usage };
+    // 교육 메타(Phase 0) — 로직 설명 + 개념 태그(고정 목록으로만 필터, 최대 5개).
+    const p = parsed as Record<string, unknown>;
+    const meta = {
+      logicSummary: typeof p.logicSummary === 'string' ? p.logicSummary : '',
+      conceptTags: Array.isArray(p.conceptTags)
+        ? p.conceptTags.filter((t): t is string => typeof t === 'string' && CONCEPT_SET.includes(t)).slice(0, 5)
+        : [],
+    };
+    yield { type: 'done', code, usage, meta };
   }
 
   async generate(input: GenerateInput): Promise<GeneratedCode> {

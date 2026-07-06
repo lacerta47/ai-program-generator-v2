@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Wand2, Lightbulb, Pencil } from 'lucide-react';
-import type { GeneratedCode } from '@/lib/ai/types';
+import type { GeneratedCode, GenerationMeta } from '@/lib/ai/types';
 import { type PlanFields, EMPTY_PLAN } from '@/lib/firebase/types';
 import { requestGenerateStream } from '@/lib/client/generate';
 import { updatePostContent } from '@/lib/firebase/posts';
@@ -33,6 +33,7 @@ const DRAFT_KEY = 'lun:create-draft';
 export default function Creator() {
   const [plan, setPlan] = useState<PlanFields>(EMPTY_PLAN);
   const [code, setCode] = useState<GeneratedCode>(EMPTY_CODE);
+  const [meta, setMeta] = useState<GenerationMeta | null>(null); // 교육 메타(로직설명·개념태그) — 업로드 시 저장
   const [loading, setLoading] = useState<'idle' | 'generating' | 'modifying'>('idle');
   const [streamingPartial, setStreamingPartial] = useState<Partial<GeneratedCode>>({});
   const [resultTab, setResultTab] = useState<ResultTab>('preview');
@@ -58,6 +59,7 @@ export default function Creator() {
   const applyLoaded = (d: { plan: PlanFields; code: GeneratedCode; genPrompt: string; photo: string | null }) => {
     setPlan(d.plan);
     setCode(d.code);
+    setMeta(null); // 불러온 글의 메타는 없음 — 재생성(고치기) 시 다시 채워짐
     setGenPrompt(d.genPrompt);
     setPhoto(d.photo);
     setResultTab('preview');
@@ -160,6 +162,7 @@ export default function Creator() {
       const result = await requestGenerateStream(promptText, 'generate', 'default', {
         signal: ctrl.signal,
         onDelta: setStreamingPartial,
+        onMeta: setMeta,
         photo: photo ?? undefined,
       });
       setCode(result);
@@ -206,6 +209,7 @@ export default function Creator() {
       const result = await requestGenerateStream(buildModifyPrompt(plan, code, modifyText), 'modify', 'default', {
         signal: ctrl.signal,
         onDelta: setStreamingPartial,
+        onMeta: setMeta,
         photo: photo ?? undefined,
       });
       setCode(result);
@@ -239,6 +243,7 @@ export default function Creator() {
   function handleReset() {
     setPlan(EMPTY_PLAN);
     setCode(EMPTY_CODE);
+    setMeta(null);
     setModifyText('');
     setGenPrompt('');
     setResultTab('preview');
@@ -384,6 +389,8 @@ export default function Creator() {
         forkedFromAuthor={forkSource?.author}
         defaultCategoryId={forkSource?.categoryId}
         photo={photo ?? undefined}
+        logicSummary={meta?.logicSummary}
+        conceptTags={meta?.conceptTags}
       />
     </div>
   );

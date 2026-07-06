@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft, Check, HelpCircle, RotateCcw, Wand2, X } from 'lucide-react';
-import type { GeneratedCode } from '@/lib/ai/types';
+import type { GeneratedCode, GenerationMeta } from '@/lib/ai/types';
 import type { ProgramType, SurveyAnswers, SurveyStep } from '@/lib/survey/types';
 import { AI_PICK } from '@/lib/survey/types';
 import { PROGRAM_TYPES } from '@/lib/survey/programs';
@@ -42,6 +42,7 @@ export default function SurveyWizard() {
   const [buildMsg, setBuildMsg] = useState('AI가 준비하고 있어요…');
   const [stage, setStage] = useState<StreamStage | null>(null);
   const [code, setCode] = useState<GeneratedCode>(EMPTY_CODE);
+  const [meta, setMeta] = useState<GenerationMeta | null>(null); // 교육 메타 — 업로드 시 저장
   // 저장/공유용 프롬프트 — 생성 시 조립 프롬프트로 시작, '고치기'마다 요청을 누적
   const [genPrompt, setGenPrompt] = useState('');
   const [previewKey, setPreviewKey] = useState(0);
@@ -72,6 +73,7 @@ export default function SurveyWizard() {
     setStepIdx(0);
     setEditReturn(null);
     setCode(EMPTY_CODE);
+    setMeta(null);
     setGenPrompt('');
   }
   function pickType(t: ProgramType) {
@@ -192,6 +194,7 @@ export default function SurveyWizard() {
     setStepIdx(0);
     setEditReturn(null);
     setCode(EMPTY_CODE);
+    setMeta(null);
     setGenPrompt('');
     setFixPicks([]);
     setFixText('');
@@ -225,6 +228,7 @@ export default function SurveyWizard() {
       const result = await requestGenerateStream(prompt, 'generate', 'survey', {
         signal: ctrl.signal,
         onDelta: onStageDelta,
+        onMeta: setMeta,
         photo: photo ?? undefined,
       });
       setCode(result);
@@ -266,6 +270,7 @@ export default function SurveyWizard() {
       const result = await requestGenerateStream(prompt, 'modify', 'survey', {
         signal: ctrl.signal,
         onDelta: onStageDelta,
+        onMeta: setMeta,
         photo: photo ?? undefined,
       });
       setCode(result);
@@ -344,6 +349,8 @@ export default function SurveyWizard() {
           prompt={genPrompt || assemblePrompt(type, answers)}
           defaultTitle={type.buildName(answers)}
           photo={photo ?? undefined}
+          logicSummary={meta?.logicSummary}
+          conceptTags={meta?.conceptTags}
         />
       </div>
     );
