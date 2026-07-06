@@ -1,13 +1,13 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, Check, HelpCircle, RotateCcw, Wand2, X } from 'lucide-react';
+import { ArrowLeft, Check, HelpCircle, RotateCcw, Search, Wand2, X } from 'lucide-react';
 import type { GeneratedCode, GenerationMeta } from '@/lib/ai/types';
 import type { ProgramType, SurveyAnswers, SurveyStep } from '@/lib/survey/types';
 import { AI_PICK } from '@/lib/survey/types';
 import { PROGRAM_TYPES } from '@/lib/survey/programs';
 import { visibleSteps, assemblePrompt, surveyToPlan } from '@/lib/survey/assemble';
-import { buildFixRequest } from '@/lib/survey/fixes';
+import { buildDebugRequest } from '@/lib/ai/fixRequest';
 import { requestGenerateStream } from '@/lib/client/generate';
 import { currentStage, STAGE_ORDER, STAGE_LABEL_EASY, type StreamStage } from '@/lib/ai/streamStages';
 import { buildModifyPrompt } from '@/components/creator/prompts';
@@ -48,9 +48,11 @@ export default function SurveyWizard() {
   const [previewKey, setPreviewKey] = useState(0);
   const [uploadOpen, setUploadOpen] = useState(false);
   const [loginOpen, setLoginOpen] = useState(false);
-  // 결과 화면 '고치기' — 고른 빠른수정 id들 + 직접 입력문
-  const [fixPicks, setFixPicks] = useState<string[]>([]);
-  const [fixText, setFixText] = useState('');
+  // 결과 화면 '고치기'(디버깅 대화) — 기대(want, 필수) + 실제(actual, 선택)
+  const [fixWant, setFixWant] = useState('');
+  const [fixActual, setFixActual] = useState('');
+  // 고치기 성공 후 '무엇이 바뀌었을까?' 성찰 힌트 노출(원인→결과 연결)
+  const [showChangeHint, setShowChangeHint] = useState(false);
   // 가이드 모달 — 첫 방문 자동 + 도움말 버튼 재오픈
   const [guideOpen, setGuideOpen] = useState(false);
   // 로그인 전에 고른 종류 — 로그인 끝나면 이 종류로 자동 진입
@@ -196,8 +198,9 @@ export default function SurveyWizard() {
     setCode(EMPTY_CODE);
     setMeta(null);
     setGenPrompt('');
-    setFixPicks([]);
-    setFixText('');
+    setFixWant('');
+    setFixActual('');
+    setShowChangeHint(false);
   }
 
   // 스트리밍 도착 필드 → 저학년용 단계 진행(타이머 아님, 진짜 도착 기반)
@@ -246,7 +249,7 @@ export default function SurveyWizard() {
     }
   }
 
-  // 결과 화면 '고치기' — 고른 칩 + 직접 입력문을 합쳐 한 번의 modify 생성으로 반영
+  // 결과 화면 '고치기'(디버깅 대화) — 기대/실제를 한 요청문으로 합쳐 한 번의 modify 생성으로 반영
   async function handleSurveyModify() {
     if (!type || !hasCode) return;
     if (authLoading) return toast('잠깐만요, 준비 중이에요…');
@@ -255,11 +258,12 @@ export default function SurveyWizard() {
       setLoginOpen(true);
       return;
     }
-    const request = buildFixRequest(fixPicks, fixText);
-    if (!request) return toast('고치고 싶은 점을 고르거나 적어 주세요!');
+    if (!fixWant.trim()) return toast('어떻게 되면 좋을지 먼저 적어 주세요!');
+    const request = buildDebugRequest(fixWant, fixActual);
 
     // 저장/공유 프롬프트에 고치기 요청을 누적(게시물 prompt 한도 대비 클램프)
     setGenPrompt((prev) => `${prev}\n\n[고치기 요청]: ${request}`.slice(-40000));
+    setShowChangeHint(false);
     setBusy(true);
     setStage(null);
     setBuildMsg('AI가 준비하고 있어요…');
@@ -275,8 +279,9 @@ export default function SurveyWizard() {
       });
       setCode(result);
       setPreviewKey((k) => k + 1);
-      setFixPicks([]);
-      setFixText('');
+      setFixWant('');
+      setFixActual('');
+      setShowChangeHint(true);
       playSuccess();
       toast('원하는 대로 고쳐봤어요!', 'success');
     } catch (e) {
@@ -287,10 +292,6 @@ export default function SurveyWizard() {
       abortRef.current = null;
       setBusy(false);
     }
-  }
-
-  function toggleFixPick(id: string) {
-    setFixPicks((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
   }
 
   // busy 화면에서 '그만 만들기' — 진행 중 생성 요청을 중단하고 설문으로 복귀
@@ -327,6 +328,14 @@ export default function SurveyWizard() {
             </Button>
           </div>
         </div>
+        {showChangeHint && (
+          <div
+            role="status"
+            className="anim-pop-in mb-3 flex items-center gap-2 rounded-[var(--r-md)] border-2 border-grape/30 bg-grape-soft px-4 py-2.5 text-[15.5px] font-medium text-grape-ink"
+          >
+            <Search size={18} aria-hidden /> 무엇이 바뀌었을까요? 미리보기에서 찾아보세요!
+          </div>
+        )}
         <FullscreenFrame
           frameKey={previewKey}
           code={code}
@@ -335,10 +344,10 @@ export default function SurveyWizard() {
           className="h-[78vh] w-full overflow-hidden rounded-[var(--r-md)] border-2 border-line"
         />
         <FixPanel
-          picks={fixPicks}
-          onTogglePick={toggleFixPick}
-          text={fixText}
-          onTextChange={setFixText}
+          want={fixWant}
+          onWantChange={setFixWant}
+          actual={fixActual}
+          onActualChange={setFixActual}
           onFix={handleSurveyModify}
         />
         <UploadDialog

@@ -20,6 +20,7 @@ import { TextInput, TextArea, Label } from '@/components/ui/Field';
 import { useToast } from '@/components/ui/Toast';
 import { playSuccess } from '@/lib/client/sound';
 import { buildGeneratePrompt, buildModifyPrompt } from './prompts';
+import { buildDebugRequest } from '@/lib/ai/fixRequest';
 import { useCreatorSource } from './useCreatorSource';
 import { Tip } from './Tip';
 import ResultPanel from './ResultPanel';
@@ -37,7 +38,11 @@ export default function Creator() {
   const [loading, setLoading] = useState<'idle' | 'generating' | 'modifying'>('idle');
   const [streamingPartial, setStreamingPartial] = useState<Partial<GeneratedCode>>({});
   const [resultTab, setResultTab] = useState<ResultTab>('preview');
-  const [modifyText, setModifyText] = useState('');
+  // 고치기(디버깅 대화) — 기대(want, 필수) + 실제(actual, 선택)
+  const [modifyWant, setModifyWant] = useState('');
+  const [modifyActual, setModifyActual] = useState('');
+  // 고치기 성공 후 '무엇이 바뀌었을까?' 성찰 힌트
+  const [showChangeHint, setShowChangeHint] = useState(false);
   const [exampleIndex, setExampleIndex] = useState(0);
   const [previewKey, setPreviewKey] = useState(0);
   const [genPrompt, setGenPrompt] = useState('');
@@ -193,27 +198,31 @@ export default function Creator() {
       setLoginOpen(true);
       return;
     }
-    if (!modifyText.trim()) {
-      toast('바꾸고 싶은 점을 먼저 적어 주세요!');
+    if (!modifyWant.trim()) {
+      toast('어떻게 되길 원하는지 먼저 적어 주세요!');
       modifyRef.current?.focus();
       return;
     }
+    const request = buildDebugRequest(modifyWant, modifyActual);
     setLoading('modifying');
     // 수정 이력을 누적하되, 게시물 prompt 필드 한도(50,000자, firestore.rules)를 넘지 않게 클램프
-    setGenPrompt((prev) => `${prev}\n\n[수정 요청]: ${modifyText}`.slice(-40000));
+    setGenPrompt((prev) => `${prev}\n\n[수정 요청]: ${request}`.slice(-40000));
+    setShowChangeHint(false);
     setStreamingPartial({});
     setResultTab('code');
     const ctrl = new AbortController();
     abortRef.current = ctrl;
     try {
-      const result = await requestGenerateStream(buildModifyPrompt(plan, code, modifyText), 'modify', 'default', {
+      const result = await requestGenerateStream(buildModifyPrompt(plan, code, request), 'modify', 'default', {
         signal: ctrl.signal,
         onDelta: setStreamingPartial,
         onMeta: setMeta,
         photo: photo ?? undefined,
       });
       setCode(result);
-      setModifyText('');
+      setModifyWant('');
+      setModifyActual('');
+      setShowChangeHint(true);
       setResultTab('preview');
       setPreviewKey((k) => k + 1);
       playSuccess();
@@ -244,7 +253,9 @@ export default function Creator() {
     setPlan(EMPTY_PLAN);
     setCode(EMPTY_CODE);
     setMeta(null);
-    setModifyText('');
+    setModifyWant('');
+    setModifyActual('');
+    setShowChangeHint(false);
     setGenPrompt('');
     setResultTab('preview');
     clearSource();
@@ -369,10 +380,13 @@ export default function Creator() {
         onUpload={() => (user ? setUploadOpen(true) : setLoginOpen(true))}
         onDownload={handleDownload}
         onReset={handleReset}
-        modifyText={modifyText}
-        setModifyText={setModifyText}
+        modifyWant={modifyWant}
+        setModifyWant={setModifyWant}
+        modifyActual={modifyActual}
+        setModifyActual={setModifyActual}
         onModify={handleModify}
         modifyRef={modifyRef}
+        showChangeHint={showChangeHint}
         onNeedLogin={() => setLoginOpen(true)}
         photo={photo ?? undefined}
       />
