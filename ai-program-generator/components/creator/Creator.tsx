@@ -16,11 +16,12 @@ import UploadDialog from '@/components/board/UploadDialog';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
 import Chip, { CHIP_COLORS } from '@/components/ui/Chip';
-import { TextInput, TextArea, Label } from '@/components/ui/Field';
+import { TextInput, TextArea, Label, HelpTip } from '@/components/ui/Field';
 import { useToast } from '@/components/ui/Toast';
 import { playSuccess } from '@/lib/client/sound';
 import { buildGeneratePrompt, buildModifyPrompt } from './prompts';
 import { buildDebugRequest } from '@/lib/ai/fixRequest';
+import { composeHow, parseHow, EMPTY_HOW, type HowParts } from '@/lib/creator/howScaffold';
 import { useCreatorSource } from './useCreatorSource';
 import { Tip } from './Tip';
 import ResultPanel from './ResultPanel';
@@ -33,6 +34,8 @@ const DRAFT_KEY = 'lun:create-draft';
 
 export default function Creator() {
   const [plan, setPlan] = useState<PlanFields>(EMPTY_PLAN);
+  // 동작(how) 구조화 3칸(교육 Phase 1-b) — plan.how와 합성/역파싱으로 동기화(로컬 원본은 이 3칸)
+  const [how3, setHow3] = useState<HowParts>(EMPTY_HOW);
   const [code, setCode] = useState<GeneratedCode>(EMPTY_CODE);
   const [meta, setMeta] = useState<GenerationMeta | null>(null); // 교육 메타(로직설명·개념태그) — 업로드 시 저장
   const [loading, setLoading] = useState<'idle' | 'generating' | 'modifying'>('idle');
@@ -63,6 +66,7 @@ export default function Creator() {
   // ?edit= / ?fork= URL 소스 로딩은 훅으로 분리(불러온 값만 받아 생성 상태에 반영).
   const applyLoaded = (d: { plan: PlanFields; code: GeneratedCode; genPrompt: string; photo: string | null }) => {
     setPlan(d.plan);
+    setHow3(parseHow(d.plan.how)); // 동작 3칸 복원(마커 있으면 분해, 없으면 ①칸 폴백)
     setCode(d.code);
     setMeta(null); // 불러온 글의 메타는 없음 — 재생성(고치기) 시 다시 채워짐
     setGenPrompt(d.genPrompt);
@@ -89,6 +93,7 @@ export default function Creator() {
       const saved = JSON.parse(raw) as Partial<PlanFields>;
       if (Object.values(saved).some((v) => typeof v === 'string' && v.trim())) {
         setPlan({ ...EMPTY_PLAN, ...saved });
+        setHow3(parseHow(saved.how ?? '')); // 임시저장 복원 시 동작 3칸도 복원
         toast('이어서 작성할 수 있어요');
       }
     } catch {}
@@ -136,6 +141,13 @@ export default function Creator() {
 
   const setField = (key: keyof PlanFields, value: string) =>
     setPlan((prev) => ({ ...prev, [key]: value }));
+
+  // 동작 3칸 중 한 칸 갱신 → 3칸 상태 + plan.how(합성 결과) 동시 반영
+  const setHowPart = (key: keyof HowParts, value: string) => {
+    const nextHow = { ...how3, [key]: value };
+    setHow3(nextHow);
+    setField('how', composeHow(nextHow));
+  };
 
   function handleCancel() {
     abortRef.current?.abort();
@@ -243,6 +255,7 @@ export default function Creator() {
   function applyExample() {
     const ex = EXAMPLE_PLANS[exampleIndex];
     setPlan({ name: ex.name, look: ex.look, usage: ex.usage, how: ex.how, etc: ex.etc });
+    setHow3(parseHow(ex.how)); // 예시의 동작을 3칸으로 분해해 스캐폴드 시연
   }
 
   function handleDownload() {
@@ -251,6 +264,7 @@ export default function Creator() {
 
   function handleReset() {
     setPlan(EMPTY_PLAN);
+    setHow3(EMPTY_HOW);
     setCode(EMPTY_CODE);
     setMeta(null);
     setModifyWant('');
@@ -316,17 +330,53 @@ export default function Creator() {
             maxLength={5000}
           />
         </Label>
-        <Label
-          text="어떻게 움직이나요?"
-          tip={<Tip lead="'~하면 ~돼요'처럼, 무슨 일이 일어나는지 규칙을 적어요." examples={['정답을 맞히면 점수가 1점 올라가요', '벽에 부딪히면 게임이 끝나요']} />}
-        >
-          <TextArea
-            value={plan.how}
-            onChange={(e) => setField('how', e.target.value)}
-            placeholder="예: 정답을 맞히면 점수가 1점 올라가요"
-            maxLength={5000}
-          />
-        </Label>
+        {/* 동작(how) 구조화 — 순서(①②)·조건(③)을 눈에 보이게 유도(교육 Phase 1-b). 전부 선택 입력. */}
+        <div className="flex flex-col gap-2.5 rounded-[var(--r-md)] border-2 border-line bg-surface-2/50 p-3.5">
+          <div className="flex items-center gap-1.5 text-[15px] font-medium text-ink">
+            어떻게 움직이나요? <span className="text-[13px] font-normal text-muted">순서와 규칙</span>
+            <HelpTip>
+              <Tip
+                lead="프로그램이 움직이는 순서를 차례대로 적고, 조건(만약 ~하면)이 있으면 함께 적어요. 또렷할수록 결과가 좋아져요!"
+                examples={['① 화면에 0이 보여요  ② 누를 때마다 1씩 커져요  ③ 10이 되면 축하해요']}
+              />
+            </HelpTip>
+          </div>
+          <label className="flex flex-col gap-1">
+            <span className="text-[13.5px] font-medium text-ink">① 먼저 무엇이 일어나요?</span>
+            <TextArea
+              value={how3.first}
+              onChange={(e) => setHowPart('first', e.target.value)}
+              placeholder="예: 화면에 숫자 0이 보여요"
+              rows={2}
+              maxLength={1500}
+              aria-label="동작 ① 먼저 무엇이 일어나요"
+            />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-[13.5px] font-medium text-ink">② 그다음엔요?</span>
+            <TextArea
+              value={how3.next}
+              onChange={(e) => setHowPart('next', e.target.value)}
+              placeholder="예: 버튼을 누를 때마다 숫자가 1씩 커져요"
+              rows={2}
+              maxLength={1500}
+              aria-label="동작 ② 그다음엔요"
+            />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-[13.5px] font-medium text-ink">
+              ③ 만약 ~하면요? <span className="text-[12.5px] font-normal text-muted">(조건이 없으면 비워도 돼요)</span>
+            </span>
+            <TextArea
+              value={how3.ifThen}
+              onChange={(e) => setHowPart('ifThen', e.target.value)}
+              placeholder="예: 숫자가 10이 되면 '축하해요!'가 나와요"
+              rows={2}
+              maxLength={1500}
+              aria-label="동작 ③ 만약 ~하면요 (조건, 선택)"
+            />
+          </label>
+        </div>
         <Label
           text="더 바라는 점"
           tip={<Tip lead="소리, 점수, 축하 효과처럼 바라는 점을 자유롭게 적어요. 없으면 비워도 돼요!" examples={['정답일 때 박수 소리가 나면 좋겠어요', '휴대폰에서도 잘 보이게 해주세요']} />}
