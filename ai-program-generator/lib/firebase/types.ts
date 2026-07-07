@@ -54,6 +54,8 @@ export interface Post {
   logicSummary?: string;
   /** 교육 메타(Phase 0) — 사용한 컴퓨팅 개념 태그(순서·조건·반복·입력·출력 부분집합). */
   conceptTags?: string[];
+  /** 교육(#8) — 만든 아이가 직접 쓴 '핵심 한 줄'(자기 말 성찰). AI logicSummary(거울)와 병행 표시. */
+  logicLine?: string;
 }
 
 /** 새 게시물 생성 시 입력 (id 제외) */

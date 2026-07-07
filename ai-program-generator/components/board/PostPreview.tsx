@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { FileText, Download, MonitorPlay, Pencil, X, Link2, Check, GitFork, Heart, Eye, Flag, Share2 } from 'lucide-react';
+import { FileText, Download, MonitorPlay, Pencil, X, Link2, Check, GitFork, Heart, Eye, Flag, Share2, Quote } from 'lucide-react';
 import Modal from '@/components/ui/Modal';
 import ReportDialog from './ReportDialog';
 import type { Post } from '@/lib/firebase/types';
@@ -222,6 +222,16 @@ export default function PostPreview({
           <Eye size={16} aria-hidden /> <span className="tabular-nums">{viewCount}</span>
         </span>
       </div>
+
+      {/* 교육(#8) — 만든 아이의 '핵심 한 줄'(자기 말). AI 로직 카드(거울)보다 위 = 자기 설명이 우선. */}
+      {post.logicLine && (
+        <blockquote className="flex items-start gap-2 rounded-[var(--r-md)] border-2 border-sunshine/40 bg-sunshine-soft px-4 py-2.5">
+          <Quote size={16} className="mt-0.5 shrink-0 text-sunshine-ink" aria-hidden />
+          <p className="text-[15px] leading-relaxed text-sunshine-ink">
+            <span className="font-medium">{post.authorName}의 핵심 한 줄</span> — &ldquo;{post.logicLine}&rdquo;
+          </p>
+        </blockquote>
+      )}
 
       <LogicCard logicSummary={post.logicSummary} conceptTags={post.conceptTags} code={post.code} />
 
