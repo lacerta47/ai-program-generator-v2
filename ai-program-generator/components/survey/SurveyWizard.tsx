@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, Check, HelpCircle, RotateCcw, Search, Wand2, X } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { ArrowLeft, Check, HelpCircle, RotateCcw, Search, Sprout, Wand2, X } from 'lucide-react';
 import type { GeneratedCode, GenerationMeta } from '@/lib/ai/types';
 import type { ProgramType, SurveyAnswers, SurveyStep } from '@/lib/survey/types';
 import { AI_PICK } from '@/lib/survey/types';
@@ -26,6 +27,7 @@ import SurveySummary from './SurveySummary';
 import FixPanel from './FixPanel';
 import GuideModal from './GuideModal';
 import LogicCard from '@/components/common/LogicCard';
+import { stashEasyDraft } from '@/lib/creator/easyBridge';
 
 const GUIDE_SEEN_KEY = 'easy-guide-seen';
 
@@ -65,6 +67,19 @@ export default function SurveyWizard() {
 
   const { user, loading: authLoading, isStudent, isTeacher } = useAuth();
   const { toast } = useToast();
+  const router = useRouter();
+
+  // 만들기에서 더 키우기(easy→create 브릿지) — 인메모리 초안을 넘기고 /create로.
+  function growInCreate() {
+    if (!type) return;
+    stashEasyDraft({
+      plan: surveyToPlan(type, answers),
+      code,
+      genPrompt: genPrompt || assemblePrompt(type, answers),
+      photo: photo ?? null,
+    });
+    router.push('/create?from=easy');
+  }
 
   const steps = useMemo(() => (type ? visibleSteps(type, answers) : []), [type, answers]);
   const hasCode = Boolean(code.html || code.css || code.javascript);
@@ -320,9 +335,12 @@ export default function SurveyWizard() {
       <div className="mx-auto max-w-4xl">
         <div className="mb-3 flex items-center justify-between gap-2">
           <h2 className="anim-pop-tada text-[22px]">{type.icon} {type.label} 완성!</h2>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button variant="soft" onClick={reset}>
               <RotateCcw size={17} aria-hidden /> 새로 만들기
+            </Button>
+            <Button variant="soft" onClick={growInCreate} title="이 작품을 만들기 계획서로 열어서 더 자세히 키워요">
+              <Sprout size={17} aria-hidden /> 더 키우기
             </Button>
             <Button variant="primary" onClick={() => setUploadOpen(true)}>
               자랑하기
