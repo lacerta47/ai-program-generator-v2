@@ -247,16 +247,16 @@ export default function UploadDialog({ open, onClose, code, plan, prompt, defaul
                 <TextInput value={title} onChange={(e) => setTitle(e.target.value)} maxLength={100} required />
               </Label>
               <Label text="내 작품의 핵심 한 줄 (안 써도 돼요)">
-                {/* '핵심'을 아이 말로 정의해주는 가이드 — 이 카피가 이 기능의 절반. */}
+                {/* '핵심'을 아이 말로 정의해주는 가이드 — 규칙(부품)이 아니라 목표(추구하는 것)를 말하게 유도. */}
                 <span className="mb-1 block text-[12.5px] leading-relaxed text-muted">
-                  핵심은 <strong className="text-ink">&ldquo;이게 없으면 내 작품이 아니야!&rdquo;</strong> 싶은
-                  가장 중요한 규칙 하나예요. <strong className="text-ink">&lsquo;~하면 ~돼요&rsquo;</strong> 모양으로
+                  핵심은 <strong className="text-ink">내 작품이 무엇을 하려는지(목표)</strong>예요.
+                  <strong className="text-ink"> &lsquo;~해서 ~하는 게 목표예요&rsquo;</strong>처럼
                   친구에게 소개해 보세요.
                 </span>
                 <TextInput
                   value={logicLine}
                   onChange={(e) => setLogicLine(e.target.value)}
-                  placeholder="예: 뱀이 먹이를 먹으면 몸이 길어져요"
+                  placeholder="예: 사과를 먹고 뱀을 최대한 길게 키우는 게 목표예요"
                   maxLength={100}
                 />
               </Label>
