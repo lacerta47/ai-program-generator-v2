@@ -1,6 +1,8 @@
-// 생성물의 로직을 저학년 쉬운말로 보여주는 카드(교육 Phase 2, #1 로직 설명 오버레이).
-// Phase 0에서 생성·저장되는 logicSummary("① … ② … ③ 만약 …")를 표시만 한다.
-// 마커(①②③)가 있으면 스텝으로 쪼개고, 없으면 통짜로. 값이 없으면(구버전·미측정 글) 아무것도 안 그린다.
+// 생성물의 로직을 저학년 쉬운말로 보여주는 카드(교육 Phase 2, #1 로직 오버레이 + #2 개념 배지).
+// Phase 0에서 생성·저장되는 logicSummary("① … ② … ③ 만약 …") + conceptTags를 표시만 한다.
+// 마커(①②③)가 있으면 스텝으로 쪼개고, 없으면 통짜로. 로직·개념 둘 다 없으면(구버전 글) 안 그린다.
+
+import ConceptBadges, { hasKnownConcepts } from './ConceptBadges';
 
 /** "① … ② … ③ …" → 스텝 배열. 동그라미 숫자(①~⑩) 앞에서 분할, 마커 없으면 [원문]. */
 function splitSteps(text: string): string[] {
@@ -13,14 +15,17 @@ function splitSteps(text: string): string[] {
 
 export default function LogicCard({
   logicSummary,
+  conceptTags,
   className = '',
 }: {
   logicSummary?: string;
+  conceptTags?: string[];
   className?: string;
 }) {
   const text = logicSummary?.trim();
-  if (!text) return null;
-  const steps = splitSteps(text);
+  const hasConcepts = hasKnownConcepts(conceptTags);
+  if (!text && !hasConcepts) return null;
+  const steps = text ? splitSteps(text) : [];
 
   return (
     <section
@@ -38,9 +43,10 @@ export default function LogicCard({
             </li>
           ))}
         </ul>
-      ) : (
+      ) : text ? (
         <p className="text-[14.5px] leading-relaxed text-mint-ink">{text}</p>
-      )}
+      ) : null}
+      {hasConcepts && <ConceptBadges tags={conceptTags} className="mt-2.5" />}
     </section>
   );
 }
