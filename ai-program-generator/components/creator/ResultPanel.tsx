@@ -46,6 +46,8 @@ interface Props {
   photo?: string;
   /** 교육(#1) — 생성물 로직 설명. 있으면 미리보기 위에 카드로 표시. */
   logicSummary?: string;
+  /** 교육(#2) — 사용한 컴퓨팅 개념 태그. 로직 카드에 배지로 표시. */
+  conceptTags?: string[];
 }
 
 /** 생성기 오른쪽 '결과' 패널 — 로딩/빈상태/결과(미리보기·코드·수정요청)를 담당. */
@@ -74,6 +76,7 @@ export default function ResultPanel({
   onNeedLogin,
   photo,
   logicSummary,
+  conceptTags,
 }: Props) {
   const [codeTab, setCodeTab] = useState<CodeTab>('html');
   const [copied, setCopied] = useState(false);
@@ -202,7 +205,7 @@ export default function ResultPanel({
             </div>
           )}
 
-          <LogicCard logicSummary={logicSummary} />
+          <LogicCard logicSummary={logicSummary} conceptTags={conceptTags} code={code} />
 
           <div className="min-h-0 flex-1 overflow-hidden rounded-[var(--r-md)] border-2 border-line">
             {resultTab === 'preview' ? (

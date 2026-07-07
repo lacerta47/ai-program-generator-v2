@@ -440,6 +440,7 @@ export default function Creator() {
         onNeedLogin={() => setLoginOpen(true)}
         photo={photo ?? undefined}
         logicSummary={meta?.logicSummary}
+        conceptTags={meta?.conceptTags}
       />
 
       <LoginDialog open={loginOpen} onClose={() => setLoginOpen(false)} />
