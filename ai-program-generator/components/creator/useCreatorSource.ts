@@ -8,6 +8,7 @@ import { getPost } from '@/lib/firebase/posts';
 import { useAuth } from '@/components/auth/AuthProvider';
 import { useToast } from '@/components/ui/Toast';
 import { buildGeneratePrompt } from './prompts';
+import { takeEasyDraft } from '@/lib/creator/easyBridge';
 
 type Loaded = { plan: PlanFields; code: GeneratedCode; genPrompt: string; photo: string | null };
 type EditState = { id: string; title: string; authorName: string };
@@ -28,8 +29,22 @@ export function useCreatorSource(applyLoaded: (d: Loaded) => void) {
   const params = useSearchParams();
   const loadedEditId = useRef<string | null>(null);
   const loadedForkId = useRef<string | null>(null);
+  const loadedEasyBridge = useRef(false);
   const applyRef = useRef(applyLoaded);
   applyRef.current = applyLoaded;
+
+  // ?from=easy — 골라만들기에서 넘어온 인메모리 초안(sessionStorage)을 만들기 폼·결과에 채운다.
+  // 저장 안 된 상태를 넘기는 1회성 핸드오프(서버 조회 없음). 읽고 나면 URL·저장소를 정리한다.
+  useEffect(() => {
+    if (params.get('from') !== 'easy' || loadedEasyBridge.current) return;
+    loadedEasyBridge.current = true;
+    const draft = takeEasyDraft();
+    if (draft) {
+      applyRef.current(draft);
+      toast('골라만들기에서 이어서 키워볼까요?');
+    }
+    router.replace('/create');
+  }, [params, router, toast]);
 
   // ?edit=postId — 인증 확정 후 본인/관리자만 편집을 열고, 작품을 폼·결과에 복원.
   useEffect(() => {

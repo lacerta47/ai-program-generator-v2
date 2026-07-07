@@ -80,7 +80,8 @@ export default function Creator() {
   // 새로고침·실수로 나가도 계획서가 사라지지 않게 localStorage에 보관하고, 다음 방문 시 조용히 복원.
   const draftMode = () => {
     const p = new URLSearchParams(window.location.search);
-    return !p.get('edit') && !p.get('fork');
+    // ?from=easy(브릿지 핸드오프) 중엔 로컬 draft 복원/저장을 멈춰 충돌 방지 — URL 정리 후 다시 정상 동작.
+    return !p.get('edit') && !p.get('fork') && p.get('from') !== 'easy';
   };
   const draftRestored = useRef(false);
   useEffect(() => {
