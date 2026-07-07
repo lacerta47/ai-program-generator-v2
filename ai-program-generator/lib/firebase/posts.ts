@@ -78,6 +78,7 @@ export async function getPost(id: string): Promise<Post | null> {
 export async function createPost(data: NewPost): Promise<string> {
   await assertClean(data.title, '제목');
   await assertClean(data.authorName, '이름');
+  if (data.logicLine) await assertClean(data.logicLine, '핵심 한 줄'); // 아이가 쓴 공개 텍스트 — 제목과 동일 검열
   assertAuthorNameAllowed(data.authorName);
   const ref = await addDoc(collection(db, COL), data);
   return ref.id;

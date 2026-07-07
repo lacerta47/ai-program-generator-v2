@@ -42,6 +42,8 @@ export default function UploadDialog({ open, onClose, code, plan, prompt, defaul
   // 업로드 피커엔 공개 게시판만 노출(교사보드는 그 반만 쓰기 가능 — 규칙과 일치). 공개 탐색은 별개로 유지.
   const publicCategories = useMemo(() => categories.filter((c) => !c.teacherUid), [categories]);
   const [title, setTitle] = useState(defaultTitle);
+  // 교육(#8) — 아이가 직접 쓰는 '핵심 한 줄'(선택). AI 로직 설명(거울)과 별개인 자기 말 성찰.
+  const [logicLine, setLogicLine] = useState('');
   const [nickname, setNickname] = useState(''); // 최초 설정용 입력값
   const [savedNickname, setSavedNickname] = useState<string | null>(null); // 이미 정한 별명(읽기전용 표시)
   const [categoryId, setCategoryId] = useState('');
@@ -62,6 +64,7 @@ export default function UploadDialog({ open, onClose, code, plan, prompt, defaul
       setError('');
       setCategoryId(''); // 비우면 아래 derive 효과가 fork 원본/첫 카테고리로 재선택
       setNickname('');
+      setLogicLine('');
     }
   }, [defaultTitle, open]);
 
@@ -163,6 +166,7 @@ export default function UploadDialog({ open, onClose, code, plan, prompt, defaul
         ...(photo && boardTeacherUid ? { photo } : {}),
         ...(logicSummary ? { logicSummary } : {}),
         ...(conceptTags && conceptTags.length ? { conceptTags } : {}),
+        ...(logicLine.trim() ? { logicLine: logicLine.trim() } : {}),
       });
       if (forkedFrom) {
         incrementForkCount(forkedFrom).catch((e) => console.error('forkCount 증가 실패:', e));
@@ -241,6 +245,20 @@ export default function UploadDialog({ open, onClose, code, plan, prompt, defaul
               )}
               <Label text="작품 제목" required>
                 <TextInput value={title} onChange={(e) => setTitle(e.target.value)} maxLength={100} required />
+              </Label>
+              <Label text="내 작품의 핵심 한 줄 (안 써도 돼요)">
+                {/* '핵심'을 아이 말로 정의해주는 가이드 — 규칙(부품)이 아니라 목표(추구하는 것)를 말하게 유도. */}
+                <span className="mb-1 block text-[12.5px] leading-relaxed text-muted">
+                  핵심은 <strong className="text-ink">내 작품이 무엇을 하려는지(목표)</strong>예요.
+                  <strong className="text-ink"> &lsquo;~해서 ~하는 게 목표예요&rsquo;</strong>처럼
+                  친구에게 소개해 보세요.
+                </span>
+                <TextInput
+                  value={logicLine}
+                  onChange={(e) => setLogicLine(e.target.value)}
+                  placeholder="예: 사과를 먹고 뱀을 최대한 길게 키우는 게 목표예요"
+                  maxLength={100}
+                />
               </Label>
               {isStudent ? (
                 <div className="flex flex-col gap-1.5">
