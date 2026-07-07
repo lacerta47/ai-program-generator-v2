@@ -223,7 +223,7 @@ export default function PostPreview({
         </span>
       </div>
 
-      <LogicCard logicSummary={post.logicSummary} conceptTags={post.conceptTags} />
+      <LogicCard logicSummary={post.logicSummary} conceptTags={post.conceptTags} code={post.code} />
 
       <FullscreenFrame
         frameKey={post.id}

@@ -337,7 +337,7 @@ export default function SurveyWizard() {
             <Search size={18} aria-hidden /> 무엇이 바뀌었을까요? 미리보기에서 찾아보세요!
           </div>
         )}
-        <LogicCard logicSummary={meta?.logicSummary} conceptTags={meta?.conceptTags} className="mb-3" />
+        <LogicCard logicSummary={meta?.logicSummary} conceptTags={meta?.conceptTags} code={code} className="mb-3" />
         <FullscreenFrame
           frameKey={previewKey}
           code={code}

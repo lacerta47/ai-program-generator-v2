@@ -21,11 +21,13 @@ interface ConceptMeta {
 }
 
 const CONCEPT_META: Record<string, ConceptMeta> = {
+  // 순서·출력은 거의 모든 프로그램에 있는 '기본 배지' — 흐리게 두고,
+  // 변별력 있는 조건·반복·입력이 색으로 도드라지게 한다(시각 위계).
   순서: {
     icon: ListOrdered,
     label: '순서',
     desc: '일이 정한 차례대로 하나씩 일어나요. 첫째 → 둘째 → 셋째!',
-    badge: 'border-brand/50 text-brand-strong dark:text-brand',
+    badge: 'border-line text-muted',
     panel: 'bg-brand-soft text-brand-strong dark:text-brand',
   },
   조건: {
@@ -53,7 +55,7 @@ const CONCEPT_META: Record<string, ConceptMeta> = {
     icon: MessageSquare,
     label: '출력',
     desc: '프로그램이 나에게 보여주거나 들려주는 것이에요.',
-    badge: 'border-mint/60 text-mint-ink',
+    badge: 'border-line text-muted',
     panel: 'bg-mint-soft text-mint-ink',
   },
 };

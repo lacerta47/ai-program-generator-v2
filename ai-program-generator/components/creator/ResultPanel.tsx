@@ -205,7 +205,7 @@ export default function ResultPanel({
             </div>
           )}
 
-          <LogicCard logicSummary={logicSummary} conceptTags={conceptTags} />
+          <LogicCard logicSummary={logicSummary} conceptTags={conceptTags} code={code} />
 
           <div className="min-h-0 flex-1 overflow-hidden rounded-[var(--r-md)] border-2 border-line">
             {resultTab === 'preview' ? (
