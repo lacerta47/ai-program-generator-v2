@@ -16,6 +16,7 @@ import { listBoardPosts, deleteBoardPost, type BoardPost } from '@/lib/teacher/p
 import { listTeacherReports, dismissReportedPost, deleteReportedPost, type TeacherReportGroup } from '@/lib/teacher/reports';
 import { getViewPinStatus, setViewPin } from '@/lib/teacher/viewPin';
 import { formatDate } from '@/lib/program';
+import ClassInsights from '@/components/teacher/ClassInsights';
 
 interface TeacherInfo {
   name: string;
@@ -255,6 +256,8 @@ function Console() {
       <p className="mt-1 text-[14px] text-muted">
         우리 반 한도 <span className="text-ink">{info ? `${info.usedTotal}/${info.totalQuota}` : '…'}</span>
       </p>
+
+      <ClassInsights />
 
       <section className="mt-5 rounded-[var(--r-lg)] border-2 border-line bg-surface p-5">
         <div className="flex items-start justify-between gap-3">
