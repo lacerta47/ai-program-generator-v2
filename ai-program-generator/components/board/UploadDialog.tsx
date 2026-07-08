@@ -2,7 +2,10 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { PartyPopper, LayoutGrid, X } from 'lucide-react';
+import { PartyPopper, LayoutGrid, X, Sparkles } from 'lucide-react';
+import { detectConcepts } from '@/lib/edu/detectConcepts';
+import { markFirstUse } from '@/lib/edu/conceptCelebrate';
+import { CONCEPT_BY_KEY } from '@/lib/edu/concepts';
 import { useAuth } from '@/components/auth/AuthProvider';
 import { subscribeCategories } from '@/lib/firebase/categories';
 import { leafPaths } from '@/lib/board/categoryTree';
@@ -52,6 +55,8 @@ export default function UploadDialog({ open, onClose, code, plan, prompt, defaul
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [done, setDone] = useState<{ postId: string; categoryId: string } | null>(null);
+  // 교육 — 이번 작품에서 이 기기 기준 '처음 써본' 개념(업로드 성공 시 가볍게 축하)
+  const [firstConcepts, setFirstConcepts] = useState<string[]>([]);
 
   useEffect(() => {
     if (open) return subscribeCategories(setCategories);
@@ -65,6 +70,7 @@ export default function UploadDialog({ open, onClose, code, plan, prompt, defaul
       setCategoryId(''); // 비우면 아래 derive 효과가 fork 원본/첫 카테고리로 재선택
       setNickname('');
       setLogicLine('');
+      setFirstConcepts([]);
     }
   }, [defaultTitle, open]);
 
@@ -171,6 +177,7 @@ export default function UploadDialog({ open, onClose, code, plan, prompt, defaul
       if (forkedFrom) {
         incrementForkCount(forkedFrom).catch((e) => console.error('forkCount 증가 실패:', e));
       }
+      setFirstConcepts(markFirstUse(detectConcepts(code))); // 이 기기에서 처음 써본 개념
       playSuccess();
       setDone({ postId, categoryId });
     } catch (err) {
@@ -192,6 +199,11 @@ export default function UploadDialog({ open, onClose, code, plan, prompt, defaul
             <PartyPopper size={30} aria-hidden />
           </span>
           <p className="anim-pop-tada text-[19px]">게시판에 올라갔어요!</p>
+          {firstConcepts.length > 0 && (
+            <span className="anim-pop-in inline-flex items-center gap-1.5 rounded-full bg-grape-soft px-3 py-1 text-[13px] font-medium text-grape-ink">
+              <Sparkles size={14} aria-hidden /> 처음 써본 개념: {firstConcepts.map((c) => CONCEPT_BY_KEY[c]?.label ?? c).join(' · ')}
+            </span>
+          )}
           <div className="flex w-full flex-col gap-2">
             <Button
               variant="primary"
