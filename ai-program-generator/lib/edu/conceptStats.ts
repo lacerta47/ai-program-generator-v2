@@ -27,6 +27,7 @@ export async function fetchMyConceptStats(uid: string): Promise<ConceptStats> {
     const page = await fetchMyPosts(uid, cursor);
     for (const post of page.posts) {
       total++;
+      if (!post.code) continue; // 코드 없는 구버전/손상 글은 건너뜀(insights 라우트와 동일 방어)
       for (const c of detectConcepts(post.code)) {
         if (c in counts) counts[c]++;
       }

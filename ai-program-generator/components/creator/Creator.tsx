@@ -171,6 +171,7 @@ export default function Creator() {
     }
     const promptText = buildGeneratePrompt(plan);
     setGenPrompt(promptText);
+    setShowChangeHint(false); // 처음부터 새로 만들 땐 '무엇이 바뀌었을까?' 성찰 배너(고치기 전용) 숨김
     setStreamingPartial({});
     setResultTab('code'); // 스트림 중 코드 탭에서 라이브 표시
     setLoading('generating');
@@ -272,6 +273,7 @@ export default function Creator() {
     setModifyActual('');
     setShowChangeHint(false);
     setGenPrompt('');
+    setPhoto(null); // '처음부터'라는 문구대로 사진도 초기화(안 지우면 다음 생성에 그대로 실림)
     setResultTab('preview');
     clearSource();
     nameRef.current?.focus();
