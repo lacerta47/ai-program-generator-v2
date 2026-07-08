@@ -94,7 +94,9 @@ export class GeminiProvider implements AIProvider {
     // 교육 메타(Phase 0) — 로직 설명 + 개념 태그(고정 목록으로만 필터, 최대 5개).
     const p = parsed as Record<string, unknown>;
     const meta = {
-      logicSummary: typeof p.logicSummary === 'string' ? p.logicSummary : '',
+      // rules validPost가 logicSummary ≤2000자를 강제 → 모델이 길게 뱉어도 업로드가 거부되지 않게 여기서 절단
+      // (형제 필드 conceptTags.slice(0,5)·nextChallenge.slice(0,120)와 동일한 방어).
+      logicSummary: typeof p.logicSummary === 'string' ? p.logicSummary.slice(0, 2000) : '',
       conceptTags: Array.isArray(p.conceptTags)
         ? p.conceptTags.filter((t): t is string => typeof t === 'string' && CONCEPT_SET.includes(t)).slice(0, 5)
         : [],

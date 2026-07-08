@@ -10,10 +10,12 @@ import type { GeneratedCode } from '@/lib/ai/types';
 function stripJs(src: string): string {
   return src
     .replace(/\/\*[\s\S]*?\*\//g, ' ')
-    .replace(/(^|[^:])\/\/[^\n]*/g, '$1 ') // URL의 :// 는 보존
+    // 문자열/템플릿을 라인주석보다 먼저 제거 — "점수 // 최고"; realCode() 처럼 문자열 속 //가
+    // 라인주석으로 오인돼 뒤 코드까지 삼키는 걸 방지.
     .replace(/`(?:\\.|[^`\\])*`/g, "''")
     .replace(/'(?:\\.|[^'\\])*'/g, "''")
-    .replace(/"(?:\\.|[^"\\])*"/g, "''");
+    .replace(/"(?:\\.|[^"\\])*"/g, "''")
+    .replace(/(^|[^:])\/\/[^\n]*/g, '$1 '); // 남은 진짜 라인주석 제거(URL의 :// 는 보존)
 }
 
 /** HTML에서 주석 제거(태그 탐지 오탐 방지). */

@@ -22,6 +22,9 @@ export async function GET(req: NextRequest) {
       uid: d.id,
       name: (d.get('name') as string) || '',
       hakbun: (d.get('hakbun') as string) || '',
+      // 총량제(total) 학생은 usage 문서를 안 남기고 students.usedTotal에 누적 → 시도 집계에 반영해야 안 보이지 않음.
+      isTotal: (d.get('limitType') as string) === 'total',
+      usedTotal: (d.get('usedTotal') as number) ?? 0,
     }));
     if (roster.length === 0) {
       return NextResponse.json({ students: [], summary: { studentCount: 0, activeCount: 0, totalWorks: 0, totalAttempts: 0 } });
@@ -74,7 +77,8 @@ export async function GET(req: NextRequest) {
         name: s.name || s.hakbun || s.uid.slice(0, 6),
         hakbun: s.hakbun,
         works: works.get(s.uid) ?? 0,
-        attempts: attempts.get(s.uid) ?? 0,
+        // 일일제=최근 14일 usage 합, 총량제=누적 usedTotal(usage 미기록이라). 세그먼트별 의미 다름은 UI에 명시.
+        attempts: s.isTotal ? s.usedTotal : (attempts.get(s.uid) ?? 0),
         lastActive: lastActive.get(s.uid) ?? null,
         concepts: CONCEPT_ORDER.filter((c) => concepts.get(s.uid)?.has(c)),
       }))
@@ -82,7 +86,8 @@ export async function GET(req: NextRequest) {
 
     const summary = {
       studentCount: roster.length,
-      activeCount: students.filter((s) => s.attempts > 0).length, // 최근 14일 시도한 학생
+      // 활동 = 시도했거나(usage/누적) 작품을 올린 학생 — 총량제·미게시 학생이 '0명'으로 안 빠지게.
+      activeCount: students.filter((s) => s.attempts > 0 || s.works > 0).length,
       totalWorks: students.reduce((n, s) => n + s.works, 0),
       totalAttempts: students.reduce((n, s) => n + s.attempts, 0),
     };
