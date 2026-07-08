@@ -15,12 +15,15 @@ export default function FixPanel({
   actual,
   onActualChange,
   onFix,
+  challenge,
 }: {
   want: string;
   onWantChange: (value: string) => void;
   actual: string;
   onActualChange: (value: string) => void;
   onFix: () => void;
+  /** 교육(#6) — AI가 제안하는 다음 도전. '이렇게 되면 좋겠어요' 칸의 힌트(placeholder)로만. */
+  challenge?: string;
 }) {
   const nothing = !want.trim();
 
@@ -35,7 +38,7 @@ export default function FixPanel({
           <TextArea
             value={want}
             onChange={(e) => onWantChange(e.target.value)}
-            placeholder="예: 정답을 맞히면 폭죽이 팡 터져요"
+            placeholder={challenge || '예: 정답을 맞히면 폭죽이 팡 터져요'}
             maxLength={2000}
             rows={2}
             aria-label="이렇게 되면 좋겠어요 (바라는 모습)"

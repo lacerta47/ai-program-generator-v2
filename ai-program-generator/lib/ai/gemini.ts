@@ -21,8 +21,10 @@ const RESPONSE_SCHEMA = {
     // 교육 메타(Phase 0) — 코드 뒤에 오게 배치(라이브 미리보기는 code 3필드로만 진행).
     logicSummary: { type: Type.STRING },
     conceptTags: { type: Type.ARRAY, items: { type: Type.STRING } },
+    // 교육(#6) — 다음 도전 한 문장(저장 안 함, 고치기 칸 힌트).
+    nextChallenge: { type: Type.STRING },
   },
-  required: ['html', 'css', 'javascript', 'logicSummary', 'conceptTags'],
+  required: ['html', 'css', 'javascript', 'logicSummary', 'conceptTags', 'nextChallenge'],
 };
 
 const CONCEPT_SET = ['순서', '조건', '반복', '입력', '출력'];
@@ -96,6 +98,7 @@ export class GeminiProvider implements AIProvider {
       conceptTags: Array.isArray(p.conceptTags)
         ? p.conceptTags.filter((t): t is string => typeof t === 'string' && CONCEPT_SET.includes(t)).slice(0, 5)
         : [],
+      nextChallenge: typeof p.nextChallenge === 'string' ? p.nextChallenge.trim().slice(0, 120) : '',
     };
     yield { type: 'done', code, usage, meta };
   }

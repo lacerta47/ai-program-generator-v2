@@ -369,6 +369,7 @@ export default function SurveyWizard() {
           actual={fixActual}
           onActualChange={setFixActual}
           onFix={handleSurveyModify}
+          challenge={meta?.nextChallenge}
         />
         <UploadDialog
           open={uploadOpen}
