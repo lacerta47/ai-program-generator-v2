@@ -50,6 +50,8 @@ interface Props {
   conceptTags?: string[];
   /** 교육(#6) — AI가 제안하는 다음 도전. 고치기 '기대' 칸의 힌트(placeholder)로만 노출. */
   nextChallenge?: string;
+  /** 교육(#7) — 이어만들기(포크)로 시작한 작품. 아직 재생성 전이면 '한 가지 바꾸기' 힌트 노출. */
+  isRemix?: boolean;
 }
 
 /** 생성기 오른쪽 '결과' 패널 — 로딩/빈상태/결과(미리보기·코드·수정요청)를 담당. */
@@ -80,7 +82,12 @@ export default function ResultPanel({
   logicSummary,
   conceptTags,
   nextChallenge,
+  isRemix,
 }: Props) {
+  // 고치기 '기대' 칸 힌트 우선순위: AI 다음 도전(#6) > 리믹스 '한 가지 바꾸기'(#7) > 기본 예시.
+  const wantPlaceholder =
+    nextChallenge ||
+    (isRemix ? '예: 색을 바꿔요 · 더 빠르게 해요 · 규칙을 하나 바꿔요' : '예: 버튼을 누르면 점수가 1점 올라가길 원해');
   const [codeTab, setCodeTab] = useState<CodeTab>('html');
   const [copied, setCopied] = useState(false);
   const { toast } = useToast();
@@ -273,7 +280,7 @@ export default function ResultPanel({
                 ref={modifyRef}
                 value={modifyWant}
                 onChange={(e) => setModifyWant(e.target.value)}
-                placeholder={nextChallenge || '예: 버튼을 누르면 점수가 1점 올라가길 원해'}
+                placeholder={wantPlaceholder}
                 rows={2}
                 maxLength={2000}
                 aria-label="어떻게 되길 원해? (바라는 모습)"
