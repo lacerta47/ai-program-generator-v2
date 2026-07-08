@@ -442,6 +442,7 @@ export default function Creator() {
         photo={photo ?? undefined}
         logicSummary={meta?.logicSummary}
         conceptTags={meta?.conceptTags}
+        nextChallenge={meta?.nextChallenge}
       />
 
       <LoginDialog open={loginOpen} onClose={() => setLoginOpen(false)} />

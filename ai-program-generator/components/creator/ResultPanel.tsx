@@ -48,6 +48,8 @@ interface Props {
   logicSummary?: string;
   /** 교육(#2) — 사용한 컴퓨팅 개념 태그. 로직 카드에 배지로 표시. */
   conceptTags?: string[];
+  /** 교육(#6) — AI가 제안하는 다음 도전. 고치기 '기대' 칸의 힌트(placeholder)로만 노출. */
+  nextChallenge?: string;
 }
 
 /** 생성기 오른쪽 '결과' 패널 — 로딩/빈상태/결과(미리보기·코드·수정요청)를 담당. */
@@ -77,6 +79,7 @@ export default function ResultPanel({
   photo,
   logicSummary,
   conceptTags,
+  nextChallenge,
 }: Props) {
   const [codeTab, setCodeTab] = useState<CodeTab>('html');
   const [copied, setCopied] = useState(false);
@@ -270,7 +273,7 @@ export default function ResultPanel({
                 ref={modifyRef}
                 value={modifyWant}
                 onChange={(e) => setModifyWant(e.target.value)}
-                placeholder="예: 버튼을 누르면 점수가 1점 올라가길 원해"
+                placeholder={nextChallenge || '예: 버튼을 누르면 점수가 1점 올라가길 원해'}
                 rows={2}
                 maxLength={2000}
                 aria-label="어떻게 되길 원해? (바라는 모습)"
