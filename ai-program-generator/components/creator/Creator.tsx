@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Wand2, Lightbulb, Pencil } from 'lucide-react';
+import { Wand2, Lightbulb, Pencil, GitFork } from 'lucide-react';
 import type { GeneratedCode, GenerationMeta } from '@/lib/ai/types';
 import { type PlanFields, EMPTY_PLAN } from '@/lib/firebase/types';
 import { requestGenerateStream } from '@/lib/client/generate';
@@ -287,6 +287,15 @@ export default function Creator() {
           </span>
         </div>
       )}
+      {/* 리믹스(이어만들기) 안내 — 원작자 크레딧 + '한 가지 바꾸기' 프레임(교육 #7). 편집 중엔 안 띄움. */}
+      {forkSource && !editing && (
+        <div className="anim-pop-in flex items-center gap-2 rounded-[var(--r-md)] border-2 border-grape/40 bg-grape-soft px-4 py-2.5 text-[15px] text-grape-ink lg:col-span-2">
+          <GitFork size={16} aria-hidden />
+          <span>
+            <strong>{forkSource.author}</strong>의 작품을 이어받았어요! 그대로 두지 말고 <strong>한 가지씩</strong> 바꿔서 나만의 작품으로 만들어 봐요.
+          </span>
+        </div>
+      )}
       {/* 왼쪽: 계획서 */}
       <Card animate className="flex flex-col gap-4 self-start">
         <div className="flex items-center gap-2.5">
@@ -443,6 +452,7 @@ export default function Creator() {
         logicSummary={meta?.logicSummary}
         conceptTags={meta?.conceptTags}
         nextChallenge={meta?.nextChallenge}
+        isRemix={!!forkSource && !editing}
       />
 
       <LoginDialog open={loginOpen} onClose={() => setLoginOpen(false)} />
