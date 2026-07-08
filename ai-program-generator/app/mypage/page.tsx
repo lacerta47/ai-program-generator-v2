@@ -22,6 +22,7 @@ import { sharePostUrl, downloadProgram } from '@/lib/client/postActions';
 import { formatDate } from '@/lib/program';
 import type { Post } from '@/lib/firebase/types';
 import Header from '@/components/common/Header';
+import ConceptDex from '@/components/edu/ConceptDex';
 import Button from '@/components/ui/Button';
 import { TextInput, Label } from '@/components/ui/Field';
 import Modal from '@/components/ui/Modal';
@@ -59,6 +60,7 @@ export default function MyPage() {
       ) : (
         <div className="mx-auto flex max-w-3xl flex-col gap-6 p-4 sm:p-6">
           <AccountCard uid={user.uid} email={user.email} createdAt={user.metadata?.creationTime} isAdmin={isAdmin} isTeacher={isTeacher} isStudent={isStudent} />
+          <ConceptDex uid={user.uid} />
           <MyWorks uid={user.uid} />
         </div>
       )}
