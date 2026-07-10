@@ -23,6 +23,7 @@ export const roulette: ProgramType = {
     // Step 1 — 용도
     {
       id: 'use',
+      role: 'type',
       question: '어떤 때 쓸 룰렛이야?',
       options: [
         { id: 'lunch', label: '점심 메뉴', icon: '🍱', promptFragment: '점심 메뉴 뽑기 룰렛이야. 칸에 김밥·라면·피자·치킨·볶음밥·떡볶이를 채워줘.' },
@@ -38,6 +39,7 @@ export const roulette: ProgramType = {
     // Step 2 — 이름 넣는 법 (use==='name', Chain A)
     {
       id: 'namemethod',
+      role: 'control',
       question: '이름을 어떻게 넣을까?',
       showIf: (a) => a.use === 'name',
       options: [
@@ -50,6 +52,7 @@ export const roulette: ProgramType = {
     // Step 3 — 몇 명 (Chain B: namemethod==='type' 일 때) [2-level chain 완성]
     {
       id: 'namecount',
+      role: 'goal',
       question: '보통 몇 명을 뽑아?',
       showIf: (a) => a.namemethod === 'type',
       options: [
@@ -63,6 +66,7 @@ export const roulette: ProgramType = {
     // Step 4 — 칸 수
     {
       id: 'slots',
+      role: 'appearance',
       question: '칸을 몇 개 만들까?',
       options: [
         { id: 's4', label: '4칸 (적게)', icon: '4️⃣', promptFragment: '룰렛 칸을 4개로 만들어.' },
@@ -75,6 +79,7 @@ export const roulette: ProgramType = {
     // Step 5 — 색
     {
       id: 'color',
+      role: 'appearance',
       question: '룰렛 색은 어떻게 할까?',
       options: [
         { id: 'rainbow', label: '알록달록', icon: '🌈', promptFragment: '각 칸을 빨강·주황·노랑·초록·파랑·보라 등 무지개 색으로 칠해.' },
@@ -88,6 +93,7 @@ export const roulette: ProgramType = {
     // Step 6 — 돌리는 속도
     {
       id: 'speed',
+      role: 'flow',
       question: '얼마나 빨리 돌릴까?',
       options: [
         { id: 'slow', label: '천천히', icon: '🐢', promptFragment: '룰렛이 느리게 돌다가 멈추게 해.' },
@@ -101,6 +107,7 @@ export const roulette: ProgramType = {
     // Step 7 — 돌릴 때 소리
     {
       id: 'spinsound',
+      role: 'sound',
       question: '돌릴 때 소리를 넣을까?',
       options: [
         { id: 'tick', label: '틱틱 소리', icon: '🎵', promptFragment: '룰렛이 돌아갈 때 Web Audio로 틱틱 소리가 나게 해.' },
@@ -113,6 +120,7 @@ export const roulette: ProgramType = {
     // Step 8 — 소리 종류 (spinsound !== 'none') [조건부]
     {
       id: 'soundmood',
+      role: 'sound',
       question: '어떤 느낌 소리가 좋아?',
       showIf: (a) => a.spinsound !== 'none',
       options: [
@@ -125,6 +133,7 @@ export const roulette: ProgramType = {
     // Step 9 — 멈춤 효과 (multi)
     {
       id: 'stopfx',
+      role: 'output',
       question: '멈출 때 어떤 효과를 넣을까? (여러 개 OK)',
       multi: true,
       options: [
@@ -139,6 +148,7 @@ export const roulette: ProgramType = {
     // Step 10 — 뽑힌 것 크게 보기 (use==='name', Chain A)
     {
       id: 'bigshow',
+      role: 'output',
       question: '뽑힌 사람 이름을 크게 보여줄까?',
       showIf: (a) => a.use === 'name',
       options: [
@@ -150,6 +160,7 @@ export const roulette: ProgramType = {
     // Step 11 — 축하 방식 (bigshow==='yes') [2-level chain: use→bigshow→celebrate]
     {
       id: 'celebrate',
+      role: 'output',
       question: '축하를 어떻게 보여줄까?',
       showIf: (a) => a.bigshow === 'yes',
       options: [
@@ -163,6 +174,7 @@ export const roulette: ProgramType = {
     // Step 12 — 다시 돌리기
     {
       id: 'again',
+      role: 'output',
       question: '다시 돌리기 버튼을 넣을까?',
       options: [
         { id: 'yes', label: '응, 넣어줘', icon: '🔄', promptFragment: '결과 아래에 다시 돌리기 버튼을 넣어.' },
@@ -174,6 +186,7 @@ export const roulette: ProgramType = {
     // Step 13 — 배경
     {
       id: 'bg',
+      role: 'decor',
       question: '배경 느낌은 어떻게 할까?',
       options: [
         { id: 'bright', label: '밝고 흰 배경', icon: '🤍', promptFragment: '배경은 밝고 깔끔한 흰색 계열로 해.' },

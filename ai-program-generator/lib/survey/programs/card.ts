@@ -12,6 +12,7 @@ export const card: ProgramType = {
     // Step 1 — 카드 종류
     {
       id: 'kind',
+      role: 'type',
       question: '어떤 카드를 만들까?',
       options: [
         {
@@ -56,6 +57,7 @@ export const card: ProgramType = {
     // Step 2 — 내 소개 항목 (kind==='me' 일 때만, multi)
     {
       id: 'meinfo',
+      role: 'goal',
       question: '소개하고 싶은 게 뭐야? (여러 개 골라도 돼)',
       multi: true,
       showIf: (a) => a.kind === 'me',
@@ -96,6 +98,7 @@ export const card: ProgramType = {
     // Step 3 — 좋아하는 것 종류 (Chain A→B: meinfo includes 'fav') [2-level chain 시작]
     {
       id: 'favkind',
+      role: 'goal',
       question: '좋아하는 게 뭐야?',
       showIf: (a) => {
         const v = a.meinfo;
@@ -138,6 +141,7 @@ export const card: ProgramType = {
     // Step 4 — 좋아하는 동물 세부 (Chain B→C: favkind==='animal') [2-level chain 완성]
     {
       id: 'animaldetail',
+      role: 'goal',
       question: '어떤 동물을 좋아해?',
       showIf: (a) => a.favkind === 'animal',
       options: [
@@ -177,6 +181,7 @@ export const card: ProgramType = {
     // Step 5 — 카드 분위기
     {
       id: 'theme',
+      role: 'decor',
       question: '카드 분위기는?',
       options: [
         {
@@ -215,6 +220,7 @@ export const card: ProgramType = {
     // Step 6 — 우주 추가 효과 (theme==='space', Chain A)
     {
       id: 'shooting',
+      role: 'appearance',
       question: '별똥별이 쏟아지는 효과를 넣을까?',
       showIf: (a) => a.theme === 'space',
       options: [
@@ -242,6 +248,7 @@ export const card: ProgramType = {
     // Step 7 — 꾸미기 (multi)
     {
       id: 'deco',
+      role: 'decor',
       question: '무엇으로 꾸밀까? (여러 개 골라도 돼)',
       multi: true,
       options: [
@@ -287,6 +294,7 @@ export const card: ProgramType = {
     // Step 8 — 꾸밈 움직임 (deco가 하나라도 선택됐을 때)
     {
       id: 'decomotion',
+      role: 'flow',
       question: '꾸밈 장식을 어떻게 움직일까?',
       showIf: (a) => {
         const v = a.deco;
@@ -323,6 +331,7 @@ export const card: ProgramType = {
     // Step 9 — 카드 클릭 효과
     {
       id: 'clickfx',
+      role: 'output',
       question: '카드를 눌렀을 때 어떤 효과를 넣을까?',
       options: [
         {
@@ -361,6 +370,7 @@ export const card: ProgramType = {
     // Step 10 — 소리
     {
       id: 'music',
+      role: 'sound',
       question: '소리도 넣을까?',
       options: [
         {
@@ -387,6 +397,7 @@ export const card: ProgramType = {
     // Step 11 — 소리 분위기 (music==='yes' 일 때)
     {
       id: 'musicmood',
+      role: 'sound',
       question: '어떤 분위기 소리가 좋아?',
       showIf: (a) => a.music === 'yes',
       options: [
@@ -420,6 +431,7 @@ export const card: ProgramType = {
     // Step 12 — 이름 칸
     {
       id: 'nameField',
+      role: 'control',
       question: '카드에 이름을 적는 칸을 넣을까?',
       options: [
         {
@@ -440,6 +452,7 @@ export const card: ProgramType = {
     // Step 13 — 글씨체 (nameField==='yes')
     {
       id: 'font',
+      role: 'appearance',
       question: '글씨체는 어떤 게 좋아?',
       showIf: (a) => a.nameField === 'yes',
       options: [
@@ -473,6 +486,7 @@ export const card: ProgramType = {
     // Step 14 — 배경 무늬
     {
       id: 'pattern',
+      role: 'decor',
       question: '카드 배경 무늬는?',
       options: [
         {
@@ -517,6 +531,7 @@ export const card: ProgramType = {
     // Step 15 — 배경 색
     {
       id: 'bgcolor',
+      role: 'decor',
       question: '카드 배경 색은 어떤 게 좋아?',
       options: [
         {

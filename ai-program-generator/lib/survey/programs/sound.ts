@@ -21,6 +21,7 @@ export const sound: ProgramType = {
     // Step 1 — 악기 선택 (A: A→B→C chain)
     {
       id: 'instrument',
+      role: 'type',
       question: '어떤 악기를 만들까?',
       options: [
         {
@@ -71,6 +72,7 @@ export const sound: ProgramType = {
     // Step 2 — 피아노 연주 모드 (B in A→B→C chain: shows when instrument===piano)
     {
       id: 'playmode',
+      role: 'control',
       question: '피아노를 어떻게 연주할까?',
       showIf: (a) => a.instrument === 'piano',
       options: [
@@ -98,6 +100,7 @@ export const sound: ProgramType = {
     // Step 3 — 따라치기 연습곡 (C in 2-level chain: shows when playmode===follow or both)
     {
       id: 'songslist',
+      role: 'goal',
       question: '어떤 동요를 따라칠까?',
       showIf: (a) => a.playmode === 'follow' || a.playmode === 'both',
       options: [
@@ -143,6 +146,7 @@ export const sound: ProgramType = {
     // Step 4 — 건반·버튼 수
     {
       id: 'keycount',
+      role: 'appearance',
       question: '건반이나 버튼을 몇 개 만들까?',
       options: [
         { id: 'small', label: '적게 (5개)', icon: '👌', promptFragment: '건반·버튼을 5개로 적게 만들어.' },
@@ -155,6 +159,7 @@ export const sound: ProgramType = {
     // Step 5 — 색
     {
       id: 'color',
+      role: 'appearance',
       question: '건반이나 버튼 색은?',
       options: [
         { id: 'rainbow', label: '무지개', icon: '🌈', promptFragment: '각 건반·버튼을 무지개처럼 다른 색으로 해.' },
@@ -168,6 +173,7 @@ export const sound: ProgramType = {
     // Step 6 — 누를 때 효과 (multi)
     {
       id: 'pressfx',
+      role: 'output',
       question: '누를 때 어떤 효과를 넣을까? (여러 개 OK)',
       multi: true,
       options: [
@@ -182,6 +188,7 @@ export const sound: ProgramType = {
     // Step 7 — 소리 크기 조절
     {
       id: 'volume',
+      role: 'control',
       question: '소리 크기를 조절하는 버튼을 넣을까?',
       options: [
         { id: 'slider', label: '슬라이더로 조절', icon: '🎚️', promptFragment: '소리 크기를 조절할 수 있는 슬라이더를 넣어.' },
@@ -193,6 +200,7 @@ export const sound: ProgramType = {
     // Step 8 — 배경
     {
       id: 'bg',
+      role: 'decor',
       question: '배경은 어떻게 할까?',
       options: [
         { id: 'wood', label: '나무 느낌', icon: '🪵', promptFragment: '배경을 따뜻한 나무 느낌의 갈색 계열로 해.' },
@@ -206,6 +214,7 @@ export const sound: ProgramType = {
     // Step 9 — 녹음/재생 기능
     {
       id: 'record',
+      role: 'output',
       question: '내 연주를 기억했다가 다시 들어볼까?',
       options: [
         { id: 'yes', label: '응, 넣어줘!', icon: '⏺️', promptFragment: '내 연주를 기억했다가 다시 들려주는 버튼을 넣어. 녹음이 잘 안 되는 환경에서는 그냥 다시 칠 수 있게 해.' },
@@ -216,6 +225,7 @@ export const sound: ProgramType = {
     // Step 11 — 점수·별 모으기
     {
       id: 'score',
+      role: 'rule',
       question: '연주를 잘 하면 별이나 점수를 줄까?',
       options: [
         { id: 'stars', label: '별 모으기', icon: '⭐', promptFragment: '올바른 음을 누를 때마다 별을 모아 화면에 보여주는 기능을 넣어.' },
@@ -227,6 +237,7 @@ export const sound: ProgramType = {
     // Step 11 (renumbered) — 추가 기능 (multi)
     {
       id: 'extra',
+      role: 'output',
       question: '더 재미있는 기능을 넣을까? (여러 개 OK)',
       multi: true,
       options: [
