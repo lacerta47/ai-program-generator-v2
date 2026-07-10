@@ -154,6 +154,7 @@ export const calc: ProgramType = {
     // Step 10 — 틀렸을 때 (게임 모드)
     {
       id: 'wrongfx',
+      role: 'output',
       question: '틀렸을 때 어떻게 할까?',
       showIf: (a) => a.mode === 'guess' || a.mode === 'times' || a.mode === 'speed',
       options: [
@@ -166,6 +167,7 @@ export const calc: ProgramType = {
     // Step 11 — 추가 기능 (mode !== 'times', multi)
     {
       id: 'extra',
+      role: 'output',
       showIf: (a) => a.mode !== 'times',
       question: '추가 기능을 넣을까? (여러 개 OK)',
       multi: true,
@@ -181,6 +183,7 @@ export const calc: ProgramType = {
     // Step 12 — 화면 (mode !== 'times')
     {
       id: 'display',
+      role: 'appearance',
       showIf: (a) => a.mode !== 'times',
       question: '숫자 화면을 어떻게 보여줄까?',
       options: [
@@ -195,6 +198,7 @@ export const calc: ProgramType = {
     // Step 13 — 배경
     {
       id: 'bg',
+      role: 'decor',
       question: '배경은 어떻게 할까?',
       options: [
         { id: 'white', label: '하얀 배경', icon: '🤍', promptFragment: '배경을 깔끔한 흰색으로 해.' },

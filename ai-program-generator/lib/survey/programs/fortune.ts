@@ -134,6 +134,7 @@ export const fortune: ProgramType = {
     // Step 6 — 나타나는 효과 (fx — D in chain: fx→fxsound)
     {
       id: 'fx',
+      role: 'output',
       question: '메시지가 나올 때 어떤 효과를 줄까?',
       options: [
         { id: 'tada', label: '짠! 하고 나타나기', icon: '🎉', promptFragment: '메시지가 짠! 하고 크게 튀어나오는 애니메이션을 넣어.' },
