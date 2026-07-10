@@ -79,7 +79,7 @@ Gemini 생성(RESPONSE_SCHEMA.conceptNotes OBJECT)
     : {}
   ```
 
-### 3. 생성 프롬프트(`lib/creator/prompts.ts`)
+### 3. 생성 프롬프트(`lib/ai/prompts.ts` — `LOGIC_META_INSTRUCTION`)
 
 - 시스템 프롬프트에 지시 추가(요지): "사용한 각 개념에 대해, **이 프로그램에서 그 개념이 어떻게 쓰였는지** 저학년 말투로 아주 짧게(한 구절, 예: '버튼을 누르면 돌아가요') `conceptNotes`에 적어라. 사용하지 않은 개념은 비워라(빈 문자열)." generate·modify 두 variant 모두.
 
