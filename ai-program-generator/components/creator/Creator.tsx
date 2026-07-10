@@ -471,6 +471,7 @@ export default function Creator() {
         photo={photo ?? undefined}
         logicSummary={meta?.logicSummary}
         conceptTags={meta?.conceptTags}
+        conceptNotes={meta?.conceptNotes}
       />
     </div>
   );
