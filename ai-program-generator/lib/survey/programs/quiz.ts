@@ -15,6 +15,7 @@ export const quiz: ProgramType = {
     // STEP 1 — 주제
     {
       id: 'topic',
+      role: 'type',
       question: '무엇에 대한 퀴즈일까?',
       options: [
         {
@@ -58,6 +59,7 @@ export const quiz: ProgramType = {
     // STEP 2 — 연산 종류 (topic=숫자일 때만) [Chain Level 1]
     {
       id: 'mathtype',
+      role: 'goal',
       question: '어떤 계산 문제를 낼까?',
       showIf: (a) => a.topic === '숫자',
       options: [
@@ -90,6 +92,7 @@ export const quiz: ProgramType = {
     // STEP 3 — 숫자 범위 (mathtype이 선택된 후) [Chain Level 2]
     {
       id: 'numrange',
+      role: 'rule',
       question: '얼마나 큰 숫자로 계산할까?',
       showIf: (a) =>
         typeof a.mathtype === 'string' &&
@@ -124,6 +127,7 @@ export const quiz: ProgramType = {
     // STEP 4 — 문제 수
     {
       id: 'count',
+      role: 'flow',
       question: '문제는 몇 개 풀까?',
       options: [
         {
@@ -155,6 +159,7 @@ export const quiz: ProgramType = {
     // STEP 5 — 답 방식
     {
       id: 'answer',
+      role: 'control',
       question: '답은 어떻게 고를까?',
       options: [
         {
@@ -192,6 +197,7 @@ export const quiz: ProgramType = {
     // STEP 6 — 정답 반응 (multi)
     {
       id: 'feedback',
+      role: 'output',
       question: '정답이면 어떤 반응을 줄까? (여러 개 골라도 돼)',
       multi: true,
       options: [
@@ -230,6 +236,7 @@ export const quiz: ProgramType = {
     // STEP 7 — 소리 종류 (feedback에 sound가 포함될 때) [Conditional]
     {
       id: 'soundtype',
+      role: 'sound',
       question: '어떤 소리가 날까?',
       showIf: (a) => {
         const f = a.feedback;
@@ -266,6 +273,7 @@ export const quiz: ProgramType = {
     // STEP 8 — 시간 제한
     {
       id: 'timer',
+      role: 'rule',
       question: '시간 제한을 넣을까?',
       options: [
         {
@@ -297,6 +305,7 @@ export const quiz: ProgramType = {
     // STEP 9 — 제한 시간 경고 (timer≠no일 때) [Conditional]
     {
       id: 'timer_warn',
+      role: 'rule',
       question: '시간이 얼마 남았을 때 경고를 줄까?',
       showIf: (a) => a.timer !== 'no',
       options: [
@@ -329,6 +338,7 @@ export const quiz: ProgramType = {
     // STEP 10 — 목숨 여부
     {
       id: 'lives',
+      role: 'rule',
       question: '틀리면 목숨이 줄어들게 할까?',
       options: [
         {
@@ -348,6 +358,7 @@ export const quiz: ProgramType = {
     // STEP 11 — 목숨 개수 (lives=yes일 때만) [Conditional]
     {
       id: 'lives_count',
+      role: 'rule',
       question: '목숨은 몇 개일까?',
       showIf: (a) => a.lives === 'yes',
       options: [
@@ -374,6 +385,7 @@ export const quiz: ProgramType = {
     // STEP 12 — 혼자 또는 친구랑
     {
       id: 'playmode',
+      role: 'rule',
       question: '퀴즈를 혼자 풀까, 친구랑 번갈아 풀까?',
       options: [
         {
@@ -393,6 +405,7 @@ export const quiz: ProgramType = {
     // STEP 13 — 끝 보상
     {
       id: 'end',
+      role: 'output',
       question: '다 풀면 무엇을 보여줄까?',
       options: [
         {

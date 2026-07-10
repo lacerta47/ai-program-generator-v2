@@ -20,6 +20,7 @@ export const aquarium: ProgramType = {
     // Step 1 — 장소 (A: A→B chain)
     {
       id: 'place',
+      role: 'decor',
       question: '어디를 배경으로 만들까?',
       options: [
         { id: 'sea', label: '바닷속', icon: '🌊', promptFragment: '바닷속 배경으로 만들어. 물속 느낌을 줘.' },
@@ -32,6 +33,7 @@ export const aquarium: ProgramType = {
     // Step 2 — 우주 추가 효과 (B in A→B: shows when place===space)
     {
       id: 'spacefx',
+      role: 'appearance',
       question: '우주에 특별 효과를 넣을까?',
       showIf: (a) => a.place === 'space',
       options: [
@@ -45,6 +47,7 @@ export const aquarium: ProgramType = {
     // Step 3 — 떠다니는 것 (multi) — C in C→D 2-level chain
     {
       id: 'creatures',
+      role: 'goal',
       question: '무엇이 떠다닐까? (여러 개 OK)',
       multi: true,
       options: [
@@ -62,6 +65,7 @@ export const aquarium: ProgramType = {
     // Step 4 — 물고기 색 (D: 2-level chain — shows when fish in creatures)
     {
       id: 'fishcolor',
+      role: 'appearance',
       question: '물고기는 어떤 색으로 만들까? (여러 개 OK)',
       multi: true,
       showIf: (a) => {
@@ -80,6 +84,7 @@ export const aquarium: ProgramType = {
     // Step 5 — 바닥 장식
     {
       id: 'decor',
+      role: 'decor',
       question: '바닥에 산호와 해초 장식을 넣을까?',
       options: [
         { id: 'yes', label: '응, 예쁘게 넣어줘!', icon: '🪸', promptFragment: '수족관 바닥에 산호(🪸)와 해초를 SVG로 그려서 넣어.' },
@@ -90,6 +95,7 @@ export const aquarium: ProgramType = {
     // Step 6 — 마릿수
     {
       id: 'count',
+      role: 'flow',
       question: '얼마나 많이 떠다닐까?',
       options: [
         { id: 'few', label: '조금 (5마리)', icon: '1️⃣', promptFragment: '5마리·개 정도로 조금 떠다니게 해.' },
@@ -102,6 +108,7 @@ export const aquarium: ProgramType = {
     // Step 6 — 움직임 속도
     {
       id: 'speed',
+      role: 'flow',
       question: '움직임 속도는 어떻게 할까?',
       options: [
         { id: 'slow', label: '천천히', icon: '🐢', promptFragment: '생물들이 느릿느릿 천천히 움직이게 해.' },
@@ -114,6 +121,7 @@ export const aquarium: ProgramType = {
     // Step 7 — 배경 색
     {
       id: 'bgcolor',
+      role: 'decor',
       question: '배경 색은 어떻게 할까?',
       options: [
         { id: 'deep', label: '깊은 파란색', icon: '💙', promptFragment: '배경을 깊은 바다 같은 진한 파란색으로 해.' },
@@ -127,6 +135,7 @@ export const aquarium: ProgramType = {
     // Step 8 — 클릭 반응 (E: E→F 2-level chain)
     {
       id: 'click',
+      role: 'control',
       question: '화면을 클릭하면 어떤 일이 일어날까?',
       options: [
         { id: 'feed', label: '먹이 주기', icon: '🍬', promptFragment: '화면을 클릭하면 그 자리에 먹이가 생기고 근처 생물이 다가오게 해.' },
@@ -140,6 +149,7 @@ export const aquarium: ProgramType = {
     // Step 9 — 먹이 종류 (F: 2-level chain — shows when click===feed)
     {
       id: 'feedkind',
+      role: 'appearance',
       question: '먹이는 어떤 모양으로 만들까?',
       showIf: (a) => a.click === 'feed',
       options: [
@@ -153,6 +163,7 @@ export const aquarium: ProgramType = {
     // Step 10 — 소리 (G: G→H chain)
     {
       id: 'sound',
+      role: 'sound',
       question: '소리를 넣을까?',
       options: [
         { id: 'yes', label: '응, 넣어줘!', icon: '🔊', promptFragment: '배경 소리를 Web Audio API로 넣어줘.' },
@@ -163,6 +174,7 @@ export const aquarium: ProgramType = {
     // Step 11 — 소리 종류 (H: 2-level chain — shows when sound===yes)
     {
       id: 'soundkind',
+      role: 'sound',
       question: '어떤 소리를 넣을까?',
       showIf: (a) => a.sound === 'yes',
       options: [
@@ -176,6 +188,7 @@ export const aquarium: ProgramType = {
     // Step 12 — 낮밤 바꾸기
     {
       id: 'daynight',
+      role: 'control',
       question: '낮과 밤을 버튼으로 바꿀 수 있게 할까?',
       options: [
         {

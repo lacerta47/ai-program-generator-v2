@@ -13,6 +13,7 @@ export const maze: ProgramType = {
     // STEP 1 — 테마
     {
       id: 'theme',
+      role: 'decor',
       question: '미로 테마는?',
       options: [
         {
@@ -62,6 +63,7 @@ export const maze: ProgramType = {
     // STEP 2 — 크기
     {
       id: 'size',
+      role: 'rule',
       question: '미로 크기는?',
       options: [
         {
@@ -93,6 +95,7 @@ export const maze: ProgramType = {
     // STEP 3 — 미니맵 여부 (size=large 또는 huge일 때만) [Conditional]
     {
       id: 'minimap',
+      role: 'output',
       question: '미로 구석에 작은 지도(미니맵)를 보여줄까?',
       showIf: (a) => a.size === 'large' || a.size === 'huge',
       options: [
@@ -113,6 +116,7 @@ export const maze: ProgramType = {
     // STEP 4 — 조작
     {
       id: 'control',
+      role: 'control',
       question: '어떻게 조작할까?',
       options: [
         {
@@ -144,6 +148,7 @@ export const maze: ProgramType = {
     // STEP 5 — 주인공
     {
       id: 'hero',
+      role: 'appearance',
       question: '미로를 탐험할 주인공은?',
       options: [
         {
@@ -187,6 +192,7 @@ export const maze: ProgramType = {
     // STEP 6 — 목표
     {
       id: 'goal',
+      role: 'goal',
       question: '미로의 목표는?',
       options: [
         {
@@ -218,6 +224,7 @@ export const maze: ProgramType = {
     // STEP 7 — 보물 개수 (goal=treasure일 때만) [Chain Level 1]
     {
       id: 'treasure_count',
+      role: 'goal',
       question: '보물이 몇 개 있을까?',
       showIf: (a) => a.goal === 'treasure',
       options: [
@@ -244,6 +251,7 @@ export const maze: ProgramType = {
     // STEP 8 — 보물 힌트 (treasure_count가 3 또는 5일 때) [Chain Level 2]
     {
       id: 'treasure_hint',
+      role: 'rule',
       question: '보물이 어디 있는지 힌트를 줄까?',
       showIf: (a) => a.treasure_count === '3' || a.treasure_count === '5',
       options: [
@@ -270,6 +278,7 @@ export const maze: ProgramType = {
     // STEP 9 — 보물 종류 (goal=treasure일 때만) [Conditional]
     {
       id: 'treasure_type',
+      role: 'goal',
       question: '어떤 보물을 찾을까?',
       showIf: (a) => a.goal === 'treasure',
       options: [
@@ -302,6 +311,7 @@ export const maze: ProgramType = {
     // STEP 10 — 함정 (multi)
     {
       id: 'trap',
+      role: 'rule',
       question: '함정을 넣을까? (여러 개 골라도 돼)',
       multi: true,
       options: [
@@ -340,6 +350,7 @@ export const maze: ProgramType = {
     // STEP 10 — 함정 종류 추가 세부 (trap에 none이 없을 때) [Conditional]
     {
       id: 'trap_hint',
+      role: 'rule',
       question: '함정이 어디 있는지 미리 알려줄까?',
       showIf: (a) => {
         const t = a.trap;
@@ -370,6 +381,7 @@ export const maze: ProgramType = {
     // STEP 11 — 시간 제한
     {
       id: 'timer',
+      role: 'rule',
       question: '시간 제한을 넣을까?',
       options: [
         {
@@ -401,6 +413,7 @@ export const maze: ProgramType = {
     // STEP 12 — 성공 효과
     {
       id: 'success',
+      role: 'output',
       question: '클리어하면 어떤 효과를 줄까?',
       options: [
         {

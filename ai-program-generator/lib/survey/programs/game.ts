@@ -19,6 +19,7 @@ export const game: ProgramType = {
     // STEP 1 — 장르
     {
       id: 'genre',
+      role: 'type',
       question: '어떤 종류의 게임을 만들까?',
       options: [
         {
@@ -50,6 +51,7 @@ export const game: ProgramType = {
     // STEP 2 — 모을 것 (genre=collect일 때만) [Chain Level 1]
     {
       id: 'collectitem',
+      role: 'goal',
       question: '무엇을 모을까?',
       showIf: (a) => a.genre === 'collect',
       options: [
@@ -82,6 +84,7 @@ export const game: ProgramType = {
     // STEP 3 — 별 효과 (collectitem=star일 때만) [Chain Level 2]
     {
       id: 'star_effect',
+      role: 'appearance',
       question: '별을 잡을 때 어떤 효과가 날까?',
       showIf: (a) => a.collectitem === 'star',
       options: [
@@ -108,6 +111,7 @@ export const game: ProgramType = {
     // STEP 4 — 주인공 (genre=mole 제외)
     {
       id: 'hero',
+      role: 'appearance',
       showIf: (a) => a.genre !== 'mole',
       question: '주인공 모습은?',
       options: [
@@ -146,6 +150,7 @@ export const game: ProgramType = {
     // STEP 5 — 조작 (genre=mole 제외)
     {
       id: 'control',
+      role: 'control',
       showIf: (a) => a.genre !== 'mole',
       question: '어떻게 조작할까?',
       options: [
@@ -178,6 +183,7 @@ export const game: ProgramType = {
     // STEP 6 — 배경
     {
       id: 'background',
+      role: 'decor',
       question: '게임 배경은?',
       options: [
         {
@@ -215,6 +221,7 @@ export const game: ProgramType = {
     // STEP 7 — 점수 규칙
     {
       id: 'scoring',
+      role: 'rule',
       question: '점수 규칙은?',
       options: [
         {
@@ -246,6 +253,7 @@ export const game: ProgramType = {
     // STEP 8 — 속도
     {
       id: 'speed',
+      role: 'flow',
       question: '게임 속도는?',
       options: [
         {
@@ -265,6 +273,7 @@ export const game: ProgramType = {
     // STEP 9 — 빨라지는 정도 (speed=fast일 때만) [Conditional]
     {
       id: 'speedup',
+      role: 'flow',
       question: '얼마나 빨라질까?',
       showIf: (a) => a.speed === 'fast',
       options: [
@@ -291,6 +300,7 @@ export const game: ProgramType = {
     // STEP 10 — 파워업 (multi)
     {
       id: 'powerup',
+      role: 'rule',
       question: '파워업 아이템도 넣을까? (여러 개 골라도 돼)',
       multi: true,
       options: [
@@ -323,6 +333,7 @@ export const game: ProgramType = {
     // STEP 11 — 파워업 효과 강도 (powerup에 none이 없을 때) [Conditional]
     {
       id: 'powerup_effect',
+      role: 'output',
       question: '파워업을 잡을 때 어떤 효과를 줄까?',
       showIf: (a) => {
         const p = a.powerup;
@@ -353,6 +364,7 @@ export const game: ProgramType = {
     // STEP 12 — 두더지 종류 (genre=mole일 때만) [Conditional]
     {
       id: 'mole_type',
+      role: 'goal',
       question: '어떤 두더지가 나올까?',
       showIf: (a) => a.genre === 'mole',
       options: [
@@ -385,6 +397,7 @@ export const game: ProgramType = {
     // STEP 13 — 피할 것 / 넘을 것 (genre=dodge||run일 때만) [Conditional]
     {
       id: 'obstacle_type',
+      role: 'goal',
       question: '무엇을 피할까?',
       showIf: (a) => a.genre === 'dodge' || a.genre === 'run',
       options: [
@@ -417,6 +430,7 @@ export const game: ProgramType = {
     // STEP 14 — 이름 등록
     {
       id: 'scorename',
+      role: 'output',
       question: '점수판에 내 이름을 넣을까?',
       options: [
         {
@@ -436,6 +450,7 @@ export const game: ProgramType = {
     // STEP 15 — 게임 오버
     {
       id: 'gameover',
+      role: 'output',
       question: '게임 오버 화면은 어떻게 할까?',
       options: [
         {
