@@ -56,7 +56,7 @@ service cloud.firestore {
 
     // 게시물 생성 문서 형태/크기 검증
     function validPost(d) {
-      return d.keys().hasOnly(['title', 'categoryId', 'ownerUid', 'authorName', 'code', 'plan', 'prompt', 'createdAt', 'updatedAt', 'forkedFrom', 'forkedFromAuthor', 'boardTeacherUid', 'photo', 'logicSummary', 'conceptTags', 'logicLine'])
+      return d.keys().hasOnly(['title', 'categoryId', 'ownerUid', 'authorName', 'code', 'plan', 'prompt', 'createdAt', 'updatedAt', 'forkedFrom', 'forkedFromAuthor', 'boardTeacherUid', 'photo', 'logicSummary', 'conceptTags', 'logicLine', 'conceptNotes'])
         && d.title is string && d.title.size() > 0 && d.title.size() <= 100
         && d.categoryId is string && d.categoryId.size() > 0 && d.categoryId.size() <= 128
         && d.ownerUid is string
@@ -79,7 +79,17 @@ service cloud.firestore {
         && (!('logicSummary' in d) || (d.logicSummary is string && d.logicSummary.size() <= 2000))
         && (!('conceptTags' in d) || (d.conceptTags is list && d.conceptTags.size() <= 5))
         // 교육(#8) — 아이가 직접 쓴 핵심 한 줄(옵셔널, 한 줄 분량 제한).
-        && (!('logicLine' in d) || (d.logicLine is string && d.logicLine.size() <= 200));
+        && (!('logicLine' in d) || (d.logicLine is string && d.logicLine.size() <= 200))
+        // 개념별 '내 작품 예시'(옵셔널) — 키 ⊆ 5개념, 각 값 string·≤60자.
+        && (!('conceptNotes' in d) || (
+             d.conceptNotes is map
+             && d.conceptNotes.keys().hasOnly(['순서','조건','반복','입력','출력'])
+             && (!('순서' in d.conceptNotes) || (d.conceptNotes['순서'] is string && d.conceptNotes['순서'].size() <= 60))
+             && (!('조건' in d.conceptNotes) || (d.conceptNotes['조건'] is string && d.conceptNotes['조건'].size() <= 60))
+             && (!('반복' in d.conceptNotes) || (d.conceptNotes['반복'] is string && d.conceptNotes['반복'].size() <= 60))
+             && (!('입력' in d.conceptNotes) || (d.conceptNotes['입력'] is string && d.conceptNotes['입력'].size() <= 60))
+             && (!('출력' in d.conceptNotes) || (d.conceptNotes['출력'] is string && d.conceptNotes['출력'].size() <= 60))
+           ));
     }
 
     // 신고의 postOwnerUid가 실제 글 주인과 일치하는지(위조 차단). 글이 없으면 거부.
