@@ -20,7 +20,7 @@ export const CONCEPTS: ConceptInfo[] = [
     key: '순서',
     label: '순서',
     icon: ListOrdered,
-    desc: '일이 정한 차례대로 하나씩 일어나요. 첫째 → 둘째 → 셋째!',
+    desc: '일이 정한 차례대로 하나씩 일어나요. 1번 → 2번 → 3번!',
     badge: 'border-line text-muted',
     soft: 'bg-brand-soft text-brand-strong dark:text-brand',
   },

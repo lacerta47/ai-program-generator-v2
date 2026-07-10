@@ -36,9 +36,11 @@ interface Props {
   logicSummary?: string;
   /** 교육 메타(Phase 0) — 컴퓨팅 개념 태그. 있으면 게시물에 저장. */
   conceptTags?: string[];
+  /** 교육 메타(Phase 0) — 개념별 예시 한 줄. 있으면 게시물에 저장. */
+  conceptNotes?: Record<string, string>;
 }
 
-export default function UploadDialog({ open, onClose, code, plan, prompt, defaultTitle, forkedFrom, forkedFromAuthor, defaultCategoryId, photo, logicSummary, conceptTags }: Props) {
+export default function UploadDialog({ open, onClose, code, plan, prompt, defaultTitle, forkedFrom, forkedFromAuthor, defaultCategoryId, photo, logicSummary, conceptTags, conceptNotes }: Props) {
   const { user, isTeacher, isStudent } = useAuth();
   const router = useRouter();
   const [categories, setCategories] = useState<Category[]>([]);
@@ -172,6 +174,7 @@ export default function UploadDialog({ open, onClose, code, plan, prompt, defaul
         ...(photo && boardTeacherUid ? { photo } : {}),
         ...(logicSummary ? { logicSummary } : {}),
         ...(conceptTags && conceptTags.length ? { conceptTags } : {}),
+        ...(conceptNotes && Object.keys(conceptNotes).length ? { conceptNotes } : {}),
         ...(logicLine.trim() ? { logicLine: logicLine.trim() } : {}),
       });
       if (forkedFrom) {

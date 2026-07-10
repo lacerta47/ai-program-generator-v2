@@ -48,6 +48,7 @@ interface Props {
   logicSummary?: string;
   /** 교육(#2) — 사용한 컴퓨팅 개념 태그. 로직 카드에 배지로 표시. */
   conceptTags?: string[];
+  conceptNotes?: Record<string, string>;
   /** 교육(#6) — AI가 제안하는 다음 도전. 고치기 '기대' 칸의 힌트(placeholder)로만 노출. */
   nextChallenge?: string;
   /** 교육(#7) — 이어만들기(포크)로 시작한 작품. 아직 재생성 전이면 '한 가지 바꾸기' 힌트 노출. */
@@ -81,6 +82,7 @@ export default function ResultPanel({
   photo,
   logicSummary,
   conceptTags,
+  conceptNotes,
   nextChallenge,
   isRemix,
 }: Props) {
@@ -215,7 +217,7 @@ export default function ResultPanel({
             </div>
           )}
 
-          <LogicCard logicSummary={logicSummary} conceptTags={conceptTags} code={code} />
+          <LogicCard logicSummary={logicSummary} conceptTags={conceptTags} conceptNotes={conceptNotes} code={code} />
 
           <div className="min-h-0 flex-1 overflow-hidden rounded-[var(--r-md)] border-2 border-line">
             {resultTab === 'preview' ? (
