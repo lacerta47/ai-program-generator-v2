@@ -36,6 +36,8 @@ export interface GenerationMeta {
   conceptTags: string[];
   /** 교육(#6) — 다음에 키워볼 도전 한 문장(저장 안 함, 고치기 칸 힌트로만). */
   nextChallenge: string;
+  /** 개념별 '내 작품 예시' 한 줄 — 키 ⊆ ['순서','조건','반복','입력','출력'], 각 값 ≤60자. 미측정 시 {}. */
+  conceptNotes: Record<string, string>;
 }
 
 /** 스트리밍 청크: 진행 중 부분 코드(delta) → 검증 통과한 최종(done). done엔 토큰 사용량·교육 메타(있으면) 동봉. */

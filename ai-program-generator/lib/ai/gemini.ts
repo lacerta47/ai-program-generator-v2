@@ -23,8 +23,19 @@ const RESPONSE_SCHEMA = {
     conceptTags: { type: Type.ARRAY, items: { type: Type.STRING } },
     // 교육(#6) — 다음 도전 한 문장(저장 안 함, 고치기 칸 힌트).
     nextChallenge: { type: Type.STRING },
+    // 개념별 '내 작품 예시' 한 줄(하이브리드 C). 미사용 개념은 빈 문자열.
+    conceptNotes: {
+      type: Type.OBJECT,
+      properties: {
+        순서: { type: Type.STRING },
+        조건: { type: Type.STRING },
+        반복: { type: Type.STRING },
+        입력: { type: Type.STRING },
+        출력: { type: Type.STRING },
+      },
+    },
   },
-  required: ['html', 'css', 'javascript', 'logicSummary', 'conceptTags', 'nextChallenge'],
+  required: ['html', 'css', 'javascript', 'logicSummary', 'conceptTags', 'nextChallenge', 'conceptNotes'],
 };
 
 const CONCEPT_SET = ['순서', '조건', '반복', '입력', '출력'];
@@ -101,6 +112,16 @@ export class GeminiProvider implements AIProvider {
         ? p.conceptTags.filter((t): t is string => typeof t === 'string' && CONCEPT_SET.includes(t)).slice(0, 5)
         : [],
       nextChallenge: typeof p.nextChallenge === 'string' ? p.nextChallenge.trim().slice(0, 120) : '',
+      // 개념별 예시: CONCEPT_SET 키만, 값 trim·60자 절단, 빈값 제외(규칙 ≤60과 일치).
+      conceptNotes:
+        p.conceptNotes && typeof p.conceptNotes === 'object' && !Array.isArray(p.conceptNotes)
+          ? Object.fromEntries(
+              CONCEPT_SET.filter((k) => {
+                const v = (p.conceptNotes as Record<string, unknown>)[k];
+                return typeof v === 'string' && v.trim().length > 0;
+              }).map((k) => [k, (p.conceptNotes as Record<string, string>)[k].trim().slice(0, 60)]),
+            )
+          : {},
     };
     yield { type: 'done', code, usage, meta };
   }
