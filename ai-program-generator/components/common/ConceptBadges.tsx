@@ -8,7 +8,7 @@ import { CONCEPT_ORDER, CONCEPT_BY_KEY } from '@/lib/edu/concepts';
 
 export { hasKnownConcepts } from '@/lib/edu/concepts';
 
-export default function ConceptBadges({ tags, className = '' }: { tags?: string[]; className?: string }) {
+export default function ConceptBadges({ tags, notes, className = '' }: { tags?: string[]; notes?: Record<string, string>; className?: string }) {
   const uniq = CONCEPT_ORDER.filter((c) => tags?.includes(c)); // 중복 제거 + 고정 순서
   const [open, setOpen] = useState<string | null>(null);
   if (uniq.length === 0) return null;
@@ -37,12 +37,19 @@ export default function ConceptBadges({ tags, className = '' }: { tags?: string[
         })}
       </div>
       {openMeta && (
-        <p
+        <div
           role="note"
           className={`anim-pop-in mt-2 rounded-[var(--r-md)] px-3 py-2 text-[13.5px] leading-relaxed ${openMeta.soft}`}
         >
-          <strong>{openMeta.label}</strong> — {openMeta.desc}
-        </p>
+          <p>
+            <strong>{openMeta.label}</strong> — {openMeta.desc}
+          </p>
+          {open && notes?.[open] && (
+            <p className="mt-1.5 border-t border-current/15 pt-1.5 text-[13px]">
+              <span className="opacity-70">이 작품에선:</span> {notes[open]}
+            </p>
+          )}
+        </div>
       )}
     </div>
   );

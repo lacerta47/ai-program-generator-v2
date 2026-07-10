@@ -233,7 +233,7 @@ export default function PostPreview({
         </blockquote>
       )}
 
-      <LogicCard logicSummary={post.logicSummary} conceptTags={post.conceptTags} code={post.code} />
+      <LogicCard logicSummary={post.logicSummary} conceptTags={post.conceptTags} conceptNotes={post.conceptNotes} code={post.code} />
 
       <FullscreenFrame
         frameKey={post.id}

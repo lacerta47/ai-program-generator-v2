@@ -22,12 +22,14 @@ function splitSteps(text: string): string[] {
 export default function LogicCard({
   logicSummary,
   conceptTags,
+  conceptNotes,
   code,
   className = '',
 }: {
   logicSummary?: string;
   /** 저장된 태그(Gemini) — code가 없을 때만 폴백으로 사용 */
   conceptTags?: string[];
+  conceptNotes?: Record<string, string>;
   /** 생성 코드 — 있으면 배지를 코드에서 직접 탐지(표시의 진실원천) */
   code?: GeneratedCode;
   className?: string;
@@ -57,7 +59,7 @@ export default function LogicCard({
       ) : text ? (
         <p className="text-[14.5px] leading-relaxed text-mint-ink">{text}</p>
       ) : null}
-      {hasConcepts && <ConceptBadges tags={tags} className="mt-2.5" />}
+      {hasConcepts && <ConceptBadges tags={tags} notes={conceptNotes} className="mt-2.5" />}
     </section>
   );
 }

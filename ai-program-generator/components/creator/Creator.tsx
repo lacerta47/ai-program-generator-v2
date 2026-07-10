@@ -454,6 +454,7 @@ export default function Creator() {
         logicSummary={meta?.logicSummary}
         conceptTags={meta?.conceptTags}
         nextChallenge={meta?.nextChallenge}
+        conceptNotes={meta?.conceptNotes}
         isRemix={!!forkSource && !editing}
       />
 
