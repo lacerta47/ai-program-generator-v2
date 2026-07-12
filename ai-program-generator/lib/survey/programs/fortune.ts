@@ -22,6 +22,7 @@ export const fortune: ProgramType = {
     // Step 1 — kind (A in the A→B→C chain)
     {
       id: 'kind',
+      role: 'type',
       question: '어떤 메시지를 뽑을까?',
       options: [
         {
@@ -72,6 +73,7 @@ export const fortune: ProgramType = {
     // Step 2 — 운세 추가 옵션 (B in A→B→C chain: shows when kind===fortune)
     {
       id: 'luckyextras',
+      role: 'goal',
       question: '운세에 행운 정보를 같이 보여줄까? (여러 개 OK)',
       multi: true,
       showIf: (a) => a.kind === 'fortune',
@@ -87,6 +89,7 @@ export const fortune: ProgramType = {
     // Step 3 — 동물 보여주는 법 (C: 2-level chain — shows when luckyextras includes animal)
     {
       id: 'animalshow',
+      role: 'appearance',
       question: '행운의 동물을 어떻게 보여줄까?',
       showIf: (a) => {
         const v = a.luckyextras;
@@ -103,6 +106,7 @@ export const fortune: ProgramType = {
     // Step 4 — 분위기
     {
       id: 'mood',
+      role: 'decor',
       question: '분위기는 어떻게 할까?',
       options: [
         { id: 'cute', label: '귀엽게', icon: '🧸', promptFragment: '귀엽고 따뜻한 파스텔 분위기로 만들어.' },
@@ -116,6 +120,7 @@ export const fortune: ProgramType = {
     // Step 5 — 버튼 모양
     {
       id: 'btnshape',
+      role: 'appearance',
       question: '뽑기 버튼 모양은?',
       options: [
         { id: 'crystal', label: '수정 구슬', icon: '🔮', promptFragment: '뽑기 버튼을 수정 구슬 모양으로 만들어.' },
@@ -129,6 +134,7 @@ export const fortune: ProgramType = {
     // Step 6 — 나타나는 효과 (fx — D in chain: fx→fxsound)
     {
       id: 'fx',
+      role: 'output',
       question: '메시지가 나올 때 어떤 효과를 줄까?',
       options: [
         { id: 'tada', label: '짠! 하고 나타나기', icon: '🎉', promptFragment: '메시지가 짠! 하고 크게 튀어나오는 애니메이션을 넣어.' },
@@ -142,6 +148,7 @@ export const fortune: ProgramType = {
     // Step 7 — 효과 소리 (2nd conditional: shows when fx is NOT 'none' — any fx choice)
     {
       id: 'fxsound',
+      role: 'sound',
       question: '효과가 나올 때 소리도 같이 넣을까?',
       showIf: (a) => !!a.fx,
       options: [
@@ -155,6 +162,7 @@ export const fortune: ProgramType = {
     // Step 8 — 한 번에 몇 개
     {
       id: 'count',
+      role: 'flow',
       question: '한 번에 몇 개 뽑을까?',
       options: [
         { id: 'one', label: '하나', icon: '1️⃣', promptFragment: '한 번에 메시지 하나를 뽑아 크게 보여줘.' },
@@ -166,6 +174,7 @@ export const fortune: ProgramType = {
     // Step 9 — 다시 뽑기
     {
       id: 'again',
+      role: 'output',
       question: '다시 뽑기 버튼을 넣을까?',
       options: [
         { id: 'yes', label: '응, 넣어줘', icon: '🔄', promptFragment: '메시지 아래에 다시 뽑기 버튼을 넣어.' },
@@ -176,6 +185,7 @@ export const fortune: ProgramType = {
     // Step 10 — 공유/저장
     {
       id: 'share',
+      role: 'output',
       question: '뽑은 메시지를 어떻게 할까?',
       options: [
         { id: 'show', label: '친구한테 크게 보여주기', icon: '📺', promptFragment: '뽑은 메시지를 화면에 크게 펼쳐 보여주는 버튼을 넣어.' },
@@ -188,6 +198,7 @@ export const fortune: ProgramType = {
     // Step 11 — 배경
     {
       id: 'bg',
+      role: 'decor',
       question: '배경을 어떻게 꾸밀까?',
       options: [
         { id: 'stars', label: '별이 반짝이게', icon: '🌟', promptFragment: '배경에 반짝이는 별 효과를 CSS/JS로 넣어.' },

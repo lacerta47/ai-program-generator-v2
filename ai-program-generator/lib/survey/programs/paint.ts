@@ -13,6 +13,7 @@ export const paint: ProgramType = {
     // STEP 1 — 배경
     {
       id: 'bg',
+      role: 'decor',
       question: '어떤 종이에 그릴까?',
       options: [
         {
@@ -56,6 +57,7 @@ export const paint: ProgramType = {
     // STEP 2 — 붓 종류
     {
       id: 'brush',
+      role: 'appearance',
       question: '어떤 붓으로 그릴까?',
       options: [
         {
@@ -105,6 +107,7 @@ export const paint: ProgramType = {
     // STEP 3 — 무지개 모드 (brush=crayon일 때만) [Chain Level 1]
     {
       id: 'rainbow',
+      role: 'appearance',
       question: '그릴 때 색이 무지개처럼 바뀌는 모드를 넣을까?',
       showIf: (a) => a.brush === 'crayon',
       options: [
@@ -125,6 +128,7 @@ export const paint: ProgramType = {
     // STEP 4 — 무지개 빠르기 (rainbow=yes일 때만) [Chain Level 2]
     {
       id: 'rainbow_speed',
+      role: 'flow',
       question: '무지개 색이 얼마나 빠르게 바뀔까?',
       showIf: (a) => a.rainbow === 'yes',
       options: [
@@ -151,6 +155,7 @@ export const paint: ProgramType = {
     // STEP 5 — 색 팔레트 (multi)
     {
       id: 'palette',
+      role: 'appearance',
       question: '어떤 색들을 쓸까? (여러 개 골라도 돼)',
       multi: true,
       options: [
@@ -195,6 +200,7 @@ export const paint: ProgramType = {
     // STEP 6 — 붓 굵기
     {
       id: 'size',
+      role: 'control',
       question: '붓 굵기를 조절할 수 있게 할까?',
       options: [
         {
@@ -220,6 +226,7 @@ export const paint: ProgramType = {
     // STEP 7 — 기본 굵기 (size=slider일 때만) [Conditional]
     {
       id: 'default_size',
+      role: 'appearance',
       question: '처음 시작할 때 기본 굵기는?',
       showIf: (a) => a.size === 'slider',
       options: [
@@ -246,6 +253,7 @@ export const paint: ProgramType = {
     // STEP 8 — 도장 (multi)
     {
       id: 'stamp',
+      role: 'appearance',
       question: '도장 찍기도 넣을까? (여러 개 골라도 돼)',
       multi: true,
       options: [
@@ -290,6 +298,7 @@ export const paint: ProgramType = {
     // STEP 9 — 도장 크기 (stamp에 none이 없고 선택이 있을 때) [Conditional]
     {
       id: 'stamp_size',
+      role: 'appearance',
       question: '도장은 얼마나 크게 찍힐까?',
       showIf: (a) => {
         const s = a.stamp;
@@ -326,6 +335,7 @@ export const paint: ProgramType = {
     // STEP 10 — 이름 도장 (stamp에 none이 없고 선택이 있을 때) [Conditional]
     {
       id: 'name_stamp',
+      role: 'appearance',
       question: '내 이름을 도장처럼 찍는 기능도 넣을까?',
       showIf: (a) => {
         const s = a.stamp;
@@ -350,6 +360,7 @@ export const paint: ProgramType = {
     // STEP 11 — 배경 음악
     {
       id: 'music',
+      role: 'sound',
       question: '그림 그리는 동안 배경 음악을 넣을까?',
       options: [
         {
@@ -381,6 +392,7 @@ export const paint: ProgramType = {
     // STEP 12 — 음악 분위기 (music=yes일 때만) [Conditional]
     {
       id: 'music_mood',
+      role: 'sound',
       question: '음악 느낌은 어떻게 할까?',
       showIf: (a) => a.music === 'yes',
       options: [
@@ -407,6 +419,7 @@ export const paint: ProgramType = {
     // STEP 13 — 저장
     {
       id: 'save',
+      role: 'output',
       question: '내 그림을 저장하거나 공유하는 버튼을 넣을까?',
       options: [
         {

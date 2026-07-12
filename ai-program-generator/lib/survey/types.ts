@@ -1,3 +1,5 @@
+import type { RoleKey } from './roles';
+
 export type SurveyAnswers = Record<string, string | string[]>;
 
 /**
@@ -21,6 +23,10 @@ export interface SurveyStep {
   multi?: boolean;
   /** 조건부 단계: 이전 답에 따라 노출 여부. 없으면 항상 노출. */
   showIf?: (a: SurveyAnswers) => boolean;
+  /** '내가 고른 것' 역할 카드용 — 이 단계가 프로그램의 어느 부분을 정하는지 */
+  role?: RoleKey;
+  /** 그 단계만 역할 hint를 덮어쓸 때(드묾). 없으면 ROLES[role].hint 사용 */
+  roleHint?: string;
 }
 
 export interface ProgramType {

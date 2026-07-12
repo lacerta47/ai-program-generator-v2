@@ -21,6 +21,7 @@ export const calc: ProgramType = {
     // Step 1 — 종류
     {
       id: 'mode',
+      role: 'type',
       question: '어떤 숫자놀이를 만들까?',
       options: [
         { id: 'calc', label: '계산기', icon: '🧮', promptFragment: '더하기·빼기·곱하기·나누기를 할 수 있는 계산기를 만들어.' },
@@ -34,6 +35,7 @@ export const calc: ProgramType = {
     // Step 2 — 범위 (mode==='guess', Chain A)
     {
       id: 'range',
+      role: 'rule',
       question: '어떤 범위 숫자를 맞힐까?',
       showIf: (a) => a.mode === 'guess',
       options: [
@@ -47,6 +49,7 @@ export const calc: ProgramType = {
     // Step 3 — 힌트 방식 (Chain B: range 값이 있을 때) [2-level chain 완성]
     {
       id: 'hint',
+      role: 'rule',
       question: '힌트를 어떻게 줄까?',
       showIf: (a) =>
         a.range === 'r50' || a.range === 'r100' || a.range === 'r1000',
@@ -62,6 +65,7 @@ export const calc: ProgramType = {
     // Step 4 — 연습할 단 (mode==='times', multi)
     {
       id: 'timesdan',
+      role: 'goal',
       question: '몇 단을 연습할까? (여러 개 골라도 돼)',
       multi: true,
       showIf: (a) => a.mode === 'times',
@@ -80,6 +84,7 @@ export const calc: ProgramType = {
     // Step 5 — 계산기 연산 종류 (mode==='calc', multi)
     {
       id: 'ops',
+      role: 'goal',
       question: '어떤 계산을 넣을까? (여러 개 OK)',
       multi: true,
       showIf: (a) => a.mode === 'calc',
@@ -95,6 +100,7 @@ export const calc: ProgramType = {
     // Step 6 — 버튼 모양
     {
       id: 'btnshape',
+      role: 'appearance',
       question: '버튼 모양은 어떻게 할까?',
       options: [
         { id: 'round', label: '둥근 버튼', icon: '🔵', promptFragment: '버튼을 동그랗게 만들어.' },
@@ -108,6 +114,7 @@ export const calc: ProgramType = {
     // Step 7 — 버튼 색
     {
       id: 'btncolor',
+      role: 'appearance',
       question: '버튼 색은 어떻게 할까?',
       options: [
         { id: 'blue', label: '파란색', icon: '💙', promptFragment: '버튼을 파란색 계열로 해.' },
@@ -121,6 +128,7 @@ export const calc: ProgramType = {
     // Step 8 — 소리
     {
       id: 'btnsound',
+      role: 'sound',
       question: '버튼 누를 때 소리를 넣을까?',
       options: [
         { id: 'click', label: '딸깍 소리', icon: '🎵', promptFragment: '버튼을 누를 때마다 Web Audio로 딸깍 소리가 나게 해.' },
@@ -133,6 +141,7 @@ export const calc: ProgramType = {
     // Step 9 — 소리 종류 (btnsound !== 'none')
     {
       id: 'soundfx',
+      role: 'sound',
       question: '정답 맞혔을 때 효과음을 어떻게 할까?',
       showIf: (a) => a.btnsound !== 'none',
       options: [
@@ -145,6 +154,7 @@ export const calc: ProgramType = {
     // Step 10 — 틀렸을 때 (게임 모드)
     {
       id: 'wrongfx',
+      role: 'output',
       question: '틀렸을 때 어떻게 할까?',
       showIf: (a) => a.mode === 'guess' || a.mode === 'times' || a.mode === 'speed',
       options: [
@@ -157,6 +167,7 @@ export const calc: ProgramType = {
     // Step 11 — 추가 기능 (mode !== 'times', multi)
     {
       id: 'extra',
+      role: 'output',
       showIf: (a) => a.mode !== 'times',
       question: '추가 기능을 넣을까? (여러 개 OK)',
       multi: true,
@@ -172,6 +183,7 @@ export const calc: ProgramType = {
     // Step 12 — 화면 (mode !== 'times')
     {
       id: 'display',
+      role: 'appearance',
       showIf: (a) => a.mode !== 'times',
       question: '숫자 화면을 어떻게 보여줄까?',
       options: [
@@ -186,6 +198,7 @@ export const calc: ProgramType = {
     // Step 13 — 배경
     {
       id: 'bg',
+      role: 'decor',
       question: '배경은 어떻게 할까?',
       options: [
         { id: 'white', label: '하얀 배경', icon: '🤍', promptFragment: '배경을 깔끔한 흰색으로 해.' },
