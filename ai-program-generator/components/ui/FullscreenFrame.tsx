@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Maximize, Minimize, ZoomIn, ZoomOut } from 'lucide-react';
 import type { GeneratedCode } from '@/lib/ai/types';
 import { authedFetch } from '@/lib/client/authedFetch';
+import { previewOrigin } from '@/lib/client/previewOrigin';
 import LoadingDots from './LoadingDots';
 import Button from './Button';
 
@@ -22,26 +23,6 @@ interface Props {
   /** iframe 강제 리마운트용 key */
   frameKey?: string | number;
   className?: string;
-}
-
-// 미리보기를 "교차 사이트" URL로 로드해 별도 프로세스에서 실행한다.
-// (srcDoc은 부모와 같은 프로세스라, 생성 코드의 무한 루프가 탭 전체를 얼렸음 — 실제 발생 버그)
-// localhost ↔ 127.0.0.1 은 서로 다른 사이트라 Chrome 사이트 격리가 적용된다.
-function previewOrigin(): string {
-  const { protocol, hostname, port } = window.location;
-  const p = port ? `:${port}` : '';
-  if (hostname === 'localhost') return `${protocol}//127.0.0.1${p}`;
-  if (hostname === '127.0.0.1') return `${protocol}//localhost${p}`;
-  // 배포 환경: 별도 미리보기 도메인이 있어야 프로세스 격리가 유지된다.
-  const configured = process.env.NEXT_PUBLIC_PREVIEW_ORIGIN;
-  if (!configured) {
-    // 배포(비-localhost)인데 별도 미리보기 도메인 미설정 = 프로세스 격리 불가.
-    // 같은 오리진으로 조용히 폴백(무한루프 코드가 부모 탭을 얼림)하지 않고 명시적으로 실패시킨다.
-    // 배포 시 NEXT_PUBLIC_PREVIEW_ORIGIN 설정 필수.
-    console.error('[preview] NEXT_PUBLIC_PREVIEW_ORIGIN 미설정 — 미리보기 비활성화(프로세스 격리 불가).');
-    throw new Error('PREVIEW_ORIGIN_UNSET');
-  }
-  return configured;
 }
 
 // code 객체 + photo 값 기준 미리보기 id 캐시 — 탭 토글로 remount돼도 같은 (code, photo)면 재요청하지 않는다.
