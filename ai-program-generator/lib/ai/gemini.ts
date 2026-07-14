@@ -69,12 +69,17 @@ export class GeminiProvider implements AIProvider {
 
     let acc = '';
     let lastSig = '';
+    let lastParsedLen = 0;
     let lastUsage: { promptTokenCount?: number; candidatesTokenCount?: number; thoughtsTokenCount?: number } | undefined;
     for await (const chunk of stream) {
       if (chunk.usageMetadata) lastUsage = chunk.usageMetadata; // usageMetadata는 보통 마지막 청크에 누적치로 온다
       const t = chunk.text;
       if (!t) continue;
       acc += t;
+      // 라이브 프리뷰용 델타는 512자 단위로만 재파싱 — 매 청크마다 acc 전체를 재파싱하면 대형 생성에서
+      // O(n²) 동기 CPU로 이벤트루프를 막는다. 최종 결과는 아래 done 경로에서 acc 전체를 엄격 파싱하므로 정확성 무영향.
+      if (acc.length - lastParsedLen < 512) continue;
+      lastParsedLen = acc.length;
       const partial = parsePartialCode(acc);
       const sig = JSON.stringify(partial);
       if (sig !== lastSig) {
