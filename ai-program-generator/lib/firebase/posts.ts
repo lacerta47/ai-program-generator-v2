@@ -17,7 +17,7 @@ import { db } from './client';
 import { assertClean, isReservedNickname, ProfanityError } from '@/lib/moderation';
 import { forkPost } from '@/lib/client/postCount';
 import { authedJson } from '@/lib/client/authedFetch';
-import type { Post, NewPost, PostEdit } from './types';
+import type { Post, NewPost, PostEdit, PlanFields } from './types';
 
 const COL = 'posts';
 export const PAGE_SIZE = 20;
@@ -79,6 +79,7 @@ export async function createPost(data: NewPost): Promise<string> {
   await assertClean(data.title, '제목');
   await assertClean(data.authorName, '이름');
   if (data.logicLine) await assertClean(data.logicLine, '핵심 한 줄'); // 아이가 쓴 공개 텍스트 — 제목과 동일 검열
+  await assertPlanClean(data.plan); // 계획서 본문(공개)도 동일 검열
   assertAuthorNameAllowed(data.authorName);
   const ref = await addDoc(collection(db, COL), data);
   return ref.id;
@@ -91,6 +92,19 @@ function assertAuthorNameAllowed(authorName: string): void {
   }
 }
 
+/** 계획서 본문(생김새·사용법·동작·더 바라는 점)도 제목·이름과 동일 검열 — 정상 UI 경로 커버(SDK 우회는 신고로 대처). */
+async function assertPlanClean(plan?: PlanFields): Promise<void> {
+  if (!plan) return;
+  for (const [label, v] of [
+    ['생김새', plan.look],
+    ['사용법', plan.usage],
+    ['동작', plan.how],
+    ['더 바라는 점', plan.etc],
+  ] as const) {
+    if (v && v.trim()) await assertClean(v, label);
+  }
+}
+
 export async function updatePostTitle(id: string, title: string): Promise<void> {
   await assertClean(title);
   await updateDoc(doc(db, COL, id), { title: title.trim() });
@@ -100,6 +114,7 @@ export async function updatePostTitle(id: string, title: string): Promise<void> 
 export async function updatePostContent(id: string, edit: PostEdit): Promise<void> {
   await assertClean(edit.title, '제목');
   await assertClean(edit.authorName, '이름');
+  await assertPlanClean(edit.plan); // 계획서 본문(공개)도 동일 검열
   assertAuthorNameAllowed(edit.authorName);
   await updateDoc(doc(db, COL, id), { ...edit });
 }
