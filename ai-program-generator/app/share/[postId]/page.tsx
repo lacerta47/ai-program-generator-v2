@@ -1,14 +1,6 @@
 'use client';
 import { use, useState } from 'react';
-
-// FullscreenFrame의 previewOrigin 로직과 동일(로컬 localhost↔127 스왑 / 배포 NEXT_PUBLIC_PREVIEW_ORIGIN)
-function previewOrigin(): string {
-  const { protocol, hostname, port } = window.location;
-  const p = port ? `:${port}` : '';
-  if (hostname === 'localhost') return `${protocol}//127.0.0.1${p}`;
-  if (hostname === '127.0.0.1') return `${protocol}//localhost${p}`;
-  return process.env.NEXT_PUBLIC_PREVIEW_ORIGIN ?? `${protocol}//${hostname}${p}`;
-}
+import { previewOrigin } from '@/lib/client/previewOrigin';
 
 export default function SharePage({ params }: { params: Promise<{ postId: string }> }) {
   const { postId } = use(params);
