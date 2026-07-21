@@ -12,3 +12,6 @@ export class UserFacingError extends Error {
     this.name = 'UserFacingError';
   }
 }
+
+/** 무료 할당량 소진(양 모델 모두 429) — UserFacingError의 특수형. 소진을 코드로 구별하기 위함(cron 등). */
+export class QuotaExhaustedError extends UserFacingError {}
