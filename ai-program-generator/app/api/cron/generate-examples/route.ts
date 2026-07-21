@@ -3,7 +3,7 @@ import { adminDb } from '@/lib/firebase/admin';
 import { randomPlan } from '@/lib/examples/randomPlan';
 import { generateExampleOnce } from '@/lib/examples/generateExampleOnce';
 import { publishExample } from '@/lib/examples/publishExample';
-import { UserFacingError } from '@/lib/ai/errors';
+import { QuotaExhaustedError } from '@/lib/ai/errors';
 
 // 놀고 있는 Gemini 무료 한도로 예시 작품을 교육테스트 보드에 생성·게시. CRON_SECRET Bearer(daily-stats 동일).
 // 한 요청은 소량(MAX_PER_RUN)만 — Vercel 함수 시간제한(maxDuration). 트리거(Claude 루틴)가 exhausted까지 반복 호출.
@@ -20,9 +20,9 @@ async function findExampleCategoryId(): Promise<string | null> {
   return snap.empty ? null : snap.docs[0].id;
 }
 
-/** 무료 소진(429/UserFacingError) 여부 — true면 그날 종료. */
+/** 무료 소진(429/QuotaExhaustedError) 여부 — true면 그날 종료. */
 function isExhausted(e: unknown): boolean {
-  if (e instanceof UserFacingError) return true;
+  if (e instanceof QuotaExhaustedError) return true;
   const msg = String((e as { message?: string })?.message ?? e);
   const status = (e as { status?: number })?.status;
   return status === 429 || /RESOURCE_EXHAUSTED|exceeded your current quota/i.test(msg);
