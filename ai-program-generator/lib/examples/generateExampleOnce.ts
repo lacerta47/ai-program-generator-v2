@@ -6,9 +6,10 @@ import { SYSTEM_PROMPTS, LOGIC_META_INSTRUCTION } from '@/lib/ai/prompts';
  *  무료 소진 시 gemini.ts가 UserFacingError를 던지며 그대로 위로 전파(호출부가 exhausted 처리). */
 export async function generateExampleOnce(
   prompt: string,
+  signal?: AbortSignal,
 ): Promise<{ code: GeneratedCode; meta: GenerationMeta }> {
   const system = SYSTEM_PROMPTS['survey'] + LOGIC_META_INSTRUCTION;
-  for await (const chunk of getAIProvider().generateStream({ prompt, system, mode: 'generate' })) {
+  for await (const chunk of getAIProvider().generateStream({ prompt, system, mode: 'generate' }, signal)) {
     if (chunk.type === 'done') {
       return {
         code: chunk.code,
