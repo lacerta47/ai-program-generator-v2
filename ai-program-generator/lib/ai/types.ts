@@ -13,6 +13,12 @@ export interface GenerateInput {
   mode: GenerateMode;
   /** 멀티모달: 첨부 사진(없으면 텍스트-only). data=순수 base64(접두 제외), mimeType=image/jpeg 등 */
   photo?: { data: string; mimeType: string };
+  /**
+   * 빠른 생성 모드(자동 예시 대량 생성 전용) — 품질보다 속도 우선.
+   * 실사용 생성(/api/generate)은 이 값을 넘기지 않으므로 기본 품질(thinking 유지)로 동작한다.
+   * Gemini 구현은 이 플래그에서 thinking을 끄고 출력 상한을 낮춰 지연을 크게 줄인다.
+   */
+  fast?: boolean;
 }
 
 export interface GeneratedCode {
