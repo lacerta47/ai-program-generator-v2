@@ -50,12 +50,14 @@ export async function GET(req: NextRequest) {
   let made = 0;
   let exhausted = false;
   const startedAt = Date.now();
+  const usedTypes: string[] = []; // 한 호출 안에서 같은 종류가 겹치지 않게(서버리스라 호출 간 상태는 없음)
   for (let i = 0; i < MAX_PER_RUN; i++) {
     // 남은 예산이 부족하면 이번 호출은 여기서 종료(다음 호출로 이어감). 정상 200 응답.
     const remaining = RUN_BUDGET_MS - (Date.now() - startedAt);
     if (remaining < MIN_GEN_MS) break;
     try {
-      const rp = randomPlan();
+      const rp = randomPlan(usedTypes);
+      usedTypes.push(rp.type.id);
       // 개별 생성에 잔여 예산만큼의 상한 — hang/지연이 60s 캡을 넘겨 504 나는 걸 방지.
       const { code, meta } = await generateExampleOnce(rp.prompt, AbortSignal.timeout(remaining));
       await publishExample(categoryId, rp, code, meta);
