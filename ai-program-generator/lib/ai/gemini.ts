@@ -2,6 +2,7 @@ import { GoogleGenAI, Type } from '@google/genai';
 import type { AIProvider, GeneratedCode, GenerateInput, GenerationChunk } from './types';
 import { parsePartialCode } from './partialJson';
 import { UserFacingError, QuotaExhaustedError } from './errors';
+import { validateGeneratedCode } from './validateCode';
 
 // 제공자별 세부사항(모델 선택, JSON 모드, 파싱, 폴백)을 이 파일 안에 가둔다.
 // 다른 제공자로 교체할 때는 이 파일에 대응하는 구현만 추가하면 된다.
@@ -98,6 +99,13 @@ export class GeminiProvider implements AIProvider {
     const code = normalize(parsed);
     if (!code.html.trim()) {
       throw new UserFacingError('AI가 빈 결과를 만들었어요. 다시 한 번 만들어 볼까요?');
+    }
+    // 실행 가능성 게이트 — 문법이 깨졌거나 없는 요소를 조작하는 '죽은 프로그램'을 게시 전에 막는다.
+    // 실패는 기존 실패 경로와 동일하게 처리된다(라우트가 쿼터 환불 + 안내 메시지 전송).
+    const invalid = validateGeneratedCode(code);
+    if (invalid) {
+      console.error('[gemini] 생성 코드 검증 실패 →', invalid);
+      throw new UserFacingError('앗, 만든 프로그램이 잘 움직이지 않아요. 다시 한 번 만들어 볼까요?');
     }
     // 토큰 사용량(비용 실측용). thoughtsTokenCount=thinking(출력으로 과금됨).
     const usage = lastUsage
