@@ -427,6 +427,13 @@ export const quiz: ProgramType = {
           promptFragment: '마지막에 맞힌 점수와 칭찬 메시지, 다시하기 버튼을 보여줘.',
         },
         {
+          id: 'type',
+          label: '나는 어떤 타입?',
+          icon: '🔮',
+          promptFragment:
+            '마지막에 점수 대신 "너는 호기심 대장!" 같은 타입 진단 결과 카드를 보여줘. 맞힌 개수 구간마다 다른 타입 이름과 한 줄 설명을 정해두고, 다시하기 버튼도 넣어.',
+        },
+        {
           id: 'medal',
           label: '금·은·동 메달',
           icon: '🥇',

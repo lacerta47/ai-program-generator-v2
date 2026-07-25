@@ -62,6 +62,47 @@ export const paint: ProgramType = {
     },
     // STEP 2 — 붓 종류
     {
+      id: 'outline',
+      role: 'goal',
+      question: '밑그림을 깔아 줄까?',
+      options: [
+        {
+          id: 'animal',
+          label: '동물 밑그림',
+          icon: '🐶',
+          promptFragment:
+            '도화지에 색칠할 수 있는 동물(강아지·고양이·토끼 등) 외곽선 밑그림을 SVG로 연하게 깔아줘. 선 안쪽을 칠할 수 있게 하고, 밑그림을 켜고 끄는 버튼도 넣어.',
+        },
+        {
+          id: 'dino',
+          label: '공룡 밑그림',
+          icon: '🦕',
+          promptFragment:
+            '도화지에 색칠할 수 있는 공룡 외곽선 밑그림을 SVG로 연하게 깔아줘. 선 안쪽을 칠할 수 있게 하고, 밑그림을 켜고 끄는 버튼도 넣어.',
+        },
+        {
+          id: 'car',
+          label: '자동차 밑그림',
+          icon: '🚗',
+          promptFragment:
+            '도화지에 색칠할 수 있는 자동차 외곽선 밑그림을 SVG로 연하게 깔아줘. 선 안쪽을 칠할 수 있게 하고, 밑그림을 켜고 끄는 버튼도 넣어.',
+        },
+        {
+          id: 'flower',
+          label: '꽃 밑그림',
+          icon: '🌷',
+          promptFragment:
+            '도화지에 색칠할 수 있는 꽃 외곽선 밑그림을 SVG로 연하게 깔아줘. 선 안쪽을 칠할 수 있게 하고, 밑그림을 켜고 끄는 버튼도 넣어.',
+        },
+        {
+          id: 'none',
+          label: '빈 종이에 자유롭게',
+          icon: '📄',
+          promptFragment: '',
+        },
+      ],
+    },
+    {
       id: 'brush',
       role: 'appearance',
       question: '어떤 붓으로 그릴까?',
