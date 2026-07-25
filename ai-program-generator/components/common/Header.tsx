@@ -23,19 +23,19 @@ export default function Header({ active }: { active?: 'creator' | 'board' | 'sur
             <span className="hover-wiggle grid place-items-center" aria-hidden>
               <Wand2 size={17} />
             </span>
-            만들기
+            <span className="relative top-[0.5px]">만들기</span>
           </GlowNavLink>
           <GlowNavLink href="/easy" active={active === 'survey'}>
             <span className="hover-wiggle grid place-items-center" aria-hidden>
               <MousePointerClick size={17} />
             </span>
-            골라서 만들기
+            <span className="relative top-[0.5px]">골라서 만들기</span>
           </GlowNavLink>
           <GlowNavLink href="/board" active={active === 'board'}>
             <span className="hover-wiggle grid place-items-center" aria-hidden>
               <LayoutGrid size={17} />
             </span>
-            게시판
+            <span className="relative top-[0.5px]">게시판</span>
           </GlowNavLink>
           <SoundToggle />
           <ThemeToggle />
