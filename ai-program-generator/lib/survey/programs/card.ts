@@ -72,6 +72,7 @@ export const card: ProgramType = {
           id: 'name',
           label: '이름',
           icon: '🏷️',
+          needsName: true,
           promptFragment: '카드에 내 이름을 크게 써줘.',
         },
         {
@@ -451,6 +452,7 @@ export const card: ProgramType = {
           id: 'yes',
           label: '응, 내 이름 쓸래!✏️',
           icon: '✏️',
+          needsName: true,
           promptFragment: '카드 안에서 이름과 한 줄 메시지를 직접 클릭해 입력하고 바꿀 수 있는 칸을 넣어.',
         },
         {

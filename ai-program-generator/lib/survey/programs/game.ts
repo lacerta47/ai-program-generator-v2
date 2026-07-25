@@ -538,6 +538,7 @@ export const game: ProgramType = {
           id: 'yes',
           label: '응, 이름 넣어!',
           icon: '✏️',
+          needsName: true,
           promptFragment: '게임 시작 전 이름을 입력하고, 점수판(localStorage)에 이름과 함께 최고 점수를 기록해.',
         },
         {

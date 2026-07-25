@@ -13,6 +13,8 @@ import { requestGenerateStream } from '@/lib/client/generate';
 import { currentStage, STAGE_ORDER, STAGE_LABEL_EASY, type StreamStage } from '@/lib/ai/streamStages';
 import { buildModifyPrompt } from '@/components/creator/prompts';
 import PhotoUpload from '@/components/creator/PhotoUpload';
+import { TextInput } from '@/components/ui/Field';
+import { assertClean, isReservedNickname } from '@/lib/moderation';
 import { playSelect, playSuccess } from '@/lib/client/sound';
 import { useAuth } from '@/components/auth/AuthProvider';
 import LoginDialog from '@/components/auth/LoginDialog';
@@ -62,6 +64,8 @@ export default function SurveyWizard() {
   const [pendingType, setPendingType] = useState<ProgramType | null>(null);
   // 생성 화면 사진 1장(학생/교사 전용) — 생성(requestGenerateStream)·업로드(createPost)에 전달
   const [photo, setPhoto] = useState<string | null>(null);
+  // '내 이름' 류(needsName) 선택 시 마지막 단계에서 받는 이름(별명) — 선택 입력(비우면 기존 동작)
+  const [userName, setUserName] = useState('');
   // 생성 취소용 — busy 화면에서 '그만 만들기'를 누르면 진행 중 요청을 중단
   const abortRef = useRef<AbortController | null>(null);
 
@@ -73,7 +77,7 @@ export default function SurveyWizard() {
   function growInCreate() {
     if (!type) return;
     stashEasyDraft({
-      plan: surveyToPlan(type, answers),
+      plan: planForShare(),
       code,
       genPrompt: genPrompt || assemblePrompt(type, answers),
       photo: photo ?? null,
@@ -93,6 +97,24 @@ export default function SurveyWizard() {
       }),
     [steps, answers],
   );
+
+  // '내 이름' 류(needsName) 옵션을 골랐는지 — 마지막 단계에 이름(별명) 입력 칸을 보여준다(선택 입력).
+  const wantsName = useMemo(
+    () =>
+      steps.some((s) => {
+        const a = answers[s.id];
+        const ids = Array.isArray(a) ? a : a ? [a] : [];
+        return s.options.some((o) => o.needsName && ids.includes(o.id));
+      }),
+    [steps, answers],
+  );
+
+  // 업로드·수정·브릿지가 쓰는 계획서 — 이름을 적었으면 etc에 남겨(게시 시 검열 대상에 포함되고, 보는 사람도 알 수 있게)
+  const planForShare = () => {
+    const p = surveyToPlan(type!, answers);
+    const name = userName.trim();
+    return wantsName && name ? { ...p, etc: `${p.etc}\n이름 → ${name}` } : p;
+  };
   const hasCode = Boolean(code.html || code.css || code.javascript);
   const onLastDone = stepIdx >= steps.length;
 
@@ -251,13 +273,29 @@ export default function SurveyWizard() {
       toast('"내 사진으로"를 골랐어요! 아래에서 사진을 먼저 올려 주세요.');
       return;
     }
+    // 이름은 선택 입력 — 적었을 때만 검열(공개 게시 가능 텍스트라 authorName과 동일 정책) 후 프롬프트에 반영
+    const name = userName.trim();
+    if (wantsName && name) {
+      if (isReservedNickname(name)) {
+        toast('그 이름은 쓸 수 없어요. 다른 이름으로 해주세요.');
+        return;
+      }
+      try {
+        await assertClean(name, '이름');
+      } catch (e) {
+        toast(e instanceof Error ? e.message : '이름을 다시 확인해 주세요.');
+        return;
+      }
+    }
     setBusy(true);
     setStage(null);
     setBuildMsg('AI가 준비하고 있어요…');
     const ctrl = new AbortController();
     abortRef.current = ctrl;
     try {
-      const prompt = assemblePrompt(type, answers);
+      const prompt =
+        assemblePrompt(type, answers) +
+        (wantsName && name ? ` 화면에 이름이 들어가는 곳(카드 이름·점수판 등)에는 '${name}' 이름을 처음부터 넣어줘.` : '');
       setGenPrompt(prompt);
       const result = await requestGenerateStream(prompt, 'generate', 'survey', {
         signal: ctrl.signal,
@@ -301,7 +339,7 @@ export default function SurveyWizard() {
     const ctrl = new AbortController();
     abortRef.current = ctrl;
     try {
-      const prompt = buildModifyPrompt(surveyToPlan(type, answers), code, request);
+      const prompt = buildModifyPrompt(planForShare(), code, request);
       const result = await requestGenerateStream(prompt, 'modify', 'survey', {
         signal: ctrl.signal,
         onDelta: onStageDelta,
@@ -390,7 +428,7 @@ export default function SurveyWizard() {
           open={uploadOpen}
           onClose={() => setUploadOpen(false)}
           code={code}
-          plan={surveyToPlan(type, answers)}
+          plan={planForShare()}
           prompt={genPrompt || assemblePrompt(type, answers)}
           defaultTitle={type.buildName(answers)}
           photo={photo ?? undefined}
@@ -519,6 +557,20 @@ export default function SurveyWizard() {
           <div className="anim-pop-in text-center">
             <h2 className="text-[24px]">다 골랐어요! 만들어 볼까요?</h2>
             <p className="mt-1 text-[16px] text-muted">고른 대로 AI가 만들어 줄 거예요</p>
+            {wantsName && (
+              <div className="mt-5 flex flex-col items-center gap-1.5">
+                <p className="text-[15px] font-medium text-brand">작품에 넣을 이름(별명)을 알려줘요</p>
+                <TextInput
+                  value={userName}
+                  onChange={(e) => setUserName(e.target.value)}
+                  placeholder="예: 지호"
+                  maxLength={12}
+                  className="max-w-56 text-center"
+                  aria-label="작품에 넣을 이름(별명)"
+                />
+                <p className="text-[13px] text-muted">안 적으면 만든 다음에 직접 적을 수 있어요</p>
+              </div>
+            )}
             {(isStudent || isTeacher) && (
               <div className="mt-5 flex flex-col items-center gap-2">
                 {wantsPhoto && !photo && (

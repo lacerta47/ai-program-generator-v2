@@ -20,6 +20,13 @@ export interface SurveyOption {
    * 마지막 단계에서 사진 없이 만들기를 누르면 막는다. 자동 예시(randomPlan)도 이 옵션은 뽑지 않는다.
    */
   needsPhoto?: boolean;
+  /**
+   * '내 이름' 류 선택지 — 고르면 마지막 단계에 이름(별명) 입력 칸이 나타난다.
+   * 사진과 달리 **선택 입력**: 비워도 기존처럼 프로그램 안에서 직접 적는 동작이 되고,
+   * 적으면 완성작에 그 이름을 처음부터 넣도록 프롬프트에 반영한다(검열 통과 필수).
+   * 선택 입력이므로 자동 예시(randomPlan)에서 제외하지 않는다.
+   */
+  needsName?: boolean;
 }
 
 export interface SurveyStep {
