@@ -9,7 +9,7 @@ import { requestGenerateStream } from '@/lib/client/generate';
 import { updatePostContent } from '@/lib/firebase/posts';
 import { ProfanityError } from '@/lib/moderation';
 import { downloadProgram } from '@/lib/client/postActions';
-import { EXAMPLE_PLANS } from '@/lib/examples';
+import { EXAMPLE_PLANS, type ExamplePlan } from '@/lib/examples';
 import { useAuth } from '@/components/auth/AuthProvider';
 import LoginDialog from '@/components/auth/LoginDialog';
 import UploadDialog from '@/components/board/UploadDialog';
@@ -46,7 +46,6 @@ export default function Creator() {
   const [modifyActual, setModifyActual] = useState('');
   // 고치기 성공 후 '무엇이 바뀌었을까?' 성찰 힌트
   const [showChangeHint, setShowChangeHint] = useState(false);
-  const [exampleIndex, setExampleIndex] = useState(0);
   const [previewKey, setPreviewKey] = useState(0);
   const [genPrompt, setGenPrompt] = useState('');
   const [uploadOpen, setUploadOpen] = useState(false);
@@ -254,8 +253,8 @@ export default function Creator() {
     }
   }
 
-  function applyExample() {
-    const ex = EXAMPLE_PLANS[exampleIndex];
+  // 예시 이름(칩)을 누르면 바로 폼을 채운다(별도 '가져오기' 버튼 없이 1클릭).
+  function applyExample(ex: ExamplePlan) {
     setPlan({ name: ex.name, look: ex.look, usage: ex.usage, how: ex.how, etc: ex.etc });
     setHow3(parseHow(ex.how)); // 예시의 동작을 3칸으로 분해해 스캐폴드 시연
   }
@@ -402,20 +401,16 @@ export default function Creator() {
         </Label>
 
         <div className="flex flex-wrap items-center gap-2 rounded-[var(--r-md)] bg-surface-2 p-3">
-          <span className="w-full text-[14px] text-muted">아이디어가 없나요? 예시로 시작해 보세요</span>
+          <span className="w-full text-[14px] text-muted">아이디어가 없나요? 예시를 누르면 바로 채워져요</span>
           {EXAMPLE_PLANS.map((ex, i) => (
             <Chip
               key={ex.name}
               color={CHIP_COLORS[(i + 1) % CHIP_COLORS.length]}
-              active={exampleIndex === i}
-              onClick={() => setExampleIndex(i)}
+              onClick={() => applyExample(ex)}
             >
               {ex.name}
             </Chip>
           ))}
-          <Button variant="soft" onClick={applyExample} className="min-h-11 w-full">
-            이 예시 가져오기
-          </Button>
         </div>
 
         {(isStudent || isTeacher) && <PhotoUpload value={photo} onChange={setPhoto} />}
