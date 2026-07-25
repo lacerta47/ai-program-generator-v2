@@ -161,6 +161,13 @@ export const game: ProgramType = {
           icon: '🤖',
           promptFragment: '주인공은 작은 로봇이야.',
         },
+        {
+          id: 'photo',
+          label: '내 사진으로',
+          icon: '📷',
+          needsPhoto: true,
+          promptFragment: '주인공은 내가 올린 사진이야. 첨부한 사진을 주인공 캐릭터로 사용해(둥글게 잘라 얼굴처럼 보여도 좋아).',
+        },
       ],
     },
     // STEP 5 — 조작 (액션 장르만 — mole/rps/memory는 클릭이 전부라 제외)
@@ -498,6 +505,14 @@ export const game: ProgramType = {
         { id: 'space', label: '우주', icon: '🚀', promptFragment: '카드 그림은 우주 친구들(로켓·별·행성·외계인 등)로 해.' },
         { id: 'vehicle', label: '탈것', icon: '🚗', promptFragment: '카드 그림은 탈것들(자동차·기차·비행기·배 등)로 해.' },
         { id: 'face', label: '표정 얼굴', icon: '😀', promptFragment: '카드 그림은 여러 가지 표정 얼굴(웃음·놀람·윙크 등)로 해.' },
+        {
+          id: 'photo',
+          label: '내 사진',
+          icon: '📷',
+          needsPhoto: true,
+          promptFragment:
+            '카드 그림은 첨부한 사진으로 만들어. 사진을 canvas에 한 번만 불러와 여러 조각으로 잘라, 같은 조각 두 장씩 짝이 되게 카드 앞면에 그려.',
+        },
       ],
     },
     // STEP 13-d — 짝 맞추기: 카드 수 (genre=memory일 때만)

@@ -9,15 +9,19 @@ export default function StepScreen({
   total,
   value,
   onChoose,
+  canPhoto = false,
 }: {
   step: SurveyStep;
   index: number; // 0-based 현재 단계
   total: number;
   value: string | string[] | undefined;
   onChoose: (optionId: string) => void; // 단일: 즉시 진행 / 다중: 토글
+  /** 사진 첨부 가능 계정(학생·교사)인지 — false면 needsPhoto 옵션을 숨긴다(고르고도 못 올리는 막다른 길 방지) */
+  canPhoto?: boolean;
 }) {
   const selected = (id: string) =>
     Array.isArray(value) ? value.includes(id) : value === id;
+  const options = step.options.filter((o) => !o.needsPhoto || canPhoto);
 
   return (
     <div className="anim-pop-in">
@@ -38,7 +42,7 @@ export default function StepScreen({
       {step.multi && <p className="mb-3 -mt-3 text-[14px] text-muted">여러 개 골라도 돼요</p>}
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        {step.options.map((o) => (
+        {options.map((o) => (
           <button
             key={o.id}
             onClick={() => onChoose(o.id)}

@@ -82,6 +82,17 @@ export default function SurveyWizard() {
   }
 
   const steps = useMemo(() => (type ? visibleSteps(type, answers) : []), [type, answers]);
+
+  // '내 사진으로' 류(needsPhoto) 옵션을 하나라도 골랐는지 — 마지막 단계에서 사진 첨부를 요구한다.
+  const wantsPhoto = useMemo(
+    () =>
+      steps.some((s) => {
+        const a = answers[s.id];
+        const ids = Array.isArray(a) ? a : a ? [a] : [];
+        return s.options.some((o) => o.needsPhoto && ids.includes(o.id));
+      }),
+    [steps, answers],
+  );
   const hasCode = Boolean(code.html || code.css || code.javascript);
   const onLastDone = stepIdx >= steps.length;
 
@@ -234,6 +245,10 @@ export default function SurveyWizard() {
     if (!user) {
       toast('로그인하면 만들 수 있어요!');
       setLoginOpen(true);
+      return;
+    }
+    if (wantsPhoto && !photo) {
+      toast('"내 사진으로"를 골랐어요! 아래에서 사진을 먼저 올려 주세요.');
       return;
     }
     setBusy(true);
@@ -505,7 +520,12 @@ export default function SurveyWizard() {
             <h2 className="text-[24px]">다 골랐어요! 만들어 볼까요?</h2>
             <p className="mt-1 text-[16px] text-muted">고른 대로 AI가 만들어 줄 거예요</p>
             {(isStudent || isTeacher) && (
-              <div className="mt-5 flex justify-center">
+              <div className="mt-5 flex flex-col items-center gap-2">
+                {wantsPhoto && !photo && (
+                  <p className="text-[15px] font-medium text-brand">
+                    &quot;내 사진으로&quot;를 골랐어요! 여기에 사진을 올려 주세요
+                  </p>
+                )}
                 <PhotoUpload value={photo} onChange={setPhoto} />
               </div>
             )}
@@ -521,6 +541,7 @@ export default function SurveyWizard() {
               total={steps.length}
               value={answers[steps[stepIdx].id]}
               onChoose={choose}
+              canPhoto={isStudent || isTeacher}
             />
             {steps[stepIdx].multi && (
               <Button variant="primary" onClick={() => advance(steps)} className="w-fit self-end">
