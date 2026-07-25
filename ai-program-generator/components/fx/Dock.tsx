@@ -99,7 +99,7 @@ export default function Dock({
           return (
             <span
               key={it.key}
-              className={`flex-1 basis-0 text-center text-[13px] leading-tight [word-break:keep-all] ${
+              className={`grid flex-1 basis-0 place-items-center text-center font-display text-[13px] leading-tight [word-break:keep-all] ${
                 on ? 'font-medium text-brand' : 'text-muted'
               }`}
             >
