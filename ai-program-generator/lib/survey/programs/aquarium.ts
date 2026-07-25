@@ -12,6 +12,7 @@ export const aquarium: ProgramType = {
       space: '나의 우주 수족관',
       forest: '나의 숲속 수족관',
       candy: '나의 사탕 나라 수족관',
+      dino: '나의 공룡 바다 수족관',
     };
     const place = a.place;
     return typeof place === 'string' && labels[place] ? labels[place] : '나의 디지털 수족관';
@@ -27,6 +28,7 @@ export const aquarium: ProgramType = {
         { id: 'space', label: '우주', icon: '🚀', promptFragment: '우주 배경으로 만들어. 별이 가득한 우주 느낌을 줘.' },
         { id: 'forest', label: '숲속 연못', icon: '🌿', promptFragment: '숲속 연못 배경으로 만들어. 초록색 자연 느낌을 줘.' },
         { id: 'candy', label: '사탕 나라', icon: '🍬', promptFragment: '파스텔 핑크·보라 사탕 나라 배경으로 만들어. 달콤하고 귀여운 느낌을 줘.' },
+        { id: 'dino', label: '공룡 바다', icon: '🦕', promptFragment: '아주 먼 옛날 공룡 시대의 바다 배경으로 만들어. 수장룡·암모나이트 같은 옛날 바다 친구들이 어울리는 느낌을 줘.' },
       ],
     },
 

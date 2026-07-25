@@ -49,6 +49,18 @@ export const quiz: ProgramType = {
           promptFragment: '공룡 이름·크기·먹이·시대에 대한 쉬운 퀴즈로 채워줘.',
         },
         {
+          id: '탈것',
+          label: '탈것',
+          icon: '🚗',
+          promptFragment: '자동차·기차·비행기·배 같은 탈것에 대한 쉬운 퀴즈로 채워줘.',
+        },
+        {
+          id: '우리 몸',
+          label: '우리 몸',
+          icon: '🦷',
+          promptFragment: '눈·코·입·뼈·심장 같은 우리 몸에 대한 쉬운 퀴즈로 채워줘.',
+        },
+        {
           id: '이것저것',
           label: '이것저것',
           icon: '🎲',

@@ -51,6 +51,12 @@ export const card: ProgramType = {
           icon: '❤️',
           promptFragment: '사랑하는 마음을 전하는 따뜻한 카드.',
         },
+        {
+          id: 'invite',
+          label: '초대 카드',
+          icon: '💌',
+          promptFragment: '생일잔치나 놀이에 친구를 초대하는 초대장 카드. 언제·어디서 만나는지 적는 칸이 어울리게 들어가.',
+        },
       ],
     },
 

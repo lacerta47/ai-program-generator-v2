@@ -13,6 +13,7 @@ export const sound: ProgramType = {
       drum: '나의 드럼',
       guitar: '나의 기타',
       bell: '나의 벨',
+      dj: '나의 DJ 패드',
     };
     const instrument = a.instrument;
     return typeof instrument === 'string' && labels[instrument] ? labels[instrument] : '나의 소리놀이';
@@ -65,6 +66,13 @@ export const sound: ProgramType = {
           icon: '🐸',
           promptFragment:
             '버튼마다 동물 소리가 나는 동물 소리판을 만들어. 🐄 소 울음·🐸 개구리·🦊 여우·🐧 펭귄 등 다양한 동물 버튼을 넣고, Web Audio API로 각 동물 특유의 음색을 합성해줘. 버튼에 동물 이모지를 크게 표시해.',
+        },
+        {
+          id: 'dj',
+          label: 'DJ 패드',
+          icon: '🎧',
+          promptFragment:
+            '네모난 패드를 누르면 신나는 전자음(킥·클랩·신스·효과음)이 나는 DJ 패드를 만들어. Web Audio API로 소리를 합성하고, 패드를 누르면 불이 들어오게 해.',
         },
       ],
     },
