@@ -294,6 +294,13 @@ export const card: ProgramType = {
           icon: '☁️',
           promptFragment: '솜사탕 같은 구름 장식을 넣어.',
         },
+        {
+          id: 'photo',
+          label: '내 사진',
+          icon: '📷',
+          needsPhoto: true,
+          promptFragment: '카드에 내가 올린 사진을 어울리는 자리(가운데나 액자 모양)에 넣어 꾸며.',
+        },
       ],
     },
 

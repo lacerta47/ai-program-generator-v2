@@ -47,7 +47,8 @@ function pick<T>(arr: T[]): T {
  * 걸리면 buildName이 폴백 이름('나의 퀴즈')으로 떨어져 제목이 되레 단조로워지기 때문이다.
  */
 function randomAnswer(step: SurveyStep, allowAiPick: boolean): string | string[] {
-  const ids = step.options.map((o) => o.id);
+  // needsPhoto('내 사진으로' 류)는 제외 — 봇은 사진이 없어서 뽑으면 "첨부한 사진" 지시만 남는 불량이 된다.
+  const ids = step.options.filter((o) => !o.needsPhoto).map((o) => o.id);
   if (step.multi) {
     const n = 1 + Math.floor(Math.random() * Math.min(MULTI_MAX, ids.length));
     return [...ids].sort(() => Math.random() - 0.5).slice(0, n);

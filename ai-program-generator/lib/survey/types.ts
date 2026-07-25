@@ -14,6 +14,12 @@ export interface SurveyOption {
   icon?: string;
   /** 이 선택이 생성 프롬프트에 더하는 자연어 조각 */
   promptFragment: string;
+  /**
+   * '내 사진으로' 류 선택지 — 사진 첨부가 전제인 옵션.
+   * 사진은 학생·교사(교실 보드)만 쓸 수 있으므로 그 외 계정에는 UI에서 숨기고,
+   * 마지막 단계에서 사진 없이 만들기를 누르면 막는다. 자동 예시(randomPlan)도 이 옵션은 뽑지 않는다.
+   */
+  needsPhoto?: boolean;
 }
 
 export interface SurveyStep {

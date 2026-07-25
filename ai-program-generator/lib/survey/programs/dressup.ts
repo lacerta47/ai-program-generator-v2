@@ -15,6 +15,7 @@ export const dressup: ProgramType = {
       robot: '나만의 로봇',
       animal: '나만의 동물 친구',
       monster: '나만의 몬스터',
+      photo: '내 사진 꾸미기',
     };
     const base = a.base;
     return typeof base === 'string' && labels[base] ? labels[base] : '나의 꾸미기 놀이';
@@ -31,6 +32,14 @@ export const dressup: ProgramType = {
         { id: 'robot', label: '로봇', icon: '🤖', promptFragment: '네모난 로봇을 꾸미는 놀이로 만들어. 로봇 얼굴·몸에 눈·안테나·버튼 등을 얹어.' },
         { id: 'animal', label: '동물 친구', icon: '🐱', promptFragment: '귀여운 동물 친구를 꾸미는 놀이로 만들어. 동물 얼굴에 귀·눈·코 등을 얹어.' },
         { id: 'monster', label: '몬스터', icon: '👾', promptFragment: '귀엽고 장난스러운 몬스터를 꾸미는 놀이로 만들어. 몸에 눈·뿔·이빨 등을 얹어.' },
+        {
+          id: 'photo',
+          label: '내 사진 꾸미기',
+          icon: '📷',
+          needsPhoto: true,
+          promptFragment:
+            '첨부한 사진을 화면 가운데 크게 놓고, 그 위에 부품(모자·안경·리본·수염 등)을 얹어 꾸미는 놀이로 만들어. 부품 위치는 사진 위에 어울리게 겹쳐.',
+        },
       ],
     },
     // 2 — 바탕 색
