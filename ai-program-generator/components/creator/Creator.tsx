@@ -343,8 +343,9 @@ export default function Creator() {
         </Label>
         {/* 동작(how) 구조화 — 순서(①②)·조건(③)을 눈에 보이게 유도(교육 Phase 1-b). 전부 선택 입력. */}
         <div className="flex flex-col gap-2.5 rounded-[var(--r-md)] border-2 border-line bg-surface-2/50 p-3.5">
-          <div className="flex items-center gap-1.5 text-[15px] font-medium text-ink">
-            어떻게 움직이나요? <span className="text-[13px] font-normal text-muted">순서와 규칙</span>
+          {/* 라벨 스타일을 다른 필드(어떻게 사용하나요? 등 Label 컴포넌트)와 통일 — Jua 20px muted */}
+          <div className="inline-flex items-center gap-1 font-display text-[20px] font-normal text-muted">
+            어떻게 움직이나요?
             <HelpTip>
               <Tip
                 lead="프로그램이 움직이는 순서를 차례대로 적고, 조건(만약 ~하면)이 있으면 함께 적어요. 또렷할수록 결과가 좋아져요!"
