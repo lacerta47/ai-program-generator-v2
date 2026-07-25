@@ -15,6 +15,7 @@ export const roulette: ProgramType = {
       task: '오늘의 할 일 룰렛',
       penalty: '벌칙 룰렛',
       prize: '경품 룰렛',
+      seat: '자리 뽑기 룰렛',
     };
     const use = a.use;
     return typeof use === 'string' && labels[use] ? labels[use] : '나의 룰렛';
@@ -33,6 +34,7 @@ export const roulette: ProgramType = {
         { id: 'task', label: '오늘의 할 일', icon: '📋', promptFragment: '오늘 할 일 뽑기 룰렛이야. 칸에 책 읽기·운동하기·그림 그리기·청소하기·일기 쓰기·악기 연습을 채워줘.' },
         { id: 'penalty', label: '벌칙 뽑기', icon: '😜', promptFragment: '재미있는 벌칙 뽑기 룰렛이야. 칸에 윗몸일으키기 10번·닭 흉내·눈 감고 노래·한 발로 서기·박수 20번·혀 내밀기를 채워줘.' },
         { id: 'prize', label: '경품·선물', icon: '🎁', promptFragment: '경품이나 선물 뽑기 룰렛이야. 칸에 책·과자·문구·스티커·게임·쿠폰을 채워줘.' },
+        { id: 'seat', label: '자리 뽑기', icon: '🪑', promptFragment: '자리 뽑기 룰렛이야. 칸에 1분단 첫째 줄·1분단 둘째 줄·2분단 첫째 줄·2분단 둘째 줄·3분단 첫째 줄·3분단 둘째 줄처럼 자리 이름을 채워줘.' },
       ],
     },
 

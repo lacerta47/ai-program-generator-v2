@@ -52,6 +52,12 @@ export const paint: ProgramType = {
           icon: '📓',
           promptFragment: '캔버스 배경은 흰색이고 연한 점선 격자무늬가 깔려 있어.',
         },
+        {
+          id: 'night',
+          label: '밤하늘 종이',
+          icon: '🌌',
+          promptFragment: '캔버스 배경은 어두운 밤하늘색이야. 밝은 색으로 그리면 야광처럼 빛나 보이게 해.',
+        },
       ],
     },
     // STEP 2 — 붓 종류

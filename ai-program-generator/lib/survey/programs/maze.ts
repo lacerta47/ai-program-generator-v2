@@ -58,6 +58,18 @@ export const maze: ProgramType = {
           icon: '❄️',
           promptFragment: '투명한 얼음벽과 눈으로 꾸며진 겨울 왕국 미로.',
         },
+        {
+          id: 'volcano',
+          label: '화산 미로',
+          icon: '🌋',
+          promptFragment: '용암이 흐르는 화산 속 미로. 벽은 바위, 길 옆에 주황빛 용암이 보여.',
+        },
+        {
+          id: 'undersea',
+          label: '바닷속 미로',
+          icon: '🐠',
+          promptFragment: '산호와 해초로 벽이 만들어진 바닷속 미로. 물고기가 배경에 헤엄쳐 다녀.',
+        },
       ],
     },
     // STEP 2 — 크기

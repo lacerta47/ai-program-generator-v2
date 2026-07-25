@@ -13,6 +13,7 @@ export const calc: ProgramType = {
       times: '구구단 연습기',
       speed: '빠른 셈 게임',
       animal: '동물 세기 게임',
+      coin: '동전 세기 놀이',
     };
     const mode = a.mode;
     return typeof mode === 'string' && labels[mode] ? labels[mode] : '나의 숫자놀이';
@@ -29,6 +30,7 @@ export const calc: ProgramType = {
         { id: 'times', label: '구구단 연습', icon: '✖️', promptFragment: '구구단 문제를 하나씩 내고 답을 맞히면 점수가 올라가는 구구단 연습 프로그램을 만들어.' },
         { id: 'speed', label: '빠른 셈 게임', icon: '⚡', promptFragment: '제한 시간 안에 간단한 덧셈·뺄셈 문제를 최대한 많이 맞히는 빠른 셈 게임을 만들어.' },
         { id: 'animal', label: '동물 세기 게임', icon: '🐶', promptFragment: '화면에 동물이 나타나면 개수를 세어 맞히는 동물 세기 게임을 만들어.' },
+        { id: 'coin', label: '동전 세기 놀이', icon: '🪙', promptFragment: '화면에 동전(10원·50원·100원·500원)들이 나타나면 모두 얼마인지 세어 맞히는 동전 세기 놀이를 만들어. 동전은 SVG로 실제와 비슷하게 그려줘.' },
       ],
     },
 

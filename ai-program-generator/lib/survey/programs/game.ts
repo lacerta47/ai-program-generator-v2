@@ -13,6 +13,8 @@ export const game: ProgramType = {
     if (a.genre === 'collect') return '모으기 게임';
     if (a.genre === 'mole') return '두더지 잡기';
     if (a.genre === 'run') return '달리기 게임';
+    if (a.genre === 'rps') return '가위바위보';
+    if (a.genre === 'memory') return '짝 맞추기 게임';
     return '나의 게임';
   },
   steps: [
@@ -45,6 +47,20 @@ export const game: ProgramType = {
           label: '달리기',
           icon: '🏃',
           promptFragment: '주인공이 자동으로 달리고 장애물을 점프해서 피하는 무한 달리기 게임.',
+        },
+        {
+          id: 'rps',
+          label: '가위바위보',
+          icon: '✊',
+          promptFragment:
+            '컴퓨터와 가위바위보 대결을 하는 게임. 가위·바위·보 버튼 3개를 누르면 컴퓨터도 무작위로 내고, 승/패/비김을 판정해 보여줘. 승패 기록(내 승리·컴퓨터 승리·비김 횟수)을 화면에 표시해.',
+        },
+        {
+          id: 'memory',
+          label: '짝 맞추기',
+          icon: '🃏',
+          promptFragment:
+            '뒤집힌 카드에서 같은 그림 두 장을 찾는 기억력 짝 맞추기 게임. 카드를 두 장 뒤집어 그림이 같으면 열린 채로 두고, 다르면 잠시 보여준 뒤 다시 뒤집어. 모든 짝을 찾으면 축하 화면을 보여줘.',
         },
       ],
     },
@@ -108,11 +124,11 @@ export const game: ProgramType = {
         },
       ],
     },
-    // STEP 4 — 주인공 (genre=mole 제외)
+    // STEP 4 — 주인공 (액션 장르만 — mole은 두더지가, rps/memory는 카드·손이 주인공이라 제외)
     {
       id: 'hero',
       role: 'appearance',
-      showIf: (a) => a.genre !== 'mole',
+      showIf: (a) => !['mole', 'rps', 'memory'].includes(String(a.genre)),
       question: '주인공 모습은?',
       options: [
         {
@@ -147,11 +163,11 @@ export const game: ProgramType = {
         },
       ],
     },
-    // STEP 5 — 조작 (genre=mole 제외)
+    // STEP 5 — 조작 (액션 장르만 — mole/rps/memory는 클릭이 전부라 제외)
     {
       id: 'control',
       role: 'control',
-      showIf: (a) => a.genre !== 'mole',
+      showIf: (a) => !['mole', 'rps', 'memory'].includes(String(a.genre)),
       question: '어떻게 조작할까?',
       options: [
         {
@@ -218,10 +234,11 @@ export const game: ProgramType = {
         },
       ],
     },
-    // STEP 7 — 점수 규칙
+    // STEP 7 — 점수 규칙 (액션 장르만 — rps는 승패 기록, memory는 시도 횟수로 별도 규칙)
     {
       id: 'scoring',
       role: 'rule',
+      showIf: (a) => !['rps', 'memory'].includes(String(a.genre)),
       question: '점수 규칙은?',
       options: [
         {
@@ -250,10 +267,11 @@ export const game: ProgramType = {
         },
       ],
     },
-    // STEP 8 — 속도
+    // STEP 8 — 속도 (액션 장르만 — rps/memory는 속도 개념 없음)
     {
       id: 'speed',
       role: 'flow',
+      showIf: (a) => !['rps', 'memory'].includes(String(a.genre)),
       question: '게임 속도는?',
       options: [
         {
@@ -297,10 +315,11 @@ export const game: ProgramType = {
         },
       ],
     },
-    // STEP 10 — 파워업 (multi)
+    // STEP 10 — 파워업 (액션 장르만, multi)
     {
       id: 'powerup',
       role: 'rule',
+      showIf: (a) => !['rps', 'memory'].includes(String(a.genre)),
       question: '파워업 아이템도 넣을까? (여러 개 골라도 돼)',
       multi: true,
       options: [
@@ -425,6 +444,73 @@ export const game: ProgramType = {
           icon: '🕳️',
           promptFragment: '달리기 게임에서 웅덩이나 구멍을 뛰어넘어야 해.',
         },
+      ],
+    },
+    // STEP 13-a — 가위바위보: 승부 방식 (genre=rps일 때만)
+    {
+      id: 'rps_rounds',
+      role: 'rule',
+      question: '승부는 어떻게 정할까?',
+      showIf: (a) => a.genre === 'rps',
+      options: [
+        {
+          id: 'best3',
+          label: '3판 2승',
+          icon: '✌️',
+          promptFragment: '3판 2선승제로 해. 먼저 2번 이기는 쪽이 최종 승리하고 승리 화면을 보여줘.',
+        },
+        {
+          id: 'best5',
+          label: '5판 3승',
+          icon: '🖐️',
+          promptFragment: '5판 3선승제로 해. 먼저 3번 이기는 쪽이 최종 승리하고 승리 화면을 보여줘.',
+        },
+        {
+          id: 'endless',
+          label: '계속 이어서',
+          icon: '♾️',
+          promptFragment: '판 제한 없이 계속 이어서 하고, 승·패·비김 누적 기록을 계속 보여줘.',
+        },
+      ],
+    },
+    // STEP 13-b — 가위바위보: 상대 캐릭터 (genre=rps일 때만)
+    {
+      id: 'rps_opponent',
+      role: 'appearance',
+      question: '누구랑 대결할까?',
+      showIf: (a) => a.genre === 'rps',
+      options: [
+        { id: 'robot', label: '로봇', icon: '🤖', promptFragment: '상대는 로봇 캐릭터야. 로봇이 가위바위보를 내는 모습을 보여줘.' },
+        { id: 'cat', label: '고양이', icon: '🐱', promptFragment: '상대는 귀여운 고양이 캐릭터야. 고양이가 가위바위보를 내는 모습을 보여줘.' },
+        { id: 'monster', label: '몬스터', icon: '👾', promptFragment: '상대는 장난꾸러기 몬스터 캐릭터야. 몬스터가 가위바위보를 내는 모습을 보여줘.' },
+        { id: 'dino', label: '공룡', icon: '🦖', promptFragment: '상대는 아기 공룡 캐릭터야. 공룡이 가위바위보를 내는 모습을 보여줘.' },
+      ],
+    },
+    // STEP 13-c — 짝 맞추기: 카드 그림 (genre=memory일 때만)
+    {
+      id: 'memory_theme',
+      role: 'goal',
+      question: '카드에 어떤 그림을 넣을까?',
+      showIf: (a) => a.genre === 'memory',
+      options: [
+        { id: 'animal', label: '동물', icon: '🐶', promptFragment: '카드 그림은 귀여운 동물들(강아지·고양이·토끼·판다 등)로 해.' },
+        { id: 'fruit', label: '과일', icon: '🍎', promptFragment: '카드 그림은 알록달록 과일들(사과·바나나·딸기·수박 등)로 해.' },
+        { id: 'space', label: '우주', icon: '🚀', promptFragment: '카드 그림은 우주 친구들(로켓·별·행성·외계인 등)로 해.' },
+        { id: 'vehicle', label: '탈것', icon: '🚗', promptFragment: '카드 그림은 탈것들(자동차·기차·비행기·배 등)로 해.' },
+        { id: 'face', label: '표정 얼굴', icon: '😀', promptFragment: '카드 그림은 여러 가지 표정 얼굴(웃음·놀람·윙크 등)로 해.' },
+      ],
+    },
+    // STEP 13-d — 짝 맞추기: 카드 수 (genre=memory일 때만)
+    {
+      id: 'memory_size',
+      role: 'rule',
+      question: '카드를 몇 장으로 할까?',
+      showIf: (a) => a.genre === 'memory',
+      options: [
+        { id: 'easy', label: '8장 (쉬워요)', icon: '🐣', promptFragment: '카드는 8장(4쌍)으로 쉽게 해.' },
+        { id: 'normal', label: '12장 (보통)', icon: '🙂', promptFragment: '카드는 12장(6쌍)으로 해.' },
+        { id: 'hard', label: '16장 (어려워요)', icon: '🔥', promptFragment: '카드는 16장(8쌍)으로 어렵게 해.' },
+        { id: 'choose', label: '고를 수 있게', icon: '🎚️', promptFragment: '시작 화면에서 쉬움(8장)·보통(12장)·어려움(16장)을 골라 시작할 수 있게 해.' },
       ],
     },
     // STEP 14 — 이름 등록
