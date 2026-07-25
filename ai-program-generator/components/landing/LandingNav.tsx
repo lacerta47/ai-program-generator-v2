@@ -18,8 +18,12 @@ export default function LandingNav({ compact = false }: { compact?: boolean }) {
   const { theme, toggle } = useTheme();
   const [loginOpen, setLoginOpen] = useState(false);
   const [idle, setIdle] = useState(false);
+  const [hover, setHover] = useState(false); // 네비에 마우스를 올리면 idle 타이머와 무관하게 즉시 노출
   const revealedRef = useRef(false);
   const dark = theme === 'dark';
+
+  // 무조작 대기(idle)로도, 마우스 hover로도 라벨·안내를 노출한다.
+  const revealed = idle || hover;
 
   // 무조작 감지: 마우스·키보드·스크롤·터치 어느 것도 없으면 IDLE_MS 후 라벨 노출.
   // (터치 기기엔 hover가 없으므로 touchstart 포함이 핵심)
@@ -71,15 +75,19 @@ export default function LandingNav({ compact = false }: { compact?: boolean }) {
 
   return (
     <>
-      <div className="relative">
-        <Dock items={items} compact={compact} revealed={idle} primaryKeys={PRIMARY} />
+      <div
+        className="relative"
+        onMouseEnter={() => setHover(true)}
+        onMouseLeave={() => setHover(false)}
+      >
+        <Dock items={items} compact={compact} revealed={revealed} primaryKeys={PRIMARY} />
         <p
           aria-hidden
           className={`pointer-events-none absolute inset-x-0 top-full mt-1 text-center text-[13px] text-brand transition-opacity duration-300 ${
-            idle ? 'opacity-100' : 'opacity-0'
+            revealed ? 'opacity-100' : 'opacity-0'
           }`}
         >
-          무엇부터 할까요? 여기서 골라요 ↗
+          무엇부터 할까요? 여기서 골라요
         </p>
       </div>
       <LoginDialog open={loginOpen} onClose={() => setLoginOpen(false)} />
