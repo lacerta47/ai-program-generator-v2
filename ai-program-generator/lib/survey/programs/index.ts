@@ -9,6 +9,8 @@ import { calc } from './calc';
 import { fortune } from './fortune';
 import { sound } from './sound';
 import { aquarium } from './aquarium';
+import { dressup } from './dressup';
+import { clock } from './clock';
 
 /** 종류 목록(순서 = 종류 선택 화면 노출 순서). 추가 종류는 여기에 import해 넣으면 됨. */
 export const PROGRAM_TYPES: ProgramType[] = [
@@ -22,6 +24,8 @@ export const PROGRAM_TYPES: ProgramType[] = [
   fortune,
   sound,
   aquarium,
+  dressup,
+  clock,
 ];
 
 export function getProgramType(id: string): ProgramType | undefined {
