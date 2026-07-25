@@ -146,6 +146,38 @@ export const dressup: ProgramType = {
         { id: 'both', label: '둘 다', icon: '✨', promptFragment: '"아무거나 꾸미기" 랜덤 버튼과 "처음부터" 되돌리기 버튼을 둘 다 넣어.' },
       ],
     },
+    // 9-b — 다 꾸민 뒤(목표·종결). 꾸미기만 있고 '완성'이라는 종결이 없던 공백을 메운다.
+    {
+      id: 'finish',
+      role: 'goal',
+      question: '다 꾸미면 무엇을 할까?',
+      options: [
+        {
+          id: 'card',
+          label: '완성 카드로 보여주기',
+          icon: '🖼️',
+          promptFragment: '"완성!" 버튼을 누르면 꾸민 캐릭터를 액자 같은 카드 모양으로 예쁘게 보여줘.',
+        },
+        {
+          id: 'name',
+          label: '이름 붙여 주기',
+          icon: '🏷️',
+          promptFragment: '"완성!" 버튼을 누르면 캐릭터에 이름을 붙일 수 있는 칸이 나오고, 적은 이름을 캐릭터 아래에 보여줘.',
+        },
+        {
+          id: 'compare',
+          label: '처음 모습과 비교하기',
+          icon: '🔍',
+          promptFragment: '"완성!" 버튼을 누르면 처음 기본 모습과 지금 꾸민 모습을 나란히 보여줘.',
+        },
+        {
+          id: 'keep',
+          label: '그냥 계속 꾸미기',
+          icon: '🎨',
+          promptFragment: '',
+        },
+      ],
+    },
     // 10 — 효과 (multi)
     {
       id: 'effect',

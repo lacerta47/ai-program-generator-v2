@@ -162,6 +162,47 @@ export const aquarium: ProgramType = {
       ],
     },
 
+    // Step 9-b — 먹이를 먹은 뒤의 변화(상태 변화). 클릭 반응은 있었지만 그 결과가 남지 않아
+    // '입력 → 상태 변화 → 출력' 고리가 끊겨 있던 공백을 메운다.
+    {
+      id: 'grow',
+      role: 'output',
+      showIf: (a) => a.click === 'feed',
+      question: '밥을 먹으면 어떻게 될까?',
+      options: [
+        {
+          id: 'bigger',
+          label: '몸집이 커져요',
+          icon: '🐡',
+          promptFragment: '먹이를 먹은 생물은 조금씩 커지게 해. 너무 커지지 않게 최대 크기를 정해줘.',
+        },
+        {
+          id: 'bright',
+          label: '색이 밝아져요',
+          icon: '🌟',
+          promptFragment: '먹이를 먹은 생물은 색이 조금 더 밝고 선명해지게 해.',
+        },
+        {
+          id: 'happy',
+          label: '신나서 빨라져요',
+          icon: '💨',
+          promptFragment: '먹이를 먹은 생물은 잠깐 신나게 빠르게 헤엄치다가 다시 원래 속도로 돌아오게 해.',
+        },
+        {
+          id: 'friend',
+          label: '친구가 한 마리 늘어요',
+          icon: '➕',
+          promptFragment: '먹이를 여러 번 먹으면 새 생물이 한 마리 태어나게 해(화면이 너무 붐비지 않게 최대 수를 정해줘).',
+        },
+        {
+          id: 'none',
+          label: '그대로예요',
+          icon: '🫧',
+          promptFragment: '',
+        },
+      ],
+    },
+
     // Step 10 — 소리 (G: G→H chain)
     {
       id: 'sound',

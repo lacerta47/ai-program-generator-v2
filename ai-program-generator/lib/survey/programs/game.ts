@@ -274,6 +274,44 @@ export const game: ProgramType = {
         },
       ],
     },
+    // STEP 7-b — 언제 끝날까(승리·종료 조건). 점수 규칙은 '어떻게 점수가 오르나'만 정하고
+    // '언제 끝나나'가 없어 무한 플레이가 되던 공백을 메운다. '조건' 개념의 가장 또렷한 사례.
+    // rps·memory는 자체 종료(판 수/짝 완성)가 있어 제외.
+    {
+      id: 'endcond',
+      role: 'rule',
+      showIf: (a) => !['rps', 'memory'].includes(String(a.genre)),
+      question: '게임은 언제 끝날까?',
+      options: [
+        {
+          id: 'time',
+          label: '30초 동안 버티기',
+          icon: '⏱️',
+          promptFragment:
+            '30초 제한 시간을 두고, 남은 시간을 화면에 크게 보여줘. 시간이 0이 되면 게임을 끝내고 최종 점수를 보여줘.',
+        },
+        {
+          id: 'target',
+          label: '목표 점수 채우기',
+          icon: '🎯',
+          promptFragment:
+            '목표 점수(예: 30점)를 정해 화면에 보여주고, 그 점수에 먼저 도달하면 "성공!"을 보여주며 게임을 끝내.',
+        },
+        {
+          id: 'life',
+          label: '목숨 3개 다 쓰면 끝',
+          icon: '❤️',
+          promptFragment:
+            '목숨을 3개 주고 화면에 하트로 보여줘. 부딪히거나 놓치면 목숨이 하나 줄고, 0이 되면 게임을 끝내.',
+        },
+        {
+          id: 'endless',
+          label: '끝없이 계속',
+          icon: '♾️',
+          promptFragment: '따로 끝나는 조건 없이 계속 즐길 수 있게 하고, 최고 점수만 기록해.',
+        },
+      ],
+    },
     // STEP 8 — 속도 (액션 장르만 — rps/memory는 속도 개념 없음)
     {
       id: 'speed',
