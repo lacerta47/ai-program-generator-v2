@@ -1,19 +1,16 @@
 import { NextRequest } from 'next/server';
 import { buildPreviewDoc } from '@/lib/program';
 import { adminDb } from '@/lib/firebase/admin';
+import { PREVIEW_SECURITY_HEADERS } from '@/lib/server/previewHeaders';
 import type { GeneratedCode } from '@/lib/ai/types';
 
 export const runtime = 'nodejs';
 
 // 게시된 작품 미리보기 — 이미 "공개 읽기"인 posts/{id}.code 를 서버가 직접 읽어 서빙한다.
 // (Firestore 쓰기 0 → /api/preview POST 의 무인증 쓰기 벡터를 게시판 경로에서 제거)
-// 보안 헤더/직접탐색 차단은 즉석코드 미리보기(/api/preview/[id])와 동일.
-const SECURITY_HEADERS = {
-  'Content-Type': 'text/html; charset=utf-8',
-  'Cache-Control': 'no-store',
-  'X-Robots-Tag': 'noindex',
-  'Content-Security-Policy': 'sandbox allow-scripts',
-};
+// 보안 헤더(sandbox + frame-ancestors)/직접탐색 차단은 즉석코드 미리보기(/api/preview/[id])와 동일 —
+// 값은 lib/server/previewHeaders.ts에서 공유한다.
+const SECURITY_HEADERS = PREVIEW_SECURITY_HEADERS;
 
 // 성공(공개글) 응답만 짧게 엣지 캐시 → 같은 공개글을 반복 조회하는 Firestore read 증폭(비용/DoS)을 상한. (B5)
 // 공개글 코드는 수정 시에만 바뀌므로 60초 staleness 허용(삭제된 글이 최대 60초 잔존할 수 있으나 공개 콘텐츠라 무해).

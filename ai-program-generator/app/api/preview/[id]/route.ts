@@ -1,19 +1,18 @@
 import { NextRequest } from 'next/server';
 import { getPreview } from '@/lib/preview-store';
+import { PREVIEW_SECURITY_HEADERS } from '@/lib/server/previewHeaders';
 
 export const runtime = 'nodejs';
 
 // 미리보기 문서를 직접(top-level) 탐색하면 앱 오리진에서 스크립트가 실행돼
-// localStorage/IndexedDB의 인증 토큰을 털릴 수 있다. 두 겹으로 막는다:
+// localStorage/IndexedDB의 인증 토큰을 털릴 수 있다. 세 겹으로 막는다:
 //  1) CSP sandbox 헤더 — 직접 접근해도 브라우저가 opaque origin으로 강제 샌드박스
 //     (Sec-Fetch-Dest 헤더가 없는 구형 브라우저에도 적용되는 근본 방어)
-//  2) Sec-Fetch-Dest 검사 — iframe 임베드가 아닌 직접 탐색은 차단(친절한 안내)
-const SECURITY_HEADERS = {
-  'Content-Type': 'text/html; charset=utf-8',
-  'Cache-Control': 'no-store',
-  'X-Robots-Tag': 'noindex',
-  'Content-Security-Policy': 'sandbox allow-scripts',
-};
+//  2) CSP frame-ancestors — 우리 앱 오리진 외의 사이트가 이 미리보기를 감싸지 못하게
+//     (즉석 미리보기는 교실 사진을 포함할 수 있어 외부 임베드 노출을 막는다)
+//  3) Sec-Fetch-Dest 검사 — iframe 임베드가 아닌 직접 탐색은 차단(친절한 안내)
+// 헤더 값은 lib/server/previewHeaders.ts 공유(두 미리보기 라우트가 어긋나지 않게).
+const SECURITY_HEADERS = PREVIEW_SECURITY_HEADERS;
 
 export async function GET(
   req: NextRequest,
