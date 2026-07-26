@@ -12,6 +12,8 @@ import { useToast } from '@/components/ui/Toast';
 
 interface Props {
   posts: Post[];
+  /** 찾기(검색어·개념)가 켜져 있는지 — 빈 목록 안내 문구를 '결과 없음'으로 바꾼다. */
+  filtering?: boolean;
   selectedPostId: string | null;
   onSelect: (post: Post) => void;
   currentUserUid: string | null;
@@ -26,6 +28,7 @@ interface Props {
 
 export default function PostList({
   posts,
+  filtering = false,
   selectedPostId,
   onSelect,
   currentUserUid,
@@ -85,9 +88,24 @@ export default function PostList({
           <FileQuestion size={26} aria-hidden />
         </span>
         <p className="text-[15px] text-muted">
-          아직 게시물이 없어요.
-          <br />첫 번째 작품을 올려 보세요!
+          {filtering ? (
+            <>
+              찾는 작품이 없어요.
+              <br />
+              다른 말로 찾아볼까요?
+            </>
+          ) : (
+            <>
+              아직 게시물이 없어요.
+              <br />첫 번째 작품을 올려 보세요!
+            </>
+          )}
         </p>
+        {/* 결과가 0건이어도 센티널을 유지한다 — 찾기 중 첫 페이지에 결과가 없을 때야말로
+            다음 페이지를 더 당겨야 하므로, 여기서 로드가 멈추면 '없다'는 오판이 된다. */}
+        <div ref={sentinelRef} className="h-8">
+          {loadingMore && <p className="py-1 text-[13px] text-muted">더 찾아보는 중…</p>}
+        </div>
       </div>
     );
   }

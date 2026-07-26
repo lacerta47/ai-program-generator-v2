@@ -10,6 +10,13 @@ import type { Category, Post } from '@/lib/firebase/types';
 import { CloudOff, RotateCcw, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import CategoryTree from './CategoryTree';
 import { leafPaths, hasChildren } from '@/lib/board/categoryTree';
+import BoardFilter from './BoardFilter';
+import {
+  filterPosts,
+  isFilterActive,
+  EMPTY_FILTER,
+  type BoardFilter as Filter,
+} from '@/lib/board/filterPosts';
 import PostList from './PostList';
 import PostPreview from './PostPreview';
 import LoginDialog from '@/components/auth/LoginDialog';
@@ -17,6 +24,9 @@ import LoadingDots from '@/components/ui/LoadingDots';
 import Button from '@/components/ui/Button';
 import { useToast } from '@/components/ui/Toast';
 import { useConfirm } from '@/components/ui/ConfirmProvider';
+
+/** 찾는 중 자동으로 더 불러올 글 수 단위 — 여기까지 훑고 멈춘 뒤 '더 찾아보기'로 한 단계씩 넓힌다. */
+const SCAN_STEP = 100;
 
 export default function BoardView() {
   const { user, isAdmin, isTeacher } = useAuth();
@@ -53,6 +63,10 @@ export default function BoardView() {
   );
   // 공유 링크 글을 못 찾았을 때의 안내 — 토스트는 초기 로드 직후 유실될 수 있어 미리보기 패널에 인라인 표시
   const [deepLinkError, setDeepLinkError] = useState<string | null>(null);
+  // 찾기(검색어·개념) — 클라 필터라 '이미 불러온 글'만 대상. 아래 scanLimit이 그 범위를 넓힌다.
+  const [filter, setFilter] = useState<Filter>(EMPTY_FILTER);
+  // 찾는 중일 때 자동으로 더 불러올 상한(글 수). 무한 자동로드로 카테고리 전체를 당기지 않게 막는 안전장치.
+  const [scanLimit, setScanLimit] = useState(SCAN_STEP);
 
   // 카테고리 실시간 구독
   useEffect(
@@ -124,6 +138,12 @@ export default function BoardView() {
     categoriesRef.current = categories;
   }, [categories]);
 
+  // 카테고리를 옮기면 찾기 조건을 초기화 — 이전 검색어가 남아 새 보드가 텅 빈 것처럼 보이는 혼란 방지.
+  useEffect(() => {
+    setFilter(EMPTY_FILTER);
+    setScanLimit(SCAN_STEP);
+  }, [selectedCategoryId]);
+
   // 카테고리 id → 보드 소유자 uid(공개=null) 조회.
   const boardTeacherUidOf = (categoryId: string): string | null =>
     categoriesRef.current.find((c) => c.id === categoryId)?.teacherUid ?? null;
@@ -189,7 +209,7 @@ export default function BoardView() {
     if (selectedCategoryId) loadFirst(selectedCategoryId);
   }, [selectedCategoryId, selectedTeacherUid, loadFirst]);
 
-  async function loadMore() {
+  const loadMore = useCallback(async () => {
     if (!selectedCategoryId || !hasMore || loadingMore) return;
     setLoadingMore(true);
     try {
@@ -212,7 +232,19 @@ export default function BoardView() {
     } finally {
       setLoadingMore(false);
     }
-  }
+  }, [selectedCategoryId, hasMore, loadingMore]);
+
+  const filtering = isFilterActive(filter);
+
+  // 찾는 중이면 상한(scanLimit)까지 다음 페이지를 스스로 당겨온다.
+  // 스크롤 센티널에 맡기지 않는 이유: 센티널은 '화면에 보일 때'만 발화하므로 결과가 0건이라 목록이 비었을 때나
+  // '더 찾아보기'로 상한만 올렸을 때 재개가 보장되지 않는다(실제로 멈추는 걸 확인함). 로드 조건을 눈에 보이는
+  // 위치가 아니라 상태로 직접 표현한다.
+  useEffect(() => {
+    if (!filtering || !hasMore || loading || loadingMore) return;
+    if (posts.length >= scanLimit) return;
+    loadMore();
+  }, [filtering, hasMore, loading, loadingMore, posts.length, scanLimit, loadMore]);
 
   function selectCategory(id: string) {
     setSelectedCategoryId(id);
@@ -272,6 +304,12 @@ export default function BoardView() {
     setSelectedPost((prev) => (prev?.id === id ? { ...prev, title } : prev));
   }
 
+  const visiblePosts = filtering ? filterPosts(posts, filter) : posts;
+  // 상한까지 다 훑었는데 아직 남았으면 '더 찾아보기'로 한 단계 넓힌다.
+  const scanCapped = filtering && hasMore && posts.length >= scanLimit;
+  // 찾는 중엔 스크롤 자동 로드를 끈다 — 위 효과가 로드를 전담하므로 두 경로가 겹쳐 이중 호출되지 않게.
+  const listHasMore = filtering ? false : hasMore;
+
   return (
     <div
       className={`mx-auto grid max-w-7xl gap-5 p-4 sm:p-6 ${
@@ -300,6 +338,10 @@ export default function BoardView() {
           selectedId={selectedCategoryId}
           onSelect={selectCategory}
         />
+        <BoardFilter value={filter} onChange={setFilter} />
+        {filtering && !loading && visiblePosts.length > 0 && (
+          <p className="-mt-1 text-[13px] text-muted">{visiblePosts.length}개 찾았어요</p>
+        )}
         <div className="min-h-0 flex-1 overflow-y-auto">
           {loading ? (
             <div className="py-8">
@@ -323,19 +365,30 @@ export default function BoardView() {
               </Button>
             </div>
           ) : (
-            <PostList
-              posts={posts}
-              selectedPostId={selectedPost?.id ?? null}
-              onSelect={selectPost}
-              currentUserUid={user?.uid ?? null}
-              isAdmin={isAdmin}
-              onDelete={handleDelete}
-              onDownload={(p) => downloadProgram(p.code, p.title, toast, p.photo)}
-              onTitleSaved={handleTitleSaved}
-              hasMore={hasMore}
-              loadingMore={loadingMore}
-              onLoadMore={loadMore}
-            />
+            <>
+              <PostList
+                posts={visiblePosts}
+                filtering={filtering}
+                selectedPostId={selectedPost?.id ?? null}
+                onSelect={selectPost}
+                currentUserUid={user?.uid ?? null}
+                isAdmin={isAdmin}
+                onDelete={handleDelete}
+                onDownload={(p) => downloadProgram(p.code, p.title, toast, p.photo)}
+                onTitleSaved={handleTitleSaved}
+                hasMore={listHasMore}
+                loadingMore={loadingMore}
+                onLoadMore={loadMore}
+              />
+              {scanCapped && (
+                <div className="flex flex-col items-center gap-2 pb-2 pt-1 text-center">
+                  <p className="text-[13px] text-muted">최근 작품 {posts.length}개에서 찾았어요.</p>
+                  <Button variant="soft" onClick={() => setScanLimit((n) => n + SCAN_STEP)}>
+                    더 찾아보기
+                  </Button>
+                </div>
+              )}
+            </>
           )}
         </div>
       </section>
