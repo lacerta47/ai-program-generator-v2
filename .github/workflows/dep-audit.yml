@@ -1,0 +1,84 @@
+# 로컬 Claude 루틴(lun-dep-audit)을 대체한다. npm audit는 저장소가 있어야 해서
+# 로컬에서 돌렸지만, GitHub Actions가 원래 이 용도에 맞다(앱 실행 여부와 무관).
+#
+# 정책: '알려진 미해결 건'(KNOWN)은 추적만 하고 통과시키고, 그 밖의 High/Critical이
+# 새로 나타나면 실패시킨다. 이유 — next/postcss/sharp의 현재 High 건은 업스트림에
+# 패치판이 아직 없어(취약 범위 ~16.3.0-preview.7, 최신 정식 16.2.12) 지금 고칠 방법이 없다.
+# 우리는 이미 15.x 라인의 마지막(15.5.22)이고, npm audit fix --force는 next를 9.3.3으로
+# 다운그레이드해 앱을 파괴하므로 쓰면 안 된다. postcss·sharp는 next가 끌어오는 하위 의존이다.
+# 패치가 나오면 이 KNOWN 목록에서 빼고 실제로 올릴 것.
+
+name: 의존성 보안 감사
+
+on:
+  schedule:
+    # 매주 월요일 14:00 UTC = 23:00 KST
+    - cron: '0 14 * * 1'
+  workflow_dispatch:
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ai-program-generator
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: ai-program-generator/package-lock.json
+
+      # package-lock.json 기반이라 install 없이 audit 가능
+      - name: npm audit (High/Critical 추적)
+        env:
+          # 업스트림 패치 대기 중인 알려진 건 — 여기 있는 것만 통과. 쉼표 구분.
+          KNOWN: 'next,postcss,sharp'
+        run: |
+          # audit는 취약점이 있으면 비-0으로 끝나므로 || true로 받고 JSON을 직접 판정
+          npm audit --omit=dev --json > audit.json || true
+
+          node <<'EOF' >> "$GITHUB_STEP_SUMMARY"
+          const fs = require('fs');
+          const a = JSON.parse(fs.readFileSync('audit.json', 'utf8'));
+          const known = new Set((process.env.KNOWN || '').split(',').map(s => s.trim()).filter(Boolean));
+
+          const hi = Object.entries(a.vulnerabilities || {})
+            .filter(([, v]) => ['high', 'critical'].includes(v.severity));
+          const tracked = hi.filter(([n]) => known.has(n));
+          const fresh = hi.filter(([n]) => !known.has(n));
+
+          const line = ([n, v]) => {
+            const via = (v.via || []).map(x => (typeof x === 'string' ? x : x.title)).filter(Boolean);
+            const head = via[0] ? via[0].slice(0, 90) : '(요약 없음)';
+            return `- **${n}** (${v.severity}) — ${head}${via.length > 1 ? ` 외 ${via.length - 1}건` : ''}`;
+          };
+
+          if (fresh.length) {
+            console.log(`### ⚠️ 새 High/Critical 취약점 **${fresh.length}건**`);
+            console.log('');
+            fresh.forEach(v => console.log(line(v)));
+            console.log('');
+          } else {
+            console.log('### 의존성 감사: 새 High/Critical **없음** ✅');
+            console.log('');
+          }
+
+          if (tracked.length) {
+            console.log(`<details><summary>추적 중(업스트림 패치 대기) ${tracked.length}건</summary>`);
+            console.log('');
+            tracked.forEach(v => console.log(line(v)));
+            console.log('');
+            console.log('> next는 이미 15.x 마지막(15.5.22). 취약 범위에 패치 정식판이 아직 없어 지금은 올릴 수 없음.');
+            console.log('> postcss·sharp는 next의 하위 의존. `npm audit fix --force`는 next@9.3.3 다운그레이드라 금지.');
+            console.log('</details>');
+          }
+
+          // 새 취약점이 있을 때만 실패 → 매주 빨간불 피로 없이 진짜 경보만 남긴다
+          if (fresh.length) {
+            console.error(`::error::새 High/Critical 취약점 ${fresh.length}건: ${fresh.map(([n]) => n).join(', ')}`);
+            process.exit(1);
+          }
+          EOF
