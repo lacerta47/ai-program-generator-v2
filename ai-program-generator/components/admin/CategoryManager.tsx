@@ -1,9 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { ChevronRight, ChevronDown, Folder, FolderOpen, FileCode2, Plus, Pencil, ArrowUp, ArrowDown, Trash2 } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
+import { ChevronRight, ChevronDown, Folder, FolderOpen, FileCode2, Plus, Pencil, ArrowUp, ArrowDown, Trash2, Lock, Globe, RotateCcw } from 'lucide-react';
 import type { Category } from '@/lib/firebase/types';
-import { buildTree, depthOf, type CategoryNode } from '@/lib/board/categoryTree';
+import { buildTree, depthOf, descendantIds, type CategoryNode } from '@/lib/board/categoryTree';
+import { authedJson } from '@/lib/client/authedFetch';
+import type { CategoryStat } from '@/app/api/admin/categories/stats/route';
 import {
   subscribeCategories,
   addCategory,
@@ -26,12 +28,37 @@ export default function CategoryManager() {
   const [editName, setEditName] = useState('');
   const [adding, setAdding] = useState<string | 'root' | null>(null); // 부모 id 또는 'root'
   const [addName, setAddName] = useState('');
+  // 게시판별 주인·작품 수. 실시간이 아니라 스냅샷이라 추가·삭제 후엔 새로고침 버튼으로 다시 읽는다
+  // (구독으로 만들면 count 집계를 매 변경마다 다시 돌려야 해 관리 화면치고 과하다).
+  const [stats, setStats] = useState<Record<string, CategoryStat> | null>(null);
+  const [statsError, setStatsError] = useState(false);
   const { toast } = useToast();
   const confirm = useConfirm();
 
   useEffect(() => subscribeCategories(setCategories, () => toast(FAIL)), [toast]);
 
+  const loadStats = useCallback(() => {
+    setStatsError(false);
+    authedJson<{ stats: Record<string, CategoryStat> }>('/api/admin/categories/stats')
+      .then((d) => setStats(d.stats))
+      .catch((e) => {
+        console.error('게시판 정보 조회 실패:', e);
+        setStatsError(true);
+      });
+  }, []);
+
+  useEffect(() => loadStats(), [loadStats]);
+
   const tree = buildTree(categories);
+
+  /** 폴더는 자기 글이 없으므로(글 있는 폴더엔 하위를 못 만든다) 후손 합계를 보여준다. */
+  const postCountOf = (id: string): number | null => {
+    if (!stats) return null;
+    const own = stats[id]?.postCount ?? 0;
+    if (own < 0) return null; // 서버에서 이 보드만 집계 실패
+    const kids = descendantIds(id, categories).filter((x) => x !== id);
+    return kids.reduce((sum, k) => sum + Math.max(0, stats[k]?.postCount ?? 0), own);
+  };
 
   const toggle = (id: string) =>
     setExpanded((p) => {
@@ -115,8 +142,13 @@ export default function CategoryManager() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <h1 className="text-[24px]">게시판 관리</h1>
+        <div className="ml-auto flex items-center gap-2">
+          <ManageBtn label="정보 새로고침" onClick={loadStats}>
+            <RotateCcw size={15} />
+          </ManageBtn>
+        </div>
         {adding === 'root' ? (
           <AddInline
             value={addName}
@@ -135,6 +167,12 @@ export default function CategoryManager() {
         )}
       </div>
 
+      {statsError && (
+        <p className="text-[14px] text-coral-ink">
+          게시판 주인·작품 수를 불러오지 못했어요. 새로고침 버튼으로 다시 시도해 주세요.
+        </p>
+      )}
+
       {categories.length === 0 ? (
         <p className="py-4 text-[15px] text-muted">아직 게시판이 없어요. 최상위 폴더부터 만들어 보세요.</p>
       ) : (
@@ -144,6 +182,8 @@ export default function CategoryManager() {
               key={node.id}
               node={node}
               categories={categories}
+              stats={stats}
+              postCountOf={postCountOf}
               expanded={expanded}
               onToggle={toggle}
               editing={editing}
@@ -205,6 +245,8 @@ function AddInline({
 function ManagerRow({
   node,
   categories,
+  stats,
+  postCountOf,
   expanded,
   onToggle,
   editing,
@@ -222,6 +264,8 @@ function ManagerRow({
 }: {
   node: CategoryNode;
   categories: Category[];
+  stats: Record<string, CategoryStat> | null;
+  postCountOf: (id: string) => number | null;
   expanded: Set<string>;
   onToggle: (id: string) => void;
   editing: string | null;
@@ -278,7 +322,10 @@ function ManagerRow({
             }}
           />
         ) : (
-          <span className="min-w-0 flex-1 truncate text-[15.5px]">{node.name}</span>
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-[15.5px]">{node.name}</span>
+            <BoardMeta node={node} stats={stats} count={postCountOf(node.id)} isFolder={isFolder} />
+          </span>
         )}
 
         <div className="flex shrink-0 gap-1">
@@ -338,6 +385,8 @@ function ManagerRow({
               key={ch.id}
               node={ch}
               categories={categories}
+              stats={stats}
+              postCountOf={postCountOf}
               expanded={expanded}
               onToggle={onToggle}
               editing={editing}
@@ -357,6 +406,58 @@ function ManagerRow({
         </ul>
       )}
     </li>
+  );
+}
+
+/**
+ * 게시판 한 줄 아래 붙는 정보 — 주인(공개/교실)과 작품 수.
+ * 주인을 굳이 표시하는 이유: 관리자 화면엔 여러 학교의 교실 보드가 함께 늘어서므로,
+ * '누구 반인지' 모르면 삭제·정리 판단을 할 수 없다. 교사 로그인 아이디(=학생 로그인의 학교 코드)를
+ * 함께 보여 문의가 왔을 때 계정을 바로 짚을 수 있게 한다.
+ */
+function BoardMeta({
+  node,
+  stats,
+  count,
+  isFolder,
+}: {
+  node: CategoryNode;
+  stats: Record<string, CategoryStat> | null;
+  count: number | null;
+  isFolder: boolean;
+}) {
+  const s = stats?.[node.id];
+  const classroom = !!node.teacherUid;
+
+  // 교사 표기: 이름(아이디) → 이름만 → 아이디만 → uid 앞자리(문서가 사라진 경우)
+  let owner: string;
+  if (!classroom) {
+    owner = '관리자가 만든 공개 게시판';
+  } else if (!stats) {
+    owner = '교실 게시판';
+  } else if (s?.ownerMissing) {
+    owner = `교실 게시판 · 삭제된 교사(${node.teacherUid!.slice(0, 6)}…)`;
+  } else {
+    const name = s?.ownerName?.trim();
+    const id = s?.ownerLoginId?.trim();
+    const who = name && id ? `${name}(${id})` : name || id || `${node.teacherUid!.slice(0, 6)}…`;
+    owner = `교실 게시판 · ${who}${s?.ownerDisabled ? ' · 정지됨' : ''}`;
+  }
+
+  return (
+    <span className="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[12.5px] text-muted">
+      {classroom ? (
+        <Lock size={12} aria-hidden className="shrink-0" />
+      ) : (
+        <Globe size={12} aria-hidden className="shrink-0" />
+      )}
+      <span className={s?.ownerDisabled || s?.ownerMissing ? 'text-coral-ink' : undefined}>{owner}</span>
+      <span aria-hidden>·</span>
+      <span>
+        {count === null ? '작품 …' : `작품 ${count}개`}
+        {isFolder && count !== null && count > 0 ? ' (하위 포함)' : ''}
+      </span>
+    </span>
   );
 }
 
