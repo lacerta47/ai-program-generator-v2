@@ -48,6 +48,8 @@ function toMessage(e: unknown): string {
 
 export default function LoginDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [mode, setMode] = useState<'login' | 'signup'>('login');
+  // 가입 동의(만 14세 이상 + 약관·개인정보처리방침). 만 14세 미만 아동은 교사 발급 계정으로만 이용한다.
+  const [agreed, setAgreed] = useState(false);
   const [email, setEmail] = useState('');
   const [pw, setPw] = useState('');
   const [error, setError] = useState('');
@@ -122,6 +124,12 @@ export default function LoginDialog({ open, onClose }: { open: boolean; onClose:
         await signInWithEmailAndPassword(auth, email, pw);
         onClose();
       } else {
+        // 만 14세 미만은 직접 가입 불가(교사 발급 계정 사용) — 약관 제4조.
+        if (!agreed) {
+          setError('만 14세 이상이고 약관·개인정보처리방침에 동의해야 가입할 수 있어요.');
+          setBusy(false);
+          return;
+        }
         const cred = await createUserWithEmailAndPassword(auth, email, pw);
         try {
           await sendEmailVerification(cred.user);
@@ -251,6 +259,30 @@ export default function LoginDialog({ open, onClose }: { open: boolean; onClose:
                 placeholder="비밀번호 (6글자 이상)"
                 autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
               />
+              {mode === 'signup' && (
+                <label className="flex items-start gap-2.5 rounded-[var(--r-md)] bg-surface-2 px-3.5 py-3 text-left text-[14px] leading-relaxed">
+                  <input
+                    type="checkbox"
+                    checked={agreed}
+                    onChange={(e) => setAgreed(e.target.checked)}
+                    className="mt-0.5 h-5 w-5 shrink-0 accent-[var(--brand)]"
+                  />
+                  <span className="text-ink">
+                    <strong>만 14세 이상</strong>이며,{' '}
+                    <a href="/terms" target="_blank" rel="noreferrer" className="text-brand-strong underline">
+                      이용약관
+                    </a>
+                    과{' '}
+                    <a href="/privacy" target="_blank" rel="noreferrer" className="text-brand-strong underline">
+                      개인정보처리방침
+                    </a>
+                    에 동의합니다.
+                    <span className="mt-1 block text-[13px] text-muted">
+                      초등학생은 선생님이 만들어 준 학생 계정으로 들어와요.
+                    </span>
+                  </span>
+                </label>
+              )}
               {error && (
                 <p className="anim-pop-in rounded-[var(--r-md)] bg-coral-soft px-3.5 py-2.5 text-[14px] text-coral-ink">
                   {error}
@@ -285,6 +317,7 @@ export default function LoginDialog({ open, onClose }: { open: boolean; onClose:
                   setMode(mode === 'login' ? 'signup' : 'login');
                   setError('');
                   setNotice('');
+                  setAgreed(false); // 모드 전환 시 동의 초기화(이전 화면의 체크가 남지 않게)
                 }}
                 className="text-[14px] text-brand-strong underline-offset-4 hover:underline dark:text-brand"
               >
