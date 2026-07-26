@@ -75,6 +75,9 @@ function Console() {
   const [password, setPassword] = useState('');
   const [limitType, setLimitType] = useState<'daily' | 'total'>('daily');
   const [limitValue, setLimitValue] = useState('');
+  // 보호자 동의 확인 — 만 14세 미만 아동은 학교 절차로 법정대리인 동의를 받은 뒤 계정을 발급한다(약관 제5조의2).
+  // 발급 때마다 다시 확인하도록 성공 후 해제한다(한 번 켜두고 계속 쓰는 것 방지).
+  const [consentChecked, setConsentChecked] = useState(false);
   const [busy, setBusy] = useState(false);
   const [created, setCreated] = useState<{ email: string; hakbun: string; password: string }[] | null>(null);
   const [createdSchool, setCreatedSchool] = useState('');
@@ -134,6 +137,7 @@ function Console() {
     if (!Number.isInteger(s) || s < 1 || s + n - 1 > 99) return toast('학생 번호(시작 번호+인원수)는 1~99 범위로 해주세요.');
     if (password.length < 6) return toast('PIN은 6자 이상으로 적어 주세요.');
     if (!Number.isInteger(v) || v < 1) return toast('한도는 1 이상의 정수로 적어 주세요.');
+    if (!consentChecked) return toast('보호자 동의를 받았는지 먼저 확인해 주세요.');
     setBusy(true);
     try {
       const r = await createStudents({ grade: g, classNo: c, count: n, startNo: s, password, limitType, limitValue: v });
@@ -146,6 +150,7 @@ function Console() {
       setStartNo('1');
       setPassword('');
       setLimitValue('');
+      setConsentChecked(false); // 다음 발급 때 다시 확인하도록 해제
       toast(`${r.created.length}명 만들었어요.`, 'success');
       reload();
     } catch (err) {
@@ -354,6 +359,24 @@ function Console() {
         <Label text="한도 값 (횟수)" required>
           <TextInput inputMode="numeric" value={limitValue} onChange={(e) => setLimitValue(e.target.value)} placeholder="5" required />
         </Label>
+        <label className="flex items-start gap-2.5 rounded-[var(--r-md)] border-2 border-line bg-surface-2 px-3.5 py-3 text-[14px] leading-relaxed">
+          <input
+            type="checkbox"
+            checked={consentChecked}
+            onChange={(e) => setConsentChecked(e.target.checked)}
+            className="mt-0.5 h-5 w-5 shrink-0 accent-[var(--brand)]"
+          />
+          <span className="text-ink">
+            소속 학교의 절차에 따라 <strong>보호자(법정대리인) 동의</strong>를 받았음을 확인합니다.
+            <span className="mt-1 block text-[13px] text-muted">
+              만 14세 미만 학생은 보호자 동의 후 계정을 만들 수 있어요.{' '}
+              <a href="/terms" target="_blank" rel="noreferrer" className="text-brand-strong underline">
+                교사 이용 조건
+              </a>
+              을 확인해 주세요.
+            </span>
+          </span>
+        </label>
         <Button type="submit" variant="primary" disabled={busy}>
           {busy ? '만드는 중…' : '학생 만들기'}
         </Button>
