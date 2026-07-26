@@ -1,0 +1,65 @@
+# 로컬 Claude 루틴(lun-auto-examples)을 대체한다. 로컬 루틴은 Claude Code 앱이 켜져 있어야만
+# 돌아서 예약 시각을 자주 놓쳤다(새벽 5시 예정 → 앱을 켠 오전에 실행).
+# 이 워크플로는 앱과 무관하게 정시 실행된다.
+
+name: 자동 예시 생성
+
+on:
+  schedule:
+    # 매일 20:00 UTC = 익일 05:00 KST (GitHub Actions는 UTC 기준)
+    - cron: '0 20 * * *'
+  workflow_dispatch: # 수동 실행 버튼
+
+# 동시 실행 방지 — 앞 회차가 아직 돌고 있으면 겹치지 않게
+concurrency:
+  group: auto-examples
+  cancel-in-progress: false
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: 예시 생성 (exhausted까지 반복)
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          BASE_URL: https://ai-program-generator-v2.vercel.app
+        run: |
+          if [ -z "$CRON_SECRET" ]; then
+            echo "::error::CRON_SECRET 시크릿이 설정되지 않았습니다."
+            exit 1
+          fi
+
+          total=0
+          calls=0
+          # 서버가 한 호출을 ~52초 안에 끝내도록 시간 예산이 잡혀 있음(PR #109).
+          # exhausted(무료 한도 소진)·made=0·15회 중 하나에 도달하면 종료.
+          while [ "$calls" -lt 15 ]; do
+            calls=$((calls + 1))
+            body=$(curl -sS --max-time 80 -w '\n%{http_code}' \
+              -H "Authorization: Bearer $CRON_SECRET" \
+              "$BASE_URL/api/cron/generate-examples") || {
+                echo "::warning::[$calls] 요청 실패(네트워크/타임아웃) — 중단"; break; }
+
+            code=$(printf '%s' "$body" | tail -n1)
+            json=$(printf '%s' "$body" | sed '$d')
+
+            if [ "$code" != "200" ]; then
+              echo "::error::[$calls] HTTP $code — $json"
+              [ "$code" = "401" ] && echo "::error::CRON_SECRET 불일치 가능성"
+              [ "$code" = "500" ] && echo "::error::서버에 CRON_SECRET 미설정 가능성"
+              exit 1
+            fi
+
+            made=$(printf '%s' "$json" | grep -o '"made":[0-9]*' | grep -o '[0-9]*$')
+            exhausted=$(printf '%s' "$json" | grep -o '"exhausted":\(true\|false\)' | grep -o 'true\|false')
+            made=${made:-0}
+            total=$((total + made))
+            echo "[$calls] made=$made total=$total exhausted=$exhausted"
+
+            [ "$exhausted" = "true" ] && { echo "무료 Gemini 한도 소진 — 종료(정상)"; break; }
+            [ "$made" -eq 0 ] && { echo "생성 0건 — 종료"; break; }
+          done
+
+          echo "총 $total개 생성 / 호출 $calls회"
+          echo "### 자동 예시 생성: **$total개** (호출 ${calls}회)" >> "$GITHUB_STEP_SUMMARY"
