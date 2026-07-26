@@ -61,6 +61,16 @@ export const CONCEPTS: ConceptInfo[] = [
 export const CONCEPT_ORDER = CONCEPTS.map((c) => c.key);
 export const CONCEPT_BY_KEY: Record<string, ConceptInfo> = Object.fromEntries(CONCEPTS.map((c) => [c.key, c]));
 
+/**
+ * 목적격 조사 — 받침 있으면 '을', 없으면 '를'. ('순서을' 같은 어색한 말이 아이 화면에 뜨지 않게)
+ * 한글 음절은 유니코드에서 (초성,중성,종성) 순으로 배열되므로, 코드포인트 차이를 28로 나눈 나머지가 종성 인덱스다.
+ */
+export function objectParticle(word: string): '을' | '를' {
+  const last = word.trim().slice(-1).charCodeAt(0);
+  if (Number.isNaN(last) || last < 0xac00 || last > 0xd7a3) return '를'; // 한글이 아니면 무난한 쪽
+  return (last - 0xac00) % 28 === 0 ? '를' : '을';
+}
+
 /** tags에 알려진 개념이 하나라도 있으면 true (렌더 가드용). */
 export function hasKnownConcepts(tags?: string[]): boolean {
   return !!tags && tags.some((t) => t in CONCEPT_BY_KEY);
