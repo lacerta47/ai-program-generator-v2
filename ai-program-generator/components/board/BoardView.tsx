@@ -104,8 +104,10 @@ export default function BoardView() {
   }, [user, isTeacher]);
 
   // 멤버십 필터: 공개 보드(teacherUid 없음) + 내 교실 보드만 노출.
+  // 관리자는 전체 보드를 본다 — 신고 처리·부적절 게시물 삭제·교실 문의 대응에 필요하고,
+  // firestore.rules의 posts read도 이미 isAdmin()을 허용하고 있어(권한 확대가 아니라 UI 노출 일치화) 여기만 막고 있었다.
   const visibleCategories = categories.filter(
-    (c) => !c.teacherUid || c.teacherUid === user?.uid || c.teacherUid === myClassTeacherUid,
+    (c) => isAdmin || !c.teacherUid || c.teacherUid === user?.uid || c.teacherUid === myClassTeacherUid,
   );
 
   // 선택된 카테고리가 없으면 첫 잎새로 (딥링크 글 해결 중이면 대기). 멤버십 필터된 목록 기준.

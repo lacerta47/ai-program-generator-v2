@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { ChevronRight, ChevronDown, Folder, FolderOpen, FileCode2 } from 'lucide-react';
+import { ChevronRight, ChevronDown, Folder, FolderOpen, FileCode2, Lock } from 'lucide-react';
 import type { Category } from '@/lib/firebase/types';
 import { buildTree, type CategoryNode } from '@/lib/board/categoryTree';
 
@@ -108,6 +108,11 @@ function TreeRow({
           </>
         )}
         <span className="truncate text-[15.5px]">{node.name}</span>
+        {/* 교실 보드 표시 — 관리자는 여러 학교 보드를 함께 보므로 공개 보드와 섞이면 안 된다.
+            (교사·학생에게도 '우리 반만 봐요'라는 사실을 그대로 알려주므로 그대로 노출) */}
+        {node.teacherUid && (
+          <Lock size={13} className="ml-auto shrink-0 text-muted" aria-label="교실 보드" />
+        )}
       </button>
 
       {isFolder && isOpen && (
