@@ -350,3 +350,36 @@ textarea {
 .hide-scrollbar::-webkit-scrollbar {
   display: none; /* Chrome/Safari */
 }
+
+/* 법적 고지 문서(약관·개인정보처리방침) 본문 타이포.
+   저학년용 화면과 달리 '읽는 문서'라 제목 위계·목록 들여쓰기를 명시적으로 준다. */
+.legal h2 {
+  margin-top: 2.2rem;
+  margin-bottom: 0.6rem;
+  font-size: 20px;
+  color: var(--ink);
+}
+.legal h3 {
+  margin-top: 1.4rem;
+  margin-bottom: 0.4rem;
+  font-size: 17px;
+}
+.legal p { margin-bottom: 0.9rem; }
+.legal ul, .legal ol { margin: 0 0 1rem 1.2rem; }
+.legal ul { list-style: disc; }
+.legal ol { list-style: decimal; }
+.legal li { margin-bottom: 0.35rem; }
+.legal table {
+  width: 100%;
+  margin: 0.5rem 0 1.2rem;
+  border-collapse: collapse;
+  font-size: 15px;
+}
+.legal th, .legal td {
+  border: 1px solid var(--line);
+  padding: 0.55rem 0.7rem;
+  text-align: left;
+  vertical-align: top;
+}
+.legal th { background: var(--surface-2); font-weight: 500; }
+.legal a { color: var(--brand-strong); text-decoration: underline; }
