@@ -7,7 +7,9 @@ import { deletePostSubcollections } from './deletePost';
  * - 본인 글에 대한 신고(postOwnerUid==uid)는 글과 함께 삭제.
  * - 본인이 '낸' 신고(reporterUid==uid)는 남긴다(대상 글은 그대로라 유효).
  * - 본인 글의 likes/views 서브컬렉션은 함께 삭제(고아 방지, #3). 본인이 '남의 글'에 남긴 likes/views는
- *   남긴다(무해·경미). usage 날짜문서도 남긴다.
+ *   남긴다(무해·경미 — 문서ID만 uid이고 내용은 없음).
+ * - usage/{uid}_{day}(생성 횟수 기록)는 uid가 담긴 개인정보라 함께 삭제한다. 쿼터 관리 목적이라
+ *   탈퇴 후엔 보관할 이유가 없고, 개인정보처리방침의 '탈퇴 시 이용 기록 삭제' 문구와도 일치시킨다.
  * - [의도 — L9] 학생 삭제 시 교사 공유풀(teachers.usedTotal)은 되돌리지 않는다. 풀은 '누적 예산'
  *   설계(CLAUDE.md)이고, 1일형 학생은 개인 소비량(student.usedTotal)을 추적하지 않아 부분환급이
  *   비대칭 footgun이 된다. 학년 순환 등으로 풀이 잠식되면 admin이 teachers.totalQuota를 보충한다.
@@ -24,6 +26,9 @@ export async function deleteAccountCascade(uid: string): Promise<void> {
   // 본인 글에 대한 신고는 글과 함께 삭제(내가 낸 신고 reporterUid는 남김).
   const reportsAgainst = await adminDb.collection('reports').where('postOwnerUid', '==', uid).get();
   reportsAgainst.forEach((d) => refs.push(d.ref));
+  // 생성 횟수 기록(usage/{uid}_{day}) — 문서에 uid 필드가 있어 단일필드 자동 인덱스로 조회된다.
+  const usage = await adminDb.collection('usage').where('uid', '==', uid).get();
+  usage.forEach((d) => refs.push(d.ref));
   refs.push(adminDb.doc(`users/${uid}`));
   refs.push(adminDb.doc(`limits/${uid}`));
   refs.push(adminDb.doc(`teachers/${uid}`));
