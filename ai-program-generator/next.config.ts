@@ -51,13 +51,22 @@ const nextConfig: NextConfig = {
       // (A) 모든 경로: 공통 안전 헤더
       { source: '/:path*', headers: safeHeaders },
 
-      // (B) 미리보기 서빙 경로: 앱 오리진이 iframe으로 감쌀 수 있게 허용(프로세스 격리 유지)
+      // (B) 미리보기 서빙 경로: sandbox(코드 격리) + frame-ancestors(앱 오리진만 임베드 허용).
+      //
+      // [실측 주의 — 두 directive를 반드시 함께 둘 것]
+      // 라우트 핸들러가 Response에 세팅한 Content-Security-Policy와 이 config 값은 '병합되지 않고'
+      // 한쪽이 다른 쪽을 통째로 대체한다. 그런데 어느 쪽이 이기는지가 환경마다 달랐다:
+      //   · 프로덕션(Vercel): 라우트 값이 이김 → config의 frame-ancestors가 적용 안 됐음
+      //   · 로컬 dev:        config 값이 이김 → 라우트의 sandbox가 적용 안 됐음
+      // 그래서 한쪽에만 넣으면 환경에 따라 한 directive가 조용히 사라진다.
+      // → 양쪽(여기 + lib/server/previewHeaders.ts)에 sandbox·frame-ancestors를 모두 선언해
+      //   누가 이기든 두 방어가 살아있게 한다. 한쪽을 고치면 다른 쪽도 함께 고칠 것.
       {
         source: '/api/preview/:path*',
         headers: [
           {
             key: 'Content-Security-Policy',
-            value: `frame-ancestors 'self' ${APP} http://localhost:3000 http://127.0.0.1:3000`,
+            value: `sandbox allow-scripts; frame-ancestors 'self' ${APP} http://localhost:3000 http://127.0.0.1:3000`,
           },
         ],
       },
