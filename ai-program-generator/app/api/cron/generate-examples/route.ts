@@ -48,6 +48,10 @@ export async function GET(req: NextRequest) {
   }
 
   let made = 0;
+  let attempted = 0;
+  // 실패 사유를 응답에 담는다 — 예전엔 made만 돌려줘 '왜 0건인지'를 서버 로그 없이는 알 수 없었고,
+  // 실제로 생성 품질이 무너진 걸 며칠 뒤에야 발견했다(줄바꿈 없는 // 주석 결함).
+  const failures: string[] = [];
   let exhausted = false;
   const startedAt = Date.now();
   const usedTypes: string[] = []; // 한 호출 안에서 같은 종류가 겹치지 않게(서버리스라 호출 간 상태는 없음)
@@ -55,6 +59,7 @@ export async function GET(req: NextRequest) {
     // 남은 예산이 부족하면 이번 호출은 여기서 종료(다음 호출로 이어감). 정상 200 응답.
     const remaining = RUN_BUDGET_MS - (Date.now() - startedAt);
     if (remaining < MIN_GEN_MS) break;
+    attempted++;
     try {
       const rp = randomPlan(usedTypes);
       usedTypes.push(rp.type.id);
@@ -68,7 +73,8 @@ export async function GET(req: NextRequest) {
         break;
       }
       console.error('[generate-examples] 한 건 실패(스킵):', e); // 검열/파싱/abort/일시오류
+      failures.push(e instanceof Error ? e.message.slice(0, 80) : String(e).slice(0, 80));
     }
   }
-  return NextResponse.json({ made, exhausted });
+  return NextResponse.json({ made, attempted, failed: failures.length, failures, exhausted });
 }
