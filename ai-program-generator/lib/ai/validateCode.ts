@@ -76,6 +76,54 @@ function stripComments(src: string): string {
   return out;
 }
 
+/**
+ * 줄바꿈 없이 끝나는 `//` 주석이 '코드를 통째로 삼켰는지' 검사한다.
+ *
+ * 배경(실측): 모델이 JS를 줄바꿈 하나 없이 한 줄로 내보내는 일이 생기는데, 그 안에 `//` 한 줄 주석이
+ * 섞이면 그 뒤 코드 전부가 주석이 된다. 운 나쁘면 문법 오류가 나 아래 new Function 검사에 걸리지만,
+ * 괄호가 우연히 맞으면 **문법상 멀쩡한 채로 90% 이상이 죽은 프로그램**이 그대로 게시된다
+ * (실측: 게시된 171건 중 13건이 이 상태, 죽은 코드 78~100%).
+ *
+ * 판정: 문자열·다른 주석 밖에서 시작해 EOF까지 이어지는 `//` 주석을 찾고, 삼켜진 내용에
+ * 코드 신호(`;` `{` `}` `=>` 선언 키워드)가 있으면 실패. 문서 끝의 짧은 설명 주석은 통과한다.
+ */
+function swallowedCode(src: string): string | null {
+  let i = 0;
+  while (i < src.length) {
+    const c = src[i];
+    const d = src[i + 1];
+    if (c === '/' && d === '/') {
+      const start = i;
+      while (i < src.length && src[i] !== '\n') i++;
+      if (i >= src.length) {
+        // 개행 없이 EOF까지 이어진 주석 — 삼킨 내용에 코드가 있으면 죽은 코드다.
+        const eaten = src.slice(start + 2);
+        if (/[;{}]|=>|\b(function|const|let|var|return|if|for|while)\b/.test(eaten)) {
+          return eaten.trim().slice(0, 60);
+        }
+      }
+      continue;
+    }
+    if (c === '/' && d === '*') {
+      i += 2;
+      while (i < src.length && !(src[i] === '*' && src[i + 1] === '/')) i++;
+      i += 2;
+      continue;
+    }
+    if (c === '"' || c === "'" || c === '`') {
+      i++;
+      while (i < src.length && src[i] !== c) {
+        if (src[i] === '\\') i++;
+        i++;
+      }
+      i++;
+      continue;
+    }
+    i++;
+  }
+  return null;
+}
+
 /** js가 조회하는 id (리터럴로 쓴 것만 — 변수·템플릿으로 조립한 셀렉터는 안전측으로 무시) */
 function referencedIds(js: string): string[] {
   const out: string[] = [];
@@ -95,6 +143,10 @@ export function validateGeneratedCode(code: GeneratedCode): string | null {
   const html = code.html ?? '';
   const js = code.javascript ?? '';
   if (!js.trim()) return null; // JS 없는 정적 작품(카드 등)은 검사 대상 아님
+
+  // 문법 검사보다 먼저 — 이 결함은 문법이 맞아도 코드가 죽으므로 new Function으로는 못 잡는다.
+  const eaten = swallowedCode(js);
+  if (eaten) return `줄바꿈 없는 // 주석이 뒤 코드를 삼킴: "${eaten}…"`;
 
   try {
     new Function(js);
