@@ -28,6 +28,10 @@ export const metadata: Metadata = {
     locale: 'ko_KR',
     siteName: 'LUN',
   },
+  // 네이버 서치어드바이저 사이트 소유확인 — <head>에 meta 태그로 출력됨
+  other: {
+    'naver-site-verification': '64666ca46d21ec7e7f1e91a6235c5919f38768e0',
+  },
 };
 
 // 하이드레이션 전에 테마 클래스를 적용해 깜빡임(FOUC) 방지
