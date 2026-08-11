@@ -14,9 +14,20 @@ const chakra = Chakra_Petch({ weight: '700', subsets: ['latin'], variable: '--fo
 // 푸터 등 라틴·숫자 정제 톤(랜딩 푸터 전용 액센트)
 const geistMono = Geist_Mono({ subsets: ['latin'], variable: '--font-geist-mono', display: 'swap' });
 
+// metadataBase — OG 태그 등의 절대 URL 기준. 커스텀 도메인 반영(NEXT_PUBLIC_APP_ORIGIN).
+const SITE = process.env.NEXT_PUBLIC_APP_ORIGIN || 'https://eduai-lun.co.kr';
+
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE),
   title: 'LUN — Logic Unfold Next',
   description: '논리를 펼치면, 마법이 시작돼요. 계획을 쓰거나 골라서 AI로 프로그램을 만들어요.',
+  openGraph: {
+    title: 'LUN — 논리를 펼치면, 마법이 시작돼요',
+    description: '초등 저학년을 위한 AI 코딩 놀이터. 계획을 쓰거나 골라서 나만의 프로그램을 만들어요.',
+    type: 'website',
+    locale: 'ko_KR',
+    siteName: 'LUN',
+  },
 };
 
 // 하이드레이션 전에 테마 클래스를 적용해 깜빡임(FOUC) 방지
