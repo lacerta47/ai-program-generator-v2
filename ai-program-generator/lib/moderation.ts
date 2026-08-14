@@ -111,6 +111,25 @@ export function isReservedNickname(name: string): boolean {
   return false;
 }
 
+/**
+ * 걸린 '조각'을 찾아 돌려준다 — 아이가 어느 말을 고쳐야 할지 알 수 있게.
+ * - 깨끗하면 null.
+ * - 공백으로 나눈 단어 하나에서 걸리면 그 단어(표시용으로 앞뒤 기호 정리, 최대 20자).
+ * - 공백을 넘나드는 우회('병 신')처럼 단어 하나로 특정 못 하면 ''(걸렸으나 위치 불명).
+ */
+export async function findProfanity(text: string): Promise<string | null> {
+  const t = (text ?? '').trim();
+  if (!t) return null;
+  if (!(await hasProfanity(t))) return null;
+  for (const tok of t.split(/\s+/)) {
+    if (tok && (await hasProfanity(tok))) {
+      const clean = tok.replace(/^[^가-힣ㄱ-ㅣa-zA-Z0-9]+|[^가-힣ㄱ-ㅣa-zA-Z0-9]+$/g, '') || tok;
+      return clean.length > 20 ? clean.slice(0, 20) + '…' : clean;
+    }
+  }
+  return ''; // 걸렸지만 단일 단어로 특정 불가(공백 우회 등)
+}
+
 /** 비속어 차단을 알리는 에러 — UI에서 instanceof로 잡아 친절한 안내로 바꾼다. */
 export class ProfanityError extends Error {
   constructor(message = '쓸 수 없는 말이 들어 있어요.') {
@@ -119,11 +138,16 @@ export class ProfanityError extends Error {
   }
 }
 
-/** 비속어가 있으면 ProfanityError를 던진다(데이터 계층 write 가드용). label을 주면 어느 칸인지 안내. */
+/**
+ * 비속어가 있으면 ProfanityError를 던진다(데이터 계층 write 가드용).
+ * label(어느 칸)과 걸린 단어를 함께 안내해, 아이가 '어디의 어떤 말'인지 바로 알 수 있게 한다.
+ */
 export async function assertClean(text: string, label = ''): Promise<void> {
-  if (await hasProfanity(text)) {
-    throw new ProfanityError(
-      label ? `${label}에 쓸 수 없는 말이 있어요. 고운 말로 바꿔 주세요.` : undefined,
-    );
-  }
+  const found = await findProfanity(text);
+  if (found === null) return; // 깨끗
+  const at = label ? `${label}에 ` : '';
+  const msg = found
+    ? `${at}'${found}'는 쓸 수 없는 말이에요. 고운 말로 바꿔 주세요.`
+    : `${at}쓸 수 없는 말이 있어요. 고운 말로 바꿔 주세요.`;
+  throw new ProfanityError(msg);
 }
