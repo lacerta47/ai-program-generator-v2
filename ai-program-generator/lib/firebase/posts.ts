@@ -106,7 +106,7 @@ async function assertPlanClean(plan?: PlanFields): Promise<void> {
 }
 
 export async function updatePostTitle(id: string, title: string): Promise<void> {
-  await assertClean(title);
+  await assertClean(title, '제목');
   await updateDoc(doc(db, COL, id), { title: title.trim() });
 }
 
