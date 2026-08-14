@@ -2,27 +2,47 @@
 // 음소거 토글은 우리 사운드만 끈다 — 페이지/미리보기 프로그램(iframe) 소리는 무관.
 // 모든 함수는 SSR·미지원·차단 환경에서 안전하게 no-op.
 
-const KEY = 'app-sound-on';
+export const SOUND_KEY = 'app-sound-on';
 /** 기본 소리 상태. 나중에 기본 끔으로 바꾸려면 이 한 줄만 false. */
 const DEFAULT_SOUND_ON = true;
 
-export function isSoundOn(): boolean {
+// 인메모리 '진실값'. 재생 판정(isSoundOn)은 이 값을 최우선으로 본다.
+// 과거엔 localStorage만 진실값이라, setItem이 막힌 환경(사생활 보호·기관 관리 기기·
+// 저장소 차단/용량 초과)에서 음소거가 '저장 실패 → 조용히 무시'되어 아이콘만 바뀌고
+// 소리는 계속 나는 버그가 있었다(= '음소거 버튼이 간간히 안 됨'). 인메모리 값이면
+// 저장 성공 여부와 무관하게 이번 세션 음소거가 즉시 반영된다.
+let soundOn: boolean | null = null;
+
+function readStored(): boolean {
   try {
-    const v = localStorage.getItem(KEY);
+    const v = localStorage.getItem(SOUND_KEY);
     if (v === '0') return false;
     if (v === '1') return true;
-    return DEFAULT_SOUND_ON;
   } catch {
-    return DEFAULT_SOUND_ON;
+    /* 접근 불가 — 기본값 */
   }
+  return DEFAULT_SOUND_ON;
+}
+
+export function isSoundOn(): boolean {
+  if (soundOn === null) soundOn = readStored();
+  return soundOn;
 }
 
 export function setSoundOn(on: boolean): void {
+  soundOn = on; // 진실값 즉시 갱신(항상 성공) — 저장 실패와 무관하게 음소거가 먹힌다
   try {
-    localStorage.setItem(KEY, on ? '1' : '0');
+    localStorage.setItem(SOUND_KEY, on ? '1' : '0');
   } catch {
-    /* localStorage 차단 — 무시 */
+    /* localStorage 차단 — 인메모리 값만으로 이번 세션 동작 */
   }
+}
+
+// 다른 탭에서 소리 설정을 바꾸면 인메모리 진실값을 무효화(다음 읽기에서 저장값 재적재).
+if (typeof window !== 'undefined') {
+  window.addEventListener('storage', (e) => {
+    if (e.key === SOUND_KEY || e.key === null) soundOn = null;
+  });
 }
 
 let ctx: AudioContext | null = null;
