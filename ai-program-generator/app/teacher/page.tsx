@@ -11,7 +11,7 @@ import { TextInput, Label } from '@/components/ui/Field';
 import Modal from '@/components/ui/Modal';
 import { useToast } from '@/components/ui/Toast';
 import { useConfirm } from '@/components/ui/ConfirmProvider';
-import { listStudents, createStudents, patchStudent, deleteStudent, type Student } from '@/lib/teacher/students';
+import { listStudents, createStudents, patchStudent, deleteStudent, bulkPatchStudents, bulkDeleteStudents, type Student } from '@/lib/teacher/students';
 import { listBoardPosts, deleteBoardPost, type BoardPost } from '@/lib/teacher/posts';
 import { listTeacherReports, dismissReportedPost, deleteReportedPost, type TeacherReportGroup } from '@/lib/teacher/reports';
 import { getViewPinStatus, setViewPin } from '@/lib/teacher/viewPin';
@@ -83,12 +83,20 @@ function Console() {
   const [createdSchool, setCreatedSchool] = useState('');
   const [editTarget, setEditTarget] = useState<Student | null>(null); // 한도 수정 모달 대상
   const [editVal, setEditVal] = useState('');
+  const [renameTarget, setRenameTarget] = useState<Student | null>(null); // 별명(이름) 수정 모달 대상
+  const [renameVal, setRenameVal] = useState('');
+  const [selected, setSelected] = useState<Set<string>>(new Set()); // 일괄 작업용 선택 학생 uid
+  const [bulkLimitOpen, setBulkLimitOpen] = useState(false); // 일괄 한도 모달
+  const [bulkLimitType, setBulkLimitType] = useState<'keep' | 'daily' | 'total'>('keep');
+  const [bulkLimitVal, setBulkLimitVal] = useState('');
+  const [bulkBusy, setBulkBusy] = useState(false);
   const [hasPin, setHasPin] = useState(false); // 관람 PIN 설정 여부
   const [pinOpen, setPinOpen] = useState(false); // 관람 PIN 모달
   const [pinVal, setPinVal] = useState('');
   const [pinBusy, setPinBusy] = useState(false);
 
   const reload = () => {
+    setSelected(new Set()); // 새로 불러올 땐 선택 초기화(삭제된 uid가 남지 않도록)
     setLoadingList(true);
     setLoadingBoard(true);
     fetchTeacherMe()
@@ -176,6 +184,99 @@ function Console() {
       reload();
     } catch (err) {
       toast(err instanceof Error ? err.message : '바꾸지 못했어요.');
+    }
+  }
+
+  function renameStudent(s: Student) {
+    setRenameTarget(s);
+    setRenameVal(s.name);
+  }
+
+  async function saveRename() {
+    if (!renameTarget) return;
+    const name = renameVal.trim();
+    if (!name || name.length > 20) return toast('별명은 1~20자로 적어 주세요.');
+    try {
+      await patchStudent(renameTarget.uid, { name });
+      toast('별명을 바꿨어요.', 'success');
+      setRenameTarget(null);
+      reload();
+    } catch (err) {
+      toast(err instanceof Error ? err.message : '바꾸지 못했어요.');
+    }
+  }
+
+  // 일괄 선택 토글
+  function toggleSelect(uid: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(uid)) next.delete(uid);
+      else next.add(uid);
+      return next;
+    });
+  }
+  const allSelected = students.length > 0 && selected.size === students.length;
+  function toggleSelectAll() {
+    setSelected(allSelected ? new Set() : new Set(students.map((s) => s.uid)));
+  }
+
+  function openBulkLimit() {
+    setBulkLimitType('keep');
+    setBulkLimitVal('');
+    setBulkLimitOpen(true);
+  }
+
+  async function saveBulkLimit() {
+    const uids = [...selected];
+    if (uids.length === 0) return;
+    const body: { limitType?: 'daily' | 'total'; limitValue?: number } = {};
+    if (bulkLimitType !== 'keep') body.limitType = bulkLimitType;
+    if (bulkLimitVal.trim()) {
+      const n = Number(bulkLimitVal);
+      if (!Number.isInteger(n) || n < 1) return toast('한도는 1 이상의 정수로 적어 주세요.');
+      body.limitValue = n;
+    }
+    if (body.limitType === undefined && body.limitValue === undefined) {
+      return toast('바꿀 한도(종류나 횟수)를 하나는 정해 주세요.');
+    }
+    setBulkBusy(true);
+    try {
+      const r = await bulkPatchStudents(uids, body);
+      setBulkLimitOpen(false);
+      toast(
+        r.failed.length ? `${r.updated.length}명 바꿨어요 (${r.failed.length}명 실패).` : `${r.updated.length}명 한도를 바꿨어요.`,
+        r.failed.length ? undefined : 'success',
+      );
+      reload();
+    } catch (err) {
+      toast(err instanceof Error ? err.message : '바꾸지 못했어요.');
+    } finally {
+      setBulkBusy(false);
+    }
+  }
+
+  async function bulkRemove() {
+    const uids = [...selected];
+    if (uids.length === 0) return;
+    const ok = await confirm({
+      title: '학생 일괄 삭제',
+      message: `선택한 ${uids.length}명의 계정을 삭제할까요? 작품·기록까지 함께 지워지고 되돌릴 수 없어요.`,
+      confirmLabel: '삭제',
+      danger: true,
+    });
+    if (!ok) return;
+    setBulkBusy(true);
+    try {
+      const r = await bulkDeleteStudents(uids);
+      toast(
+        r.failed.length ? `${r.deleted.length}명 삭제했어요 (${r.failed.length}명 실패).` : `${r.deleted.length}명 삭제했어요.`,
+        r.failed.length ? undefined : 'success',
+      );
+      reload();
+    } catch (err) {
+      toast(err instanceof Error ? err.message : '삭제하지 못했어요.');
+    } finally {
+      setBulkBusy(false);
     }
   }
 
@@ -414,22 +515,62 @@ function Console() {
         <p className="py-8 text-center text-muted">아직 학생이 없어요.</p>
       ) : (
         <div className="flex flex-col gap-2">
-          {students.map((s) => (
-            <div key={s.uid} className="flex items-center justify-between gap-3 rounded-[var(--r-md)] border-2 border-line bg-surface p-4">
-              <div className="min-w-0">
-                <p className="truncate text-[16px]">
-                  {s.name} {s.disabled && <span className="text-coral-ink">· 정지됨</span>}
-                </p>
-                <p className="truncate text-[13px] text-muted">
-                  {s.limitType === 'total' ? `총 ${s.limitValue} · 누적 ${s.usedTotal}` : `1일 ${s.limitValue}`}
-                </p>
+          {/* 전체 선택 + 일괄 작업 바 */}
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-1">
+            <label className="flex cursor-pointer items-center gap-2 text-[14px] text-muted">
+              <input
+                type="checkbox"
+                checked={allSelected}
+                onChange={toggleSelectAll}
+                className="h-5 w-5 accent-[var(--brand)]"
+              />
+              전체 선택
+            </label>
+            {selected.size > 0 && (
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-[14px] text-ink">{selected.size}명 선택</span>
+                <Button variant="soft" onClick={openBulkLimit} disabled={bulkBusy}>일괄 한도</Button>
+                <Button variant="ghost" onClick={bulkRemove} disabled={bulkBusy}>일괄 삭제</Button>
+                <button
+                  type="button"
+                  onClick={() => setSelected(new Set())}
+                  className="press text-[13px] text-muted underline underline-offset-2"
+                >
+                  선택 해제
+                </button>
               </div>
-              <div className="flex shrink-0 gap-2">
-                <Button variant="soft" onClick={() => changeLimit(s)}>한도</Button>
-                <Button variant="ghost" onClick={() => remove(s)}>삭제</Button>
+            )}
+          </div>
+          {students.map((s) => {
+            const checked = selected.has(s.uid);
+            return (
+              <div
+                key={s.uid}
+                className={`flex items-center gap-3 rounded-[var(--r-md)] border-2 bg-surface p-4 ${checked ? 'border-brand/60' : 'border-line'}`}
+              >
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  onChange={() => toggleSelect(s.uid)}
+                  aria-label={`${s.name} 선택`}
+                  className="h-5 w-5 shrink-0 accent-[var(--brand)]"
+                />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[16px]">
+                    {s.name} {s.disabled && <span className="text-coral-ink">· 정지됨</span>}
+                  </p>
+                  <p className="truncate text-[13px] text-muted">
+                    학번 {s.hakbun || '—'} · {s.limitType === 'total' ? `총 ${s.limitValue} · 누적 ${s.usedTotal}` : `1일 ${s.limitValue}`}
+                  </p>
+                </div>
+                <div className="flex shrink-0 gap-2">
+                  <Button variant="ghost" onClick={() => renameStudent(s)}>별명</Button>
+                  <Button variant="soft" onClick={() => changeLimit(s)}>한도</Button>
+                  <Button variant="ghost" onClick={() => remove(s)}>삭제</Button>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
@@ -474,6 +615,60 @@ function Console() {
           <div className="flex justify-end gap-2">
             <Button type="button" variant="ghost" onClick={() => setEditTarget(null)}>취소</Button>
             <Button type="submit" variant="primary">저장</Button>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal open={!!renameTarget} onClose={() => setRenameTarget(null)} label="별명 바꾸기" className="max-w-xs p-6">
+        <h2 className="mb-1 text-[19px]">별명 바꾸기</h2>
+        <p className="mb-4 text-[13px] text-muted">우리 반 목록에서 보이는 이름이에요(학번 {renameTarget?.hakbun || '—'}).</p>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            saveRename();
+          }}
+          className="flex flex-col gap-3"
+        >
+          <Label text="별명 (1~20자)" required>
+            <TextInput maxLength={20} value={renameVal} onChange={(e) => setRenameVal(e.target.value)} autoFocus required />
+          </Label>
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="ghost" onClick={() => setRenameTarget(null)}>취소</Button>
+            <Button type="submit" variant="primary">저장</Button>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal open={bulkLimitOpen} onClose={() => setBulkLimitOpen(false)} label="일괄 한도 바꾸기" className="max-w-xs p-6">
+        <h2 className="mb-1 text-[19px]">일괄 한도 ({selected.size}명)</h2>
+        <p className="mb-4 text-[13px] text-muted">비워 두면 그대로 둬요. 종류나 횟수 중 하나만 바꿔도 돼요.</p>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            saveBulkLimit();
+          }}
+          className="flex flex-col gap-3"
+        >
+          <div>
+            <p className="mb-1.5 text-[14px]">한도 종류</p>
+            <div className="flex flex-wrap gap-3">
+              <label className="flex items-center gap-1.5 text-[14px]">
+                <input type="radio" name="bltype" checked={bulkLimitType === 'keep'} onChange={() => setBulkLimitType('keep')} /> 그대로
+              </label>
+              <label className="flex items-center gap-1.5 text-[14px]">
+                <input type="radio" name="bltype" checked={bulkLimitType === 'daily'} onChange={() => setBulkLimitType('daily')} /> 1일 한도
+              </label>
+              <label className="flex items-center gap-1.5 text-[14px]">
+                <input type="radio" name="bltype" checked={bulkLimitType === 'total'} onChange={() => setBulkLimitType('total')} /> 총 한도
+              </label>
+            </div>
+          </div>
+          <Label text="횟수 (비우면 그대로)">
+            <TextInput inputMode="numeric" value={bulkLimitVal} onChange={(e) => setBulkLimitVal(e.target.value)} placeholder="예: 5" />
+          </Label>
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="ghost" onClick={() => setBulkLimitOpen(false)}>취소</Button>
+            <Button type="submit" variant="primary" disabled={bulkBusy}>{bulkBusy ? '바꾸는 중…' : '저장'}</Button>
           </div>
         </form>
       </Modal>

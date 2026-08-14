@@ -25,6 +25,7 @@ export async function GET(req: NextRequest) {
     return {
       uid: d.id,
       email: u?.email ?? null,
+      hakbun: (s.hakbun as string) ?? '',
       name: (s.name as string) ?? '',
       limitType: (s.limitType as string) === 'total' ? 'total' : 'daily',
       limitValue: (s.limitValue as number) ?? 0,
@@ -32,6 +33,11 @@ export async function GET(req: NextRequest) {
       disabled: u?.disabled ?? false,
     };
   });
+  // 학번 오름차순(10101, 10102 …). Firestore는 문서ID(랜덤 uid) 순서라 정렬이 없으면
+  // 뒤죽박죽으로 보인다. hakbun은 고정폭 zero-pad라 숫자 정렬과 동일하지만, 값이 빈
+  // 옛 문서를 뒤로 밀기 위해 숫자 비교를 쓴다(orderBy는 teacherUid where와 합쳐 복합
+  // 인덱스가 필요하므로 서버 메모리에서 정렬).
+  students.sort((a, b) => (Number(a.hakbun) || 0) - (Number(b.hakbun) || 0));
   return NextResponse.json({ students });
 }
 
