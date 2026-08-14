@@ -5,16 +5,22 @@ import { Volume2, VolumeX } from 'lucide-react';
 import { isSoundOn, setSoundOn, playSelect } from '@/lib/client/sound';
 
 export default function SoundToggle() {
-  // SSR/하이드레이션: 초기엔 기본(on)으로 렌더, 마운트 후 실제 저장값으로 보정.
+  // SSR/하이드레이션: 초기엔 기본(on)으로 렌더, 마운트 후 실제 값으로 보정.
   const [on, setOn] = useState(true);
   useEffect(() => {
     setOn(isSoundOn());
+    // 다른 탭에서 바꾸면 아이콘도 따라가게 동기화.
+    const onStorage = () => setOn(isSoundOn());
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
   }, []);
 
   function toggle() {
-    const next = !on;
-    setOn(next);
+    // 진실값(isSoundOn) 기준으로 뒤집는다 — 마운트 직후 아직 보정 전인 stale state로
+    // 잘못 토글되는 창을 없앤다.
+    const next = !isSoundOn();
     setSoundOn(next);
+    setOn(next);
     if (next) playSelect(); // 켤 때 미리듣기
   }
 
