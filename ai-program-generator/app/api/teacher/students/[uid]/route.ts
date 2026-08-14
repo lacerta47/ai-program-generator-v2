@@ -1,19 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { requireTeacher } from '@/lib/admin/requireTeacher';
+import { getOwnedStudent } from '@/lib/server/ownedStudent';
 import { deleteAccountCascade } from '@/lib/server/deleteAccount';
 
 export const runtime = 'nodejs';
-
-/** 대상 학생이 caller 소속이 아니면 403. 맞으면 현재 문서 데이터. */
-async function ownedStudent(callerUid: string, uid: string): Promise<FirebaseFirestore.DocumentData | NextResponse> {
-  const snap = await adminDb.doc(`students/${uid}`).get();
-  const data = snap.data();
-  if (!snap.exists || !data || data.teacherUid !== callerUid) {
-    return NextResponse.json({ error: '우리 반 학생이 아니에요.' }, { status: 403 });
-  }
-  return data;
-}
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ uid: string }> }) {
   const gate = await requireTeacher(req);
@@ -28,8 +19,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ ui
   }
   const b = (body ?? {}) as Record<string, unknown>;
 
-  const current = await ownedStudent(gate.uid, uid);
-  if (current instanceof NextResponse) return current;
+  const current = await getOwnedStudent(gate.uid, uid);
+  if (!current) return NextResponse.json({ error: '우리 반 학생이 아니에요.' }, { status: 403 });
 
   try {
     const patch: Record<string, unknown> = {};
@@ -66,8 +57,8 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ u
   if (gate instanceof NextResponse) return gate;
   const { uid } = await params;
 
-  const current = await ownedStudent(gate.uid, uid);
-  if (current instanceof NextResponse) return current;
+  const current = await getOwnedStudent(gate.uid, uid);
+  if (!current) return NextResponse.json({ error: '우리 반 학생이 아니에요.' }, { status: 403 });
 
   try {
     await deleteAccountCascade(uid);
