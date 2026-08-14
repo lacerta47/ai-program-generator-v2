@@ -44,8 +44,13 @@ export default function UploadDialog({ open, onClose, code, plan, prompt, defaul
   const { user, isTeacher, isStudent } = useAuth();
   const router = useRouter();
   const [categories, setCategories] = useState<Category[]>([]);
-  // 업로드 피커엔 공개 게시판만 노출(교사보드는 그 반만 쓰기 가능 — 규칙과 일치). 공개 탐색은 별개로 유지.
-  const publicCategories = useMemo(() => categories.filter((c) => !c.teacherUid), [categories]);
+  // 업로드 피커엔 공개 게시판 + '내 학급 보드'만 노출. 다른 교사의 보드는 그 반만 쓰기 가능
+  // (규칙과 일치)하므로 숨기되, 내 보드(teacherUid === 내 uid)는 반드시 포함해야 교사가
+  // 자기 학급에 올릴 수 있다(과거엔 !teacherUid로 모든 교사보드를 걸러 내 보드까지 사라졌음).
+  const publicCategories = useMemo(
+    () => categories.filter((c) => !c.teacherUid || c.teacherUid === user?.uid),
+    [categories, user?.uid],
+  );
   const [title, setTitle] = useState(defaultTitle);
   // 교육(#8) — 아이가 직접 쓰는 '핵심 한 줄'(선택). AI 로직 설명(거울)과 별개인 자기 말 성찰.
   const [logicLine, setLogicLine] = useState('');
