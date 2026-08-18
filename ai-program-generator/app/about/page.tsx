@@ -6,7 +6,8 @@ export default function AboutPage() {
   return (
     <LegalPage title="LUN 소개">
       <p>
-        <strong>LUN</strong>은 <em>Logic Unfold Next</em>의 줄임말입니다. 논리를 펼치면 다음이 열린다는 뜻으로, 초등학교
+        <strong>LUN(룬)</strong>은 <em>Logic Unfold Next</em>의 줄임말입니다. 웹 주소 <strong>eduai-lun</strong>을 따서
+        <strong>에듀에이아이룬</strong>, 줄여서 <strong>룬</strong>이라고 부릅니다. 논리를 펼치면 다음이 열린다는 뜻으로, 초등학교
         저학년 어린이가 자기 생각을 차근차근 풀어 쓰는 것만으로 진짜 움직이는 프로그램을 만들어 볼 수 있게 하는 서비스입니다.
       </p>
 
