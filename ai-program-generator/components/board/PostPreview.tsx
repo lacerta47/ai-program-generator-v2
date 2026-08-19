@@ -2,12 +2,13 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { FileText, Download, MonitorPlay, Pencil, X, Link2, Check, GitFork, Heart, Eye, Flag, Share2, Quote } from 'lucide-react';
+import { FileText, Download, MonitorPlay, Pencil, X, Link2, GitFork, Heart, Eye, Flag, Share2, Quote } from 'lucide-react';
 import Modal from '@/components/ui/Modal';
+import ShareDialog from '@/components/ui/ShareDialog';
 import ReportDialog from './ReportDialog';
 import type { Post } from '@/lib/firebase/types';
 import { formatDate } from '@/lib/program';
-import { downloadProgram, sharePostUrl } from '@/lib/client/postActions';
+import { downloadProgram } from '@/lib/client/postActions';
 import { isLiked, toggleLike } from '@/lib/firebase/likes';
 import { recordView } from '@/lib/firebase/views';
 import Button from '@/components/ui/Button';
@@ -38,7 +39,8 @@ export default function PostPreview({
 }) {
   const [planOpen, setPlanOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
-  const [copied, setCopied] = useState(false);
+  // 공유 팝업(QR+주소) 상태 — 작품 공유/교실 관람 공유가 같은 팝업을 쓴다.
+  const [shareState, setShareState] = useState<{ url: string; title: string; note?: string } | null>(null);
   const [liked, setLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(0);
   const [viewCount, setViewCount] = useState(0);
@@ -74,17 +76,23 @@ export default function PostPreview({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [post?.id, currentUserUid]);
 
-  // 교실(비공개) 글은 공개 URL이 없어 /share/<id> + 관람 PIN으로만 외부 공유.
-  async function copyShareLink() {
+  // 공개 작품 공유 — /board?category=&post= 주소를 QR·복사로.
+  function openPublicShare() {
     if (!post) return;
-    const url = `${window.location.origin}/share/${post.id}`;
-    try {
-      if (!navigator.clipboard) throw new Error('clipboard unavailable');
-      await navigator.clipboard.writeText(url);
-      toast('링크를 복사했어요. 관람 PIN과 함께 알려주세요.', 'success');
-    } catch {
-      toast('링크 복사를 못 했어요.');
-    }
+    setShareState({
+      url: `${window.location.origin}/board?category=${post.categoryId}&post=${post.id}`,
+      title: '작품 공유하기',
+    });
+  }
+
+  // 교실(비공개) 글은 공개 URL이 없어 /share/<id> + 관람 PIN으로만 외부 공유.
+  function openClassroomShare() {
+    if (!post) return;
+    setShareState({
+      url: `${window.location.origin}/share/${post.id}`,
+      title: '관람 링크 공유',
+      note: '관람 PIN도 함께 알려주세요.',
+    });
   }
 
   function handleLike() {
@@ -172,20 +180,15 @@ export default function PostPreview({
           <Button
             variant="ghost"
             size="icon"
-            onClick={() =>
-              sharePostUrl(post, toast, () => {
-                setCopied(true);
-                setTimeout(() => setCopied(false), 1500);
-              })
-            }
-            aria-label="링크 복사"
-            title="링크 복사"
+            onClick={openPublicShare}
+            aria-label="공유하기"
+            title="공유하기 (QR·주소)"
             className="rounded-full"
           >
-            {copied ? <Check size={18} className="text-mint-ink" aria-hidden /> : <Link2 size={18} aria-hidden />}
+            <Link2 size={18} aria-hidden />
           </Button>
           {post.boardTeacherUid && (
-            <Button variant="ghost" size="icon" onClick={copyShareLink} aria-label="관람 링크 복사" title="관람 링크 복사 (관람 PIN으로 열려요)" className="rounded-full">
+            <Button variant="ghost" size="icon" onClick={openClassroomShare} aria-label="관람 링크 공유" title="관람 링크 공유 (QR·주소, 관람 PIN으로 열려요)" className="rounded-full">
               <Share2 size={18} aria-hidden />
             </Button>
           )}
@@ -269,6 +272,14 @@ export default function PostPreview({
           reporterUid={currentUserUid}
         />
       )}
+
+      <ShareDialog
+        open={!!shareState}
+        onClose={() => setShareState(null)}
+        url={shareState?.url ?? ''}
+        title={shareState?.title ?? '공유하기'}
+        note={shareState?.note}
+      />
     </div>
   );
 }

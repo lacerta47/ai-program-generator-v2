@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Pencil, Download, Link2, Check, Trash2, Heart, Eye, GitFork, Sparkles } from 'lucide-react';
+import { Pencil, Download, Link2, Trash2, Heart, Eye, GitFork, Sparkles } from 'lucide-react';
 import { useAuth } from '@/components/auth/AuthProvider';
 import { useToast } from '@/components/ui/Toast';
 import { useConfirm } from '@/components/ui/ConfirmProvider';
@@ -18,7 +18,7 @@ import {
   NicknameError,
   NICKNAME_COOLDOWN_DAYS,
 } from '@/lib/firebase/users';
-import { sharePostUrl, downloadProgram } from '@/lib/client/postActions';
+import { downloadProgram } from '@/lib/client/postActions';
 import { formatDate } from '@/lib/program';
 import type { Post } from '@/lib/firebase/types';
 import Header from '@/components/common/Header';
@@ -26,6 +26,7 @@ import ConceptDex from '@/components/edu/ConceptDex';
 import Button from '@/components/ui/Button';
 import { TextInput, Label } from '@/components/ui/Field';
 import Modal from '@/components/ui/Modal';
+import ShareDialog from '@/components/ui/ShareDialog';
 import LoadingDots from '@/components/ui/LoadingDots';
 
 interface Usage {
@@ -301,7 +302,7 @@ function MyWorks({ uid }: { uid: string }) {
   const [posts, setPosts] = useState<Post[] | null>(null);
   const [error, setError] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
-  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [shareUrl, setShareUrl] = useState<string | null>(null); // 공유 팝업(QR+주소) 대상 주소
   // 커서 기반 페이지(이전/다음). startsRef[i] = i페이지를 가져올 시작 커서(0페이지는 undefined).
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(false);
@@ -419,21 +420,12 @@ function MyWorks({ uid }: { uid: string }) {
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={() =>
-                    sharePostUrl(post, toast, () => {
-                      setCopiedId(post.id);
-                      setTimeout(() => setCopiedId(null), 1500);
-                    })
-                  }
-                  aria-label="공유"
-                  title="공유"
+                  onClick={() => setShareUrl(`${window.location.origin}/board?category=${post.categoryId}&post=${post.id}`)}
+                  aria-label="공유하기"
+                  title="공유하기 (QR·주소)"
                   className="rounded-full"
                 >
-                  {copiedId === post.id ? (
-                    <Check size={16} className="text-mint-ink" aria-hidden />
-                  ) : (
-                    <Link2 size={16} aria-hidden />
-                  )}
+                  <Link2 size={16} aria-hidden />
                 </Button>
                 <Button
                   variant="ghost"
@@ -472,6 +464,7 @@ function MyWorks({ uid }: { uid: string }) {
         )}
         </>
       )}
+      <ShareDialog open={!!shareUrl} onClose={() => setShareUrl(null)} url={shareUrl ?? ''} title="작품 공유하기" />
     </section>
   );
 }

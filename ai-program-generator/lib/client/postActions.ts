@@ -1,4 +1,3 @@
-import type { Post } from '@/lib/firebase/types';
 import type { GeneratedCode } from '@/lib/ai/types';
 import { downloadProgramZip } from './downloadZip';
 
@@ -17,18 +16,5 @@ export async function downloadProgram(code: GeneratedCode, title: string, toast:
   }
 }
 
-/** 게시물 공유 링크 복사 + 토스트. 성공 시 onCopied 콜백(복사 표시용). */
-export async function sharePostUrl(
-  post: Pick<Post, 'id' | 'categoryId'>,
-  toast: ToastFn,
-  onCopied?: () => void,
-): Promise<void> {
-  const url = `${window.location.origin}/board?category=${post.categoryId}&post=${post.id}`;
-  try {
-    await navigator.clipboard.writeText(url);
-    onCopied?.();
-    toast('작품 주소를 복사했어요! 친구들에게 자랑해 봐요', 'success');
-  } catch {
-    toast('링크 복사에 실패했어요.');
-  }
-}
+// 공유는 QR+주소 팝업(components/ui/ShareDialog)으로 통일 — 예전의 '주소만 클립보드 복사'
+// 헬퍼(sharePostUrl)는 제거했다. 공유 URL 조립은 각 화면에서 직접 한다(카테고리·post id).
