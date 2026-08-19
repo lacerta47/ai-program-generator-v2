@@ -1,13 +1,13 @@
 'use client';
 
 import { useCallback, useRef, useState } from 'react';
-import { Link2, Check, Download, Pencil, Trash2, FileQuestion, GitFork, Heart } from 'lucide-react';
+import { Link2, Download, Pencil, Trash2, FileQuestion, GitFork, Heart } from 'lucide-react';
 import type { Post } from '@/lib/firebase/types';
 import { updatePostTitle } from '@/lib/firebase/posts';
 import { ProfanityError } from '@/lib/moderation';
-import { sharePostUrl } from '@/lib/client/postActions';
 import { formatDate } from '@/lib/program';
 import { TextInput } from '@/components/ui/Field';
+import ShareDialog from '@/components/ui/ShareDialog';
 import { useToast } from '@/components/ui/Toast';
 
 interface Props {
@@ -41,7 +41,7 @@ export default function PostList({
   onLoadMore,
 }: Props) {
   const [editing, setEditing] = useState<{ id: string; title: string } | null>(null);
-  const [copiedId, setCopiedId] = useState('');
+  const [shareUrl, setShareUrl] = useState<string | null>(null); // 공유 팝업(QR+주소) 대상 주소
   const { toast } = useToast();
 
   const observer = useRef<IntersectionObserver | null>(null);
@@ -75,10 +75,7 @@ export default function PostList({
   }
 
   function share(post: Post) {
-    sharePostUrl(post, toast, () => {
-      setCopiedId(post.id);
-      setTimeout(() => setCopiedId(''), 1500);
-    });
+    setShareUrl(`${window.location.origin}/board?category=${post.categoryId}&post=${post.id}`);
   }
 
   if (posts.length === 0) {
@@ -111,6 +108,7 @@ export default function PostList({
   }
 
   return (
+    <>
     <ul className="stagger flex flex-col gap-2 pr-1">
       {posts.map((post) => {
         const canManage = isAdmin || post.ownerUid === currentUserUid;
@@ -164,12 +162,8 @@ export default function PostList({
             )}
 
             <div className="flex shrink-0 gap-1 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100">
-              <Mini label="링크 복사" onClick={() => share(post)}>
-                {copiedId === post.id ? (
-                  <Check size={18} className="anim-pop text-mint-ink" />
-                ) : (
-                  <Link2 size={18} />
-                )}
+              <Mini label="공유하기" onClick={() => share(post)}>
+                <Link2 size={18} />
               </Mini>
               <Mini label="ZIP 저장" onClick={() => onDownload(post)}>
                 <Download size={18} />
@@ -193,6 +187,8 @@ export default function PostList({
         {loadingMore && <p className="py-1 text-center text-[13px] text-muted">더 불러오는 중…</p>}
       </div>
     </ul>
+    <ShareDialog open={!!shareUrl} onClose={() => setShareUrl(null)} url={shareUrl ?? ''} title="작품 공유하기" />
+    </>
   );
 }
 
