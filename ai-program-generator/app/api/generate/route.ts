@@ -216,7 +216,7 @@ export async function POST(req: NextRequest) {
       const send = (obj: unknown) =>
         controller.enqueue(encoder.encode(JSON.stringify(obj) + '\n'));
       try {
-        for await (const chunk of provider.generateStream({ prompt: finalPrompt, system, mode, photo: parsedPhoto }, req.signal)) {
+        for await (const chunk of provider.generateStream({ prompt: finalPrompt, system, mode, photo: parsedPhoto, tier: 'paid' }, req.signal)) {
           if (req.signal.aborted) throw new Error('ABORTED');
           if (chunk.type === 'done') {
             recordTokenUsage(day, chunk.usage); // 토큰 사용량 집계(비용 실측)
