@@ -19,6 +19,13 @@ export interface GenerateInput {
    * Gemini 구현은 이 플래그에서 thinking을 끄고 출력 상한을 낮춰 지연을 크게 줄인다.
    */
   fast?: boolean;
+  /**
+   * 사용할 요금제(키) 선택.
+   * - 'paid'(기본): 결제된 프로젝트 키 → 전송 내용이 모델 학습에 사용되지 않음. 실사용자 요청은 항상 이쪽.
+   * - 'free': 결제 없는 프로젝트 키 → 무료 한도. 내부 자동 예시 생성처럼 개인정보가 없는 작업에만 사용.
+   * 미지정 시 'paid'로 처리(사용자 데이터 보호를 기본값으로).
+   */
+  tier?: 'free' | 'paid';
 }
 
 export interface GeneratedCode {
