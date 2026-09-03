@@ -8,8 +8,9 @@ import { fetchPosts, getPost, deletePost, type PostCursor } from '@/lib/firebase
 import { downloadProgram } from '@/lib/client/postActions';
 import type { Category, Post } from '@/lib/firebase/types';
 import { CloudOff, RotateCcw, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
-import CategoryTree from './CategoryTree';
-import { leafPaths, hasChildren } from '@/lib/board/categoryTree';
+import CategoryTree, { type CategoryGroup } from './CategoryTree';
+import BoardChip from './BoardChip';
+import { leafPaths, hasChildren, pathOf } from '@/lib/board/categoryTree';
 import BoardFilter from './BoardFilter';
 import {
   filterPosts,
@@ -56,6 +57,8 @@ export default function BoardView() {
   const [loginOpen, setLoginOpen] = useState(false);
   // 데스크탑에서 좌측 목록 패널을 접어 미리보기를 넓히는 상태(세션 로컬)
   const [collapsed, setCollapsed] = useState(false);
+  // 게시판 트리 펼침 여부 — 기본 접힘(칩만), 잎새를 고르면 자동으로 접힘. 저장하지 않는다(예측 가능성).
+  const [treeOpen, setTreeOpen] = useState(false);
   // 공유 링크 ?post= 의 카테고리가 정해지기 전에는 "첫 카테고리 자동선택"을 보류
   // (categoryId 없이 들어온 딥링크가 엉뚱한 카테고리 목록을 띄우는 레이스 방지)
   const [deepLinkResolving, setDeepLinkResolving] = useState(
@@ -109,6 +112,27 @@ export default function BoardView() {
   const visibleCategories = categories.filter(
     (c) => isAdmin || !c.teacherUid || c.teacherUid === user?.uid || c.teacherUid === myClassTeacherUid,
   );
+
+  // 트리 그룹: 교사·학생은 '내 교실'(내 교실 보드)을 맨 위에, 나머지는 '모두의 게시판'.
+  // 관리자·일반·비로그인은 그룹 없이 한 덩어리. 내 보드를 떼어낸 뒤 자식이 없어진 폴더는 빈 잎새로 보이지 않게 제거.
+  const categoryGroups: CategoryGroup[] = (() => {
+    if (isAdmin || !myClassTeacherUid) return [{ label: null, categories: visibleCategories }];
+    const mine = visibleCategories.filter((c) => c.teacherUid === myClassTeacherUid);
+    if (mine.length === 0) return [{ label: null, categories: visibleCategories }];
+    const mineIds = new Set(mine.map((c) => c.id));
+    let rest = visibleCategories.filter((c) => !mineIds.has(c.id));
+    for (;;) {
+      const pruned = rest.filter(
+        (c) => !hasChildren(c.id, visibleCategories) || hasChildren(c.id, rest),
+      );
+      if (pruned.length === rest.length) break;
+      rest = pruned;
+    }
+    return [
+      { label: '내 교실', categories: mine },
+      { label: '모두의 게시판', categories: rest },
+    ];
+  })();
 
   // 선택된 카테고리가 없으면 첫 잎새로 (딥링크 글 해결 중이면 대기). 멤버십 필터된 목록 기준.
   useEffect(() => {
@@ -252,6 +276,7 @@ export default function BoardView() {
     setSelectedCategoryId(id);
     setSelectedPost(null);
     setDeepLinkError(null);
+    setTreeOpen(false);
     router.replace(`/board?category=${id}`, { scroll: false });
   }
 
@@ -335,16 +360,36 @@ export default function BoardView() {
             <PanelLeftClose size={20} />
           </button>
         </div>
-        <CategoryTree
-          categories={visibleCategories}
-          selectedId={selectedCategoryId}
-          onSelect={selectCategory}
-        />
-        <BoardFilter value={filter} onChange={setFilter} />
-        {filtering && !loading && visiblePosts.length > 0 && (
-          <p className="-mt-1 text-[13px] text-muted">{visiblePosts.length}개 찾았어요</p>
+        {visibleCategories.length === 0 ? (
+          <p className="py-2 text-[15px] text-muted">아직 게시판이 없어요.</p>
+        ) : (
+          <BoardChip
+            path={pathOf(selectedCategoryId ?? '', visibleCategories)}
+            open={treeOpen}
+            onToggle={() => setTreeOpen((v) => !v)}
+            locked={!!selectedTeacherUid}
+          />
         )}
+        {/* 단일 스크롤: 펼친 트리 → (고정) 찾기 → 목록. 트리가 길어도 목록이 밀려 사라지지 않는다. */}
         <div className="min-h-0 flex-1 overflow-y-auto">
+          {treeOpen && visibleCategories.length > 0 && (
+            <div
+              id="board-tree"
+              className="anim-pop-in mb-3 rounded-[var(--r-md)] border-2 border-line p-2"
+            >
+              <CategoryTree
+                groups={categoryGroups}
+                selectedId={selectedCategoryId}
+                onSelect={selectCategory}
+              />
+            </div>
+          )}
+          <div className="sticky top-0 z-10 bg-surface pb-3">
+            <BoardFilter value={filter} onChange={setFilter} />
+            {filtering && !loading && visiblePosts.length > 0 && (
+              <p className="mt-2 text-[13px] text-muted">{visiblePosts.length}개 찾았어요</p>
+            )}
+          </div>
           {loading ? (
             <div className="py-8">
               <LoadingDots label="작품을 불러오는 중…" />
