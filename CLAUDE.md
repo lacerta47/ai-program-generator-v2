@@ -21,7 +21,7 @@ node scripts/set-admin.mjs <email>  # 해당 계정에 admin claim 부여 (대�
 firebase deploy --only firestore:rules,firestore:indexes  # 보안 규칙·인덱스 배포 (프로젝트: test-ai-builder)
 ```
 
-테스트 프레임워크는 없음. 검증은 `tsc --noEmit` + `npm run build` + **`scripts/selftest-*.mjs`** + 브라우저 확인. self-test는 **커밋하지 않는 일회성 스크립트**(git status에 `??`로 남김): Admin SDK로 시드·custom token 발급 후, **서버 API**(dev 필요) 또는 **클라이언트 SDK**로 검증하고 끝에서 시드를 정리한다. **firestore.rules는 반드시 client SDK로 검증** — Admin SDK는 규칙을 우회한다. 규칙을 바꾸면 `firebase deploy` 후 self-test로 확인.
+**단위 테스트는 vitest**(`npm test` = `vitest run`, 대상 `lib/**/*.test.ts`, 설정 `vitest.config.mts`). 순수 로직(validateCode·detectConcepts·moderation·studentQuota[adminDb 인메모리 목])만 다루며 Firestore·Next 런타임은 안 띄운다. 순수 로직을 고치면 해당 테스트를 함께 갱신할 것. 통합 검증은 `tsc --noEmit` + `npm run build` + **`scripts/selftest-*.mjs`** + 브라우저 확인. self-test는 **커밋하지 않는 일회성 스크립트**(git status에 `??`로 남김): Admin SDK로 시드·custom token 발급 후, **서버 API**(dev 필요) 또는 **클라이언트 SDK**로 검증하고 끝에서 시드를 정리한다. **firestore.rules는 반드시 client SDK로 검증** — Admin SDK는 규칙을 우회한다. 규칙을 바꾸면 `firebase deploy` 후 self-test로 확인.
 
 ## 아키텍처
 
