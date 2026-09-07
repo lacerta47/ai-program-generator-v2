@@ -43,9 +43,16 @@ const CONCEPT_SET = ['순서', '조건', '반복', '입력', '출력'];
 
 export class GeminiProvider implements AIProvider {
   async *generateStream(input: GenerateInput, signal?: AbortSignal): AsyncGenerator<GenerationChunk> {
-    const apiKey = process.env.GEMINI_API_KEY;
+    // 티어별 키 선택: 사용자 요청('paid' 기본)은 결제 프로젝트 키(학습 미사용),
+    // 내부 자동생성('free')은 무료 프로젝트 키. 새 키가 없으면 기존 단일 키로 폴백(호환).
+    const isFree = input.tier === 'free';
+    const apiKey =
+      (isFree ? process.env.GEMINI_API_KEY_FREE : process.env.GEMINI_API_KEY_PAID) ||
+      process.env.GEMINI_API_KEY;
     if (!apiKey) {
-      throw new Error('GEMINI_API_KEY 환경변수가 설정되지 않았습니다.');
+      throw new Error(
+        `Gemini API 키가 없습니다. ${isFree ? 'GEMINI_API_KEY_FREE' : 'GEMINI_API_KEY_PAID'} 또는 GEMINI_API_KEY를 설정하세요.`,
+      );
     }
     const ai = new GoogleGenAI({ apiKey });
 
@@ -61,7 +68,9 @@ export class GeminiProvider implements AIProvider {
       } catch (e2) {
         if (isQuotaExhausted(e2)) {
           throw new QuotaExhaustedError(
-            '오늘 사용할 수 있는 무료 AI 횟수를 모두 썼어요. 내일 다시 해보세요! (무료 한도는 매일 새로 채워져요)',
+            isFree
+              ? '오늘 사용할 수 있는 무료 AI 횟수를 모두 썼어요. 내일 다시 해보세요! (무료 한도는 매일 새로 채워져요)'
+              : '지금 이용자가 많아 잠시 처리가 어려워요. 잠깐 뒤에 다시 해볼까요?',
           );
         }
         throw e2; // raw SDK 에러 — 클라엔 일반 메시지로 치환됨(B4)

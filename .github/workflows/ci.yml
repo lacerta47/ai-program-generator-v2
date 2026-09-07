@@ -26,6 +26,10 @@ jobs:
       - name: Type check
         run: ./node_modules/.bin/tsc --noEmit
 
+      # 순수 로직 단위 테스트(vitest, lib/**/*.test.ts) — Firestore·Next 런타임 미사용이라 시크릿 불필요
+      - name: Unit tests
+        run: npm test
+
       - name: Production build
         run: npm run build
         # 빌드 시점엔 실제 비밀키 불필요(런타임에만 사용). 클라이언트 Firebase init이

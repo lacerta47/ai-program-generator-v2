@@ -9,6 +9,9 @@ export default function PhotoUpload({ value, onChange }: { value: string | null;
   const inputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  // 사진 국외 이전(→ Google Gemini, 미국) 별도 동의. 체크해야만 첨부(=전송)할 수 있어,
+  // 동의 없이 사진이 해외 AI로 전송되는 일이 없다. (개인정보처리방침 §5 '선택 이전' 대응)
+  const [agreed, setAgreed] = useState(false);
   async function pick(file: File) {
     setBusy(true);
     setError('');
@@ -35,9 +38,33 @@ export default function PhotoUpload({ value, onChange }: { value: string | null;
           </button>
         </div>
       ) : (
-        <Button type="button" variant="soft" onClick={() => inputRef.current?.click()} disabled={busy} className="w-fit">
-          <ImagePlus size={18} aria-hidden /> {busy ? '사진 줄이는 중…' : '사진 올리기(선택)'}
-        </Button>
+        <>
+          <label className="flex items-start gap-2 text-[13px] text-ink">
+            <input
+              type="checkbox"
+              checked={agreed}
+              onChange={(e) => setAgreed(e.target.checked)}
+              className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--brand)]"
+            />
+            <span>
+              사진이 프로그램 제작을 위해 <strong>해외 AI(Google Gemini, 미국)</strong>로 전송되는 것에 동의해요.{' '}
+              <a href="/privacy" target="_blank" rel="noreferrer" className="text-brand-strong underline">
+                개인정보처리방침
+              </a>{' '}
+              (선택)
+            </span>
+          </label>
+          <Button
+            type="button"
+            variant="soft"
+            onClick={() => inputRef.current?.click()}
+            disabled={busy || !agreed}
+            title={!agreed ? '먼저 사진 전송 동의에 체크해 주세요.' : undefined}
+            className="w-fit"
+          >
+            <ImagePlus size={18} aria-hidden /> {busy ? '사진 줄이는 중…' : '사진 올리기(선택)'}
+          </Button>
+        </>
       )}
       <input
         ref={inputRef}

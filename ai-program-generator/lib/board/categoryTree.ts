@@ -75,6 +75,28 @@ export function depthOf(id: string, categories: Category[]): number {
   return depth;
 }
 
+/** id에서 루트까지의 카테고리 배열(루트 → id 순). 없으면 []. 사이클 안전. */
+export function pathOf(id: string, categories: Category[]): Category[] {
+  const byId = new Map(categories.map((c) => [c.id, c]));
+  const out: Category[] = [];
+  const seen = new Set<string>();
+  let cur = byId.get(id);
+  while (cur && !seen.has(cur.id)) {
+    seen.add(cur.id);
+    out.unshift(cur);
+    cur = cur.parentId ? byId.get(cur.parentId) : undefined;
+  }
+  return out;
+}
+
+/** 서브트리의 잎새 수(자기 자신이 잎새면 1). */
+export function countLeaves(node: CategoryNode): number {
+  if (node.children.length === 0) return 1;
+  let n = 0;
+  for (const ch of node.children) n += countLeaves(ch);
+  return n;
+}
+
 /** 직속 자식을 가진 노드인가(=폴더). */
 export function hasChildren(id: string, categories: Category[]): boolean {
   return categories.some((c) => (c.parentId ?? null) === id);
