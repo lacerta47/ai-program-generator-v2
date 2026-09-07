@@ -6,7 +6,7 @@ export const metadata = { title: '개인정보처리방침 — LUN' };
 // 수집 항목이 바뀌는 기능을 추가하면 이 문서도 함께 갱신할 것.
 export default function PrivacyPage() {
   return (
-    <LegalPage title="개인정보처리방침" updatedAt="2026년 7월 26일">
+    <LegalPage title="개인정보처리방침" updatedAt="2026년 9월 7일">
       <p>
         아름다운교육연구소(이하 &lsquo;연구소&rsquo;)는 LUN 서비스(이하 &lsquo;서비스&rsquo;)를 운영하면서 이용자의 개인정보를
         소중히 다루며, 「개인정보 보호법」 등 관련 법령을 준수합니다. 이 방침은 서비스가 어떤 정보를 어떻게 다루는지 알려
