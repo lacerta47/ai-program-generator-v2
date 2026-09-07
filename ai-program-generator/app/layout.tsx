@@ -20,7 +20,7 @@ const SITE = process.env.NEXT_PUBLIC_APP_ORIGIN || 'https://eduai-lun.co.kr';
 export const metadata: Metadata = {
   metadataBase: new URL(SITE),
   // 한글 음차(에듀에이아이룬·룬)를 제목·설명에 자연스럽게 넣어 한글 브랜드 검색과 연결한다.
-  title: 'LUN(룬) — 초등 저학년 AI 코딩',
+  title: 'LUN(룬) — AI 코딩',
   description:
     '에듀에이아이룬(LUN·룬)은 초등 저학년을 위한 AI 코딩 놀이터예요. 논리를 펼치면, 마법이 시작돼요. 계획을 쓰거나 골라서 AI로 프로그램을 만들어요.',
   openGraph: {
