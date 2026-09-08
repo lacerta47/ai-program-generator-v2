@@ -15,3 +15,19 @@ export class UserFacingError extends Error {
 
 /** 무료 할당량 소진(양 모델 모두 429) — UserFacingError의 특수형. 소진을 코드로 구별하기 위함(cron 등). */
 export class QuotaExhaustedError extends UserFacingError {}
+
+/**
+ * 생성 코드 게이트(validateCode) 탈락 — UserFacingError의 특수형.
+ * reason은 집계용 짧은 키(swallowed·syntax·missingId·undefinedRef·missingClass), detail은 로그용 원문.
+ * 라우트가 이 타입을 보고 stats/{day}에 탈락 건수·사유를 누적한다(일일 리포트에서 오탐 감시).
+ */
+export class GateError extends UserFacingError {
+  constructor(
+    message: string,
+    readonly reason: string,
+    readonly detail: string,
+  ) {
+    super(message);
+    this.name = 'GateError';
+  }
+}

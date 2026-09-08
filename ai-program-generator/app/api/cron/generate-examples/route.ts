@@ -3,7 +3,9 @@ import { adminDb } from '@/lib/firebase/admin';
 import { randomPlan } from '@/lib/examples/randomPlan';
 import { generateExampleOnce } from '@/lib/examples/generateExampleOnce';
 import { publishExample } from '@/lib/examples/publishExample';
-import { QuotaExhaustedError } from '@/lib/ai/errors';
+import { QuotaExhaustedError, GateError } from '@/lib/ai/errors';
+import { recordGateFail } from '@/lib/server/gateStats';
+import { todayKeyKST } from '@/lib/usageDay';
 
 // 놀고 있는 Gemini 무료 한도로 예시 작품을 교육테스트 보드에 생성·게시. CRON_SECRET Bearer(daily-stats 동일).
 // 한 요청은 소량만 — Vercel 함수 시간제한(maxDuration=60s 하드 캡). 트리거(Claude 루틴)가 exhausted까지 반복 호출.
@@ -73,7 +75,12 @@ export async function GET(req: NextRequest) {
         break;
       }
       console.error('[generate-examples] 한 건 실패(스킵):', e); // 검열/파싱/abort/일시오류
-      failures.push(e instanceof Error ? e.message.slice(0, 80) : String(e).slice(0, 80));
+      if (e instanceof GateError) {
+        recordGateFail(todayKeyKST(), e.reason, 'example'); // 게이트 탈락 집계(일일 리포트)
+        failures.push(`gate:${e.reason} ${e.detail.slice(0, 60)}`);
+      } else {
+        failures.push(e instanceof Error ? e.message.slice(0, 80) : String(e).slice(0, 80));
+      }
     }
   }
   return NextResponse.json({ made, attempted, failed: failures.length, failures, exhausted });
