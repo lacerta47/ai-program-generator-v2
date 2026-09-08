@@ -10,6 +10,8 @@ interface StreamOpts {
   signal?: AbortSignal;
   /** 사진 1장(data-URI). 멀티모달 생성용 — 서버가 검증·전달. */
   photo?: string;
+  /** 선택지 만들기의 유형 id(PROGRAM_TYPES id) — 서버가 유형별 참고 예시를 고르는 데만 쓴다. */
+  programType?: string;
 }
 
 /** 클라이언트에서 /api/generate(NDJSON 스트림)를 호출. onDelta로 부분 코드를 받고 최종을 반환. */
@@ -22,7 +24,7 @@ export async function requestGenerateStream(
   const res = await authedFetch('/api/generate', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ prompt, mode, variant, photo: opts.photo }),
+    body: JSON.stringify({ prompt, mode, variant, photo: opts.photo, programType: opts.programType }),
     signal: opts.signal,
   });
 

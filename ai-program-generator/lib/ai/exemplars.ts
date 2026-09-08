@@ -5,6 +5,8 @@ import type { GeneratedCode } from '@/lib/ai/types';
 // 컴파일 후 .js에는 런타임 import가 없어 단독 실행이 가능하다.
 export interface Exemplar {
   variant: 'default' | 'survey';
+  /** survey 전용 — 유형별 슬롯(PROGRAM_TYPES id). 없으면 유형 공통 슬롯. */
+  programType?: string;
   plan: PlanFields;
   code: GeneratedCode;
   sourcePostId: string;

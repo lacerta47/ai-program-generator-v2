@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAIProvider } from '@/lib/ai/provider';
 import { SYSTEM_PROMPTS, MODIFY_SYSTEM_SUFFIX, PHOTO_INSTRUCTION, LOGIC_META_INSTRUCTION, type SystemPromptVariant } from '@/lib/ai/prompts';
-import { getExemplar } from '@/lib/admin/exemplars';
+import { getExemplar, isProgramTypeId } from '@/lib/admin/exemplars';
 import { buildExemplarBlock } from '@/lib/ai/exemplars';
 import type { GenerateMode, TokenUsage } from '@/lib/ai/types';
 import { FieldValue } from 'firebase-admin/firestore';
@@ -89,13 +89,16 @@ export async function POST(req: NextRequest) {
   }
 
   // system 텍스트는 클라이언트가 보내도 무시(주입 차단). 대신 variant 키로 서버가 선택.
-  const { prompt, mode, variant, photo } = (body ?? {}) as {
+  const { prompt, mode, variant, photo, programType } = (body ?? {}) as {
     prompt?: unknown;
     mode?: unknown;
     variant?: unknown;
     photo?: unknown;
+    programType?: unknown;
   };
   const promptVariant: SystemPromptVariant = variant === 'survey' ? 'survey' : 'default';
+  // 선택지 만들기의 유형 id — 유형별 참고 예시 선택에만 쓴다. 모르는 값이면 무시(공통 예시로 폴백).
+  const exemplarType = promptVariant === 'survey' && isProgramTypeId(programType) ? programType : undefined;
 
   if (typeof prompt !== 'string' || !prompt.trim()) {
     return NextResponse.json({ error: 'prompt(문자열)가 필요합니다.' }, { status: 400 });
@@ -190,8 +193,8 @@ export async function POST(req: NextRequest) {
     // 수정 모드: 요청한 부분만 바꾸고 나머지 코드·제약을 보존하라는 지시를 덧붙인다.
     system = SYSTEM_PROMPTS[promptVariant] + MODIFY_SYSTEM_SUFFIX;
   } else {
-    // 생성 모드: 해당 variant에 승인된 참고 예시가 있으면 프롬프트 앞에 붙여 완성도 floor를 올린다.
-    const exemplar = await getExemplar(promptVariant);
+    // 생성 모드: 승인된 참고 예시(선택지는 유형별 슬롯 우선, 없으면 공통)를 프롬프트 앞에 붙여 완성도 floor를 올린다.
+    const exemplar = await getExemplar(promptVariant, exemplarType);
     if (exemplar) finalPrompt = buildExemplarBlock(exemplar) + prompt;
   }
   // 사진이 첨부됐으면 그 사진을 활용하라는 지시를 시스템 프롬프트에 덧붙인다.

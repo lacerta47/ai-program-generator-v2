@@ -1,12 +1,25 @@
 import { adminDb } from '@/lib/firebase/admin';
 import { truncateCode, type Exemplar } from '@/lib/ai/exemplars';
+import { PROGRAM_TYPES } from '@/lib/survey/programs';
 import type { PlanFields } from '@/lib/firebase/types';
 import type { GeneratedCode } from '@/lib/ai/types';
 
 export type ExemplarVariant = 'default' | 'survey';
 
 const COL = 'exemplars';
-const docId = (variant: ExemplarVariant) => `active_${variant}`;
+
+/** 유형별 슬롯은 survey에만 있다. id는 PROGRAM_TYPES의 id(paint·quiz…). */
+export const PROGRAM_TYPE_IDS: readonly string[] = PROGRAM_TYPES.map((t) => t.id);
+export function isProgramTypeId(v: unknown): v is string {
+  return typeof v === 'string' && PROGRAM_TYPE_IDS.includes(v);
+}
+
+/**
+ * 슬롯 문서 id. survey+유형이면 `active_survey_{type}`, 아니면 `active_{variant}`.
+ * default에는 유형 슬롯이 없다(서술형은 유형을 모름) — programType은 survey일 때만 의미 있음.
+ */
+const docId = (variant: ExemplarVariant, programType?: string) =>
+  variant === 'survey' && programType ? `active_survey_${programType}` : `active_${variant}`;
 
 export interface ExemplarCandidate {
   id: string;
@@ -16,22 +29,47 @@ export interface ExemplarCandidate {
   hasPlan: boolean;
 }
 
-/** variant 슬롯의 현재 exemplar. 없거나 읽기 실패면 null(생성을 막지 않는다). */
-export async function getExemplar(variant: ExemplarVariant): Promise<Exemplar | null> {
+async function readSlot(id: string): Promise<Exemplar | null> {
+  const snap = await adminDb.collection(COL).doc(id).get();
+  return snap.exists ? (snap.data() as Exemplar) : null;
+}
+
+/**
+ * 생성에 붙일 exemplar. survey+유형이면 유형 슬롯을 먼저 보고, 비어 있으면 유형 공통 survey 슬롯으로 폴백.
+ * 없거나 읽기 실패면 null(생성을 막지 않는다).
+ */
+export async function getExemplar(variant: ExemplarVariant, programType?: string): Promise<Exemplar | null> {
   try {
-    const snap = await adminDb.collection(COL).doc(docId(variant)).get();
-    return snap.exists ? (snap.data() as Exemplar) : null;
+    if (variant === 'survey' && programType) {
+      const typed = await readSlot(docId('survey', programType));
+      if (typed) return typed;
+    }
+    return await readSlot(docId(variant));
   } catch (e) {
     console.error('exemplar 읽기 실패:', e);
     return null;
   }
 }
 
-/** 게시물을 압축·동결해 variant 슬롯에 지정. plan/code 없는 구버전 글이면 예외. */
+/** 관리자 화면용 — 공통 슬롯 2개 + 유형별 슬롯 12개를 한 번에. */
+export async function listExemplarSlots(): Promise<{
+  default: Exemplar | null;
+  survey: Exemplar | null;
+  byType: Record<string, Exemplar | null>;
+}> {
+  const snap = await adminDb.collection(COL).get();
+  const map = new Map(snap.docs.map((d) => [d.id, d.data() as Exemplar]));
+  const byType: Record<string, Exemplar | null> = {};
+  for (const id of PROGRAM_TYPE_IDS) byType[id] = map.get(docId('survey', id)) ?? null;
+  return { default: map.get(docId('default')) ?? null, survey: map.get(docId('survey')) ?? null, byType };
+}
+
+/** 게시물을 압축·동결해 슬롯에 지정. plan/code 없는 구버전 글이면 예외. */
 export async function setExemplarFromPost(
   postId: string,
   variant: ExemplarVariant,
   approvedBy: string,
+  programType?: string,
 ): Promise<Exemplar> {
   const postSnap = await adminDb.collection('posts').doc(postId).get();
   if (!postSnap.exists) throw new Error('POST_NOT_FOUND');
@@ -41,6 +79,7 @@ export async function setExemplarFromPost(
 
   const exemplar: Exemplar = {
     variant,
+    ...(variant === 'survey' && programType ? { programType } : {}),
     plan: post.plan,
     code: truncateCode(post.code),
     sourcePostId: postId,
@@ -48,13 +87,13 @@ export async function setExemplarFromPost(
     approvedBy,
     approvedAt: Date.now(),
   };
-  await adminDb.collection(COL).doc(docId(variant)).set(exemplar);
+  await adminDb.collection(COL).doc(docId(variant, programType)).set(exemplar);
   return exemplar;
 }
 
-/** variant 슬롯 비우기. */
-export async function clearExemplar(variant: ExemplarVariant): Promise<void> {
-  await adminDb.collection(COL).doc(docId(variant)).delete();
+/** 슬롯 비우기. */
+export async function clearExemplar(variant: ExemplarVariant, programType?: string): Promise<void> {
+  await adminDb.collection(COL).doc(docId(variant, programType)).delete();
 }
 
 /**
