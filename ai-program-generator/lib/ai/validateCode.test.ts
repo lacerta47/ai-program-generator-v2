@@ -111,6 +111,34 @@ describe('validateGeneratedCode — 실행 가능성 게이트', () => {
     expect(validateGeneratedCode({ ...base, html, javascript: dyn })).toBeNull();
   });
 
+  it('querySelectorAll의 없는 클래스는 빈 목록이라 통과, querySelector(단일)만 잡는다', () => {
+    const html = '<div class="a"></div>';
+    expect(validateGeneratedCode({ ...base, html, javascript: `document.querySelectorAll('.tempo-btn').forEach(b => b.remove());` })).toBeNull();
+    expect(validateGeneratedCode({ ...base, html, javascript: `document.querySelector('.tempo-btn').remove();` })).toMatch(/\.tempo-btn/);
+  });
+
+  it('변수로 id를 붙이는 헬퍼가 있으면 없는 id 검사를 건너뛴다(동적 생성 오탐 방지)', () => {
+    const js = `function make(id) { const el = document.createElement('div'); el.id = id; document.body.appendChild(el); return el; }
+      let key = document.getElementById('key-item'); if (!key) key = make('key-item'); key.textContent = 'k';`;
+    expect(validateGeneratedCode({ ...base, html: '<div id="root"></div>', javascript: js })).toBeNull();
+  });
+
+  it('없는 클래스라도 결과를 null 검사하면 통과(두더지 .mole-item 오탐 방지)', () => {
+    const html = '<div class="cell"></div>';
+    const guarded = `const cell = document.querySelector('.cell'); const mole = cell.querySelector('.mole-item'); if (mole) { mole.remove(); }`;
+    expect(validateGeneratedCode({ ...base, html, javascript: guarded })).toBeNull();
+    const unguarded = `const mole = document.querySelector('.mole-item'); mole.remove();`;
+    expect(validateGeneratedCode({ ...base, html, javascript: unguarded })).toMatch(/\.mole-item/);
+  });
+
+  it('addEventListener에 넘긴 콜백 이름이 정의돼 있지 않으면 잡는다(selectStarStamp)', () => {
+    const html = '<button id="b"></button>';
+    expect(validateGeneratedCode({ ...base, html, javascript: `document.getElementById('b').addEventListener('click', selectStarStamp);` })).toMatch(
+      /selectStarStamp/,
+    );
+    expect(validateGeneratedCode({ ...base, html, javascript: `function go() {}\ndocument.getElementById('b').addEventListener('click', go);` })).toBeNull();
+  });
+
   it('주석 속 예시 셀렉터는 실제 참조로 보지 않는다', () => {
     const js = `/* 예) getElementById('timer-display') */\nconst a = document.getElementById('real');`;
     expect(validateGeneratedCode({ ...base, html: '<p id="real"></p>', javascript: js })).toBeNull();

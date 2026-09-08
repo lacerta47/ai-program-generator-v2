@@ -233,6 +233,8 @@ function undefinedRefs(js: string, html: string): string[] {
   for (const m of code.matchAll(/(?:^|[^\w$.])([A-Za-z_$][\w$]*)\s*\(/g)) check(m[1]);
   // 멤버 접근: 앞에 '.'이 없는 name.  (숫자 리터럴 1.5 같은 건 [A-Za-z_$] 시작 조건으로 걸러짐)
   for (const m of code.matchAll(/(?:^|[^\w$.])([A-Za-z_$][\w$]*)\s*\.[A-Za-z_$]/g)) check(m[1]);
+  // 이벤트 콜백 참조: addEventListener('click', name) — 호출도 멤버접근도 아니라 위 두 패턴이 놓친다(실측: selectStarStamp).
+  for (const m of code.matchAll(/addEventListener\s*\(\s*''\s*,\s*([A-Za-z_$][\w$]*)\s*[,)]/g)) check(m[1]);
   return [...missing];
 }
 
@@ -244,7 +246,8 @@ function missingClassSelectors(js: string, html: string): string[] {
   const htmlClasses = new Set<string>();
   for (const m of html.matchAll(/\bclass\s*=\s*["']([^"']+)["']/g)) for (const c of m[1].split(/\s+/)) if (c) htmlClasses.add(c);
   const used = new Set<string>();
-  const selectorRe = /querySelector(?:All)?\(\s*["']\.([A-Za-z_][\w-]*)["']\s*\)/g;
+  // querySelector(단일)만 — querySelectorAll은 없는 클래스여도 빈 목록이라 죽지 않는다(실측: 기타 .tempo-btn 오탐).
+  const selectorRe = /(?<!All)querySelector\(\s*["']\.([A-Za-z_][\w-]*)["']\s*\)/g;
   for (const m of stripComments(js).matchAll(selectorRe)) used.add(m[1]);
   if (used.size === 0) return [];
   const jsWithoutSelectors = js.replace(selectorRe, '');
@@ -252,6 +255,10 @@ function missingClassSelectors(js: string, html: string): string[] {
   for (const c of used) {
     if (htmlClasses.has(c)) continue;
     if (new RegExp(`['"\`][^'"\`]*\\b${c.replace(/[-]/g, '\\-')}\\b[^'"\`]*['"\`]`).test(jsWithoutSelectors)) continue;
+    // 결과를 변수에 받아 곧바로 null 검사(`if (el)`, `el &&`, `el?.`)하면 없어도 죽지 않는다(실측: 두더지 .mole-item 오탐).
+    // `=`(비교 `==` 제외) 뒤에 다른 `=`·`;` 없이 곧바로 querySelector가 오는 대입만 인정(앞 문장의 `e.key === …`에 걸리지 않게).
+    const assigned = [...js.matchAll(new RegExp(`([A-Za-z_$][\\w$]*)\\s*=(?!=)\\s*[^;=]*querySelector\\(\\s*["']\\.${c.replace(/[-]/g, '\\-')}["']\\s*\\)`, 'g'))].map((m) => m[1]);
+    if (assigned.some((v) => new RegExp(`if\\s*\\(\\s*!?\\s*${v}\\b|\\b${v}\\s*(&&|\\?\\.)`).test(js))) continue;
     out.push(c);
   }
   return out;
@@ -301,7 +308,10 @@ export function validateGeneratedCode(code: GeneratedCode): string | null {
   // (반대로 '만들어지는 id'는 원문에서 모아 더 관대하게 판단한다.)
   const known = htmlIds(html);
   for (const id of jsCreatedIds(js)) known.add(id);
-  const missing = [...new Set(referencedIds(stripComments(js)))].filter((id) => !known.has(id));
+  // id를 변수로 붙이는 헬퍼(`el.id = id`, `setAttribute('id', name)`)가 있으면 어떤 id가 생길지 정적으로 알 수 없다.
+  // 그 경우 '없는 요소' 검사는 건너뛴다(실측: 미로 key-item — 초기 getElementById는 null이지만 뒤에서 만들어 씀 → 오탐).
+  const dynamicIds = /\.id\s*=\s*[A-Za-z_$]/.test(js) || /setAttribute\(\s*["']id["']\s*,\s*[A-Za-z_$]/.test(js);
+  const missing = dynamicIds ? [] : [...new Set(referencedIds(stripComments(js)))].filter((id) => !known.has(id));
   if (missing.length) return `HTML에 없는 요소를 참조: ${missing.join(', ')}`;
 
   const undef = undefinedRefs(js, html);
