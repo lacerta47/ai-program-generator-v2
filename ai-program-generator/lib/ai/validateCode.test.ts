@@ -52,6 +52,49 @@ describe('validateGeneratedCode — 실행 가능성 게이트', () => {
     expect(validateGeneratedCode({ ...base, html: '', javascript: js })).toBeNull();
   });
 
+  it('정의 없는 함수 호출·변수 참조를 잡는다 (실측: gameLoop(), saveRecords(), html2canvas)', () => {
+    const html = '<button id="go"></button>';
+    expect(validateGeneratedCode({ ...base, html, javascript: `function start() { gameLoop(); }\nstart();` })).toMatch(
+      /정의 없는 이름.*gameLoop/,
+    );
+    expect(validateGeneratedCode({ ...base, html, javascript: `pullButton.addEventListener('click', () => {});` })).toMatch(
+      /정의 없는 이름.*pullButton/,
+    );
+    expect(validateGeneratedCode({ ...base, html, javascript: `html2canvas(document.body);` })).toMatch(/html2canvas/);
+  });
+
+  it('선언된 이름·매개변수·구조분해·catch·html id·브라우저 전역은 미정의로 보지 않는다', () => {
+    const html = '<div id="board"></div><p class="x"></p>';
+    const js = `
+      const { sin, cos } = Math; let [a, b] = [1, 2]; var total = 0;
+      function tick(dt, cb) { cb(dt); requestAnimationFrame(tick); }
+      const draw = (ctx) => { ctx.fillRect(0, 0, 1, 1); };
+      items.forEach(item => item.update());
+      try { localStorage.getItem('k'); } catch (err) { console.log(err.message); }
+      for (const el of document.querySelectorAll('.x')) el.textContent = String(sin(a) + cos(b) + total);
+      board.textContent = 'hi'; window.addEventListener('resize', () => draw(board));
+      class Ball { move() { this.x += 1; } } new Ball().move(); const it2 = new Audio(); parseInt('1');
+      setTimeout(() => tick(0, (d) => draw(d)), 10);
+    `;
+    // items는 미정의라 걸려야 하고, 나머지는 전부 통과해야 한다.
+    expect(validateGeneratedCode({ ...base, html, javascript: js })).toBe('정의 없는 이름을 호출/참조: items');
+    expect(validateGeneratedCode({ ...base, html, javascript: `const items = [];\n${js}` })).toBeNull();
+  });
+
+  it('대문자 시작 이름(생성자·내장)은 검사하지 않는다', () => {
+    expect(validateGeneratedCode({ ...base, html: '', javascript: `const m = new Map(); const c = new AudioContext(); Tone.start();` })).toBeNull();
+  });
+
+  it('HTML에 없는 클래스 셀렉터를 잡되, JS가 문자열로 붙이는 클래스는 통과', () => {
+    const html = '<div class="tool active"></div>';
+    expect(validateGeneratedCode({ ...base, html, javascript: `document.querySelector('.tool').classList.add('on');` })).toBeNull();
+    expect(validateGeneratedCode({ ...base, html, javascript: `document.querySelector('.missing').classList.add('on');` })).toMatch(
+      /없는 클래스.*\.missing/,
+    );
+    const dyn = `const d = document.createElement('div'); d.className = 'made'; document.body.appendChild(d); document.querySelector('.made').textContent = 'x';`;
+    expect(validateGeneratedCode({ ...base, html, javascript: dyn })).toBeNull();
+  });
+
   it('주석 속 예시 셀렉터는 실제 참조로 보지 않는다', () => {
     const js = `/* 예) getElementById('timer-display') */\nconst a = document.getElementById('real');`;
     expect(validateGeneratedCode({ ...base, html: '<p id="real"></p>', javascript: js })).toBeNull();
