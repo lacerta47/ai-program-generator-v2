@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/admin/requireAdmin';
 import {
-  getExemplar,
+  listExemplarSlots,
   setExemplarFromPost,
   clearExemplar,
   listExemplarCandidates,
+  isProgramTypeId,
   type ExemplarVariant,
 } from '@/lib/admin/exemplars';
 
@@ -14,15 +15,18 @@ function isVariant(v: unknown): v is ExemplarVariant {
   return v === 'default' || v === 'survey';
 }
 
+/** programType은 survey에서만 허용, PROGRAM_TYPES id여야 함. 없으면 undefined(공통 슬롯). 잘못되면 null. */
+function parseProgramType(variant: ExemplarVariant, v: unknown): string | undefined | null {
+  if (v === undefined || v === null || v === '') return undefined;
+  if (variant !== 'survey') return null;
+  return isProgramTypeId(v) ? v : null;
+}
+
 export async function GET(req: NextRequest) {
   const gate = await requireAdmin(req);
   if (gate instanceof NextResponse) return gate;
-  const [def, survey, candidates] = await Promise.all([
-    getExemplar('default'),
-    getExemplar('survey'),
-    listExemplarCandidates(),
-  ]);
-  return NextResponse.json({ slots: { default: def, survey }, candidates });
+  const [slots, candidates] = await Promise.all([listExemplarSlots(), listExemplarCandidates()]);
+  return NextResponse.json({ slots, candidates });
 }
 
 export async function POST(req: NextRequest) {
@@ -34,15 +38,23 @@ export async function POST(req: NextRequest) {
   } catch {
     return NextResponse.json({ error: '요청 본문이 올바르지 않아요.' }, { status: 400 });
   }
-  const { sourcePostId, variant } = (body ?? {}) as { sourcePostId?: unknown; variant?: unknown };
-  if (typeof sourcePostId !== 'string' || !sourcePostId) {
+  const { sourcePostId, variant, programType } = (body ?? {}) as {
+    sourcePostId?: unknown;
+    variant?: unknown;
+    programType?: unknown;
+  };
+  if (typeof sourcePostId !== 'string' || !sourcePostId.trim()) {
     return NextResponse.json({ error: 'sourcePostId가 필요해요.' }, { status: 400 });
   }
   if (!isVariant(variant)) {
     return NextResponse.json({ error: "variant는 'default' 또는 'survey'여야 해요." }, { status: 400 });
   }
+  const type = parseProgramType(variant, programType);
+  if (type === null) {
+    return NextResponse.json({ error: 'programType은 선택지(survey)에서만, 정해진 유형 id로만 쓸 수 있어요.' }, { status: 400 });
+  }
   try {
-    const exemplar = await setExemplarFromPost(sourcePostId, variant, gate.uid);
+    const exemplar = await setExemplarFromPost(sourcePostId.trim(), variant, gate.uid, type);
     return NextResponse.json({ ok: true, exemplar });
   } catch (e) {
     const code = e instanceof Error ? e.message : String(e);
@@ -60,10 +72,15 @@ export async function POST(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
   const gate = await requireAdmin(req);
   if (gate instanceof NextResponse) return gate;
-  const variant = new URL(req.url).searchParams.get('variant');
+  const sp = new URL(req.url).searchParams;
+  const variant = sp.get('variant');
   if (!isVariant(variant)) {
     return NextResponse.json({ error: "variant는 'default' 또는 'survey'여야 해요." }, { status: 400 });
   }
-  await clearExemplar(variant);
+  const type = parseProgramType(variant, sp.get('programType'));
+  if (type === null) {
+    return NextResponse.json({ error: 'programType이 올바르지 않아요.' }, { status: 400 });
+  }
+  await clearExemplar(variant, type);
   return NextResponse.json({ ok: true });
 }

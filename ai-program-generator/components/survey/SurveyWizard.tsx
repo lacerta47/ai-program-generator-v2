@@ -302,6 +302,7 @@ export default function SurveyWizard() {
         onDelta: onStageDelta,
         onMeta: setMeta,
         photo: photo ?? undefined,
+        programType: type.id, // 유형별 참고 예시 선택용
       });
       setCode(result);
       setPreviewKey((k) => k + 1);
