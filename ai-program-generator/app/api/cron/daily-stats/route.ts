@@ -39,12 +39,28 @@ interface StatsAgg {
   tokensIn: number;
   tokensOut: number;
   tokensThinking: number;
+  /** 생성 코드 게이트 탈락(사용자 경로) — 총건수·사유별. 새 검사가 정상 작품을 막는지 감시용. */
+  gateFail: number;
+  gateFailBy: Record<string, number>;
+  /** 자동예시 경로의 게이트 탈락(참고용 — 사용자 품질과는 별개). */
+  gateFailExample: number;
+  gateFailExampleBy: Record<string, number>;
 }
 
-/** stats/{day} 문서(방문·토큰) 범위 합산. */
+function addBy(into: Record<string, number>, from: unknown): void {
+  if (!from || typeof from !== 'object') return;
+  for (const [k, v] of Object.entries(from as Record<string, unknown>)) {
+    if (typeof v === 'number') into[k] = (into[k] ?? 0) + v;
+  }
+}
+
+/** stats/{day} 문서(방문·토큰·게이트 탈락) 범위 합산. */
 async function sumStats(fromKey: string, toKey: string): Promise<StatsAgg> {
   const snap = await adminDb.collection('stats').orderBy(FieldPath.documentId()).startAt(fromKey).endAt(toKey).get();
-  const a: StatsAgg = { visits: 0, genCount: 0, tokensIn: 0, tokensOut: 0, tokensThinking: 0 };
+  const a: StatsAgg = {
+    visits: 0, genCount: 0, tokensIn: 0, tokensOut: 0, tokensThinking: 0,
+    gateFail: 0, gateFailBy: {}, gateFailExample: 0, gateFailExampleBy: {},
+  };
   for (const d of snap.docs) {
     const x = d.data();
     a.visits += (x.visits as number) || 0;
@@ -52,8 +68,24 @@ async function sumStats(fromKey: string, toKey: string): Promise<StatsAgg> {
     a.tokensIn += (x.tokensIn as number) || 0;
     a.tokensOut += (x.tokensOut as number) || 0;
     a.tokensThinking += (x.tokensThinking as number) || 0;
+    a.gateFail += (x.gateFail as number) || 0;
+    a.gateFailExample += (x.gateFailExample as number) || 0;
+    addBy(a.gateFailBy, x.gateFailBy);
+    addBy(a.gateFailExampleBy, x.gateFailExampleBy);
   }
   return a;
+}
+
+/**
+ * 게이트 탈락 요약. rate = 탈락 / (성공 + 탈락) — genCount는 성공 건만 세므로 분모를 이렇게 잡는다.
+ * 사용자 경로에서 rate가 갑자기 뛰면 새 검사의 오탐을 먼저 의심할 것.
+ */
+function gate(a: StatsAgg) {
+  const attempts = a.genCount + a.gateFail;
+  return {
+    user: { fail: a.gateFail, rate: attempts ? Math.round((a.gateFail / attempts) * 1000) / 10 : 0, byReason: a.gateFailBy },
+    example: { fail: a.gateFailExample, byReason: a.gateFailExampleBy },
+  };
 }
 
 /** 토큰 집계 → 달러 비용 + 건당 비용(4자리 반올림). thinking은 출력으로 과금. */
@@ -105,6 +137,7 @@ async function dailyStats() {
       total: (await adminDb.collection('posts').count().get()).data().count,
     },
     cost: { today: cost(todayAgg), month: cost(monthAgg) },
+    gate: { today: gate(todayAgg), month: gate(monthAgg) },
   };
 }
 
@@ -131,6 +164,7 @@ async function weeklyStats() {
       posts: await countByCreatedAt('posts', mFrom, mTo),
       reports: await countByCreatedAt('reports', mFrom, mTo),
       cost: cost(agg),
+      gate: gate(agg),
     };
   };
 

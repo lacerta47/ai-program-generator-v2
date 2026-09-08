@@ -1,5 +1,21 @@
 import { describe, it, expect } from 'vitest';
-import { validateGeneratedCode } from './validateCode';
+import { validateGeneratedCode, gateReasonKey } from './validateCode';
+
+describe('gateReasonKey — 실패 사유 → 집계 키', () => {
+  it('각 검사의 사유 문구를 짧은 키로 바꾼다', () => {
+    expect(gateReasonKey('줄바꿈 없는 // 주석이 뒤 코드를 삼킴: "x"')).toBe('swallowed');
+    expect(gateReasonKey('JS 문법 오류: Unexpected token')).toBe('syntax');
+    expect(gateReasonKey('HTML에 없는 요소를 참조: a')).toBe('missingId');
+    expect(gateReasonKey('정의 없는 이름을 호출/참조: gameLoop')).toBe('undefinedRef');
+    expect(gateReasonKey('HTML에 없는 클래스를 참조: .x')).toBe('missingClass');
+    expect(gateReasonKey('알 수 없음')).toBe('other');
+  });
+
+  it('validateGeneratedCode의 실제 반환값과 키가 맞물린다', () => {
+    const r = validateGeneratedCode({ html: '', css: '', javascript: 'undefinedThing();' });
+    expect(r && gateReasonKey(r)).toBe('undefinedRef');
+  });
+});
 
 const base = { css: '' };
 

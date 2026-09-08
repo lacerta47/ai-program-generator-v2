@@ -10,7 +10,8 @@ import { todayKeyKST } from '@/lib/usageDay';
 import { readEffectiveLimit } from '@/lib/admin/usageConfig';
 import { reserveStudentQuota, refundStudentQuota } from '@/lib/server/studentQuota';
 import { allowGenerate } from '@/lib/server/genRate';
-import { UserFacingError } from '@/lib/ai/errors';
+import { UserFacingError, GateError } from '@/lib/ai/errors';
+import { recordGateFail } from '@/lib/server/gateStats';
 
 // AI 호출은 반드시 서버에서만 실행한다(키 노출 방지).
 export const runtime = 'nodejs';
@@ -232,6 +233,7 @@ export async function POST(req: NextRequest) {
           req.signal.aborted ||
           (e instanceof Error && (e.message === 'ABORTED' || e.name === 'AbortError'));
         await refundOnce();
+        if (e instanceof GateError) recordGateFail(day, e.reason, 'user'); // 게이트 탈락 집계(일일 리포트)
         if (!aborted) {
           console.error('[/api/generate] 스트리밍 실패:', e);
           try {

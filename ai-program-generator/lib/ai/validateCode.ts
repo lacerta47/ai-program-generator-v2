@@ -265,6 +265,16 @@ function referencedIds(js: string): string[] {
   return out;
 }
 
+/** 게이트 실패 사유 문자열 → 집계용 짧은 키. 새 검사를 추가하면 여기도 한 줄 추가할 것. */
+export function gateReasonKey(reason: string): string {
+  if (reason.startsWith('줄바꿈 없는')) return 'swallowed';
+  if (reason.startsWith('JS 문법')) return 'syntax';
+  if (reason.startsWith('HTML에 없는 요소')) return 'missingId';
+  if (reason.startsWith('정의 없는 이름')) return 'undefinedRef';
+  if (reason.startsWith('HTML에 없는 클래스')) return 'missingClass';
+  return 'other';
+}
+
 /**
  * 실행 가능성 검사. 통과면 null, 실패면 사유 문자열(로그용 — 사용자에겐 노출하지 않는다).
  *
