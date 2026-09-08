@@ -124,6 +124,139 @@ function swallowedCode(src: string): string | null {
   return null;
 }
 
+/**
+ * 주석과 문자열·템플릿을 모두 벗긴 코드(식별자 스캔용). 문자열은 ''로, 주석은 공백으로.
+ * 템플릿 리터럴은 통째로 지워 \${} 안 코드를 놓치지만, 그 방향은 '덜 잡는' 안전측이다.
+ */
+function stripCommentsAndStrings(src: string): string {
+  let out = '';
+  let i = 0;
+  const n = src.length;
+  while (i < n) {
+    const c = src[i];
+    const d = src[i + 1];
+    if (c === '/' && d === '/') {
+      while (i < n && src[i] !== '\n') i++;
+      out += ' ';
+      continue;
+    }
+    if (c === '/' && d === '*') {
+      i += 2;
+      while (i < n && !(src[i] === '*' && src[i + 1] === '/')) i++;
+      i += 2;
+      out += ' ';
+      continue;
+    }
+    if (c === '"' || c === "'" || c === '`') {
+      i++;
+      while (i < n && src[i] !== c) {
+        if (src[i] === '\\') i++;
+        i++;
+      }
+      i++;
+      out += "''";
+      continue;
+    }
+    out += c;
+    i++;
+  }
+  return out;
+}
+
+/**
+ * 브라우저 전역·언어 키워드 — 정의 없이 불러도 되는 이름. 여기 없는 소문자 시작 이름을
+ * 호출(`name(`)하거나 멤버 접근(`name.`)하는데 코드 어디에도 선언이 없으면 '미정의 참조'다.
+ * 대문자 시작(생성자류: Audio, Image, Map…)은 브라우저 내장이 워낙 많아 검사에서 제외한다(안전측).
+ */
+const KNOWN_GLOBALS = new Set([
+  // 타이머·기본 함수
+  'setTimeout', 'setInterval', 'clearTimeout', 'clearInterval', 'requestAnimationFrame', 'cancelAnimationFrame',
+  'parseInt', 'parseFloat', 'isNaN', 'isFinite', 'encodeURIComponent', 'decodeURIComponent', 'encodeURI', 'decodeURI',
+  'btoa', 'atob', 'fetch', 'alert', 'confirm', 'prompt', 'structuredClone', 'queueMicrotask', 'getComputedStyle',
+  'requestIdleCallback', 'cancelIdleCallback', 'scrollTo', 'scrollBy', 'open', 'close', 'print', 'focus', 'blur',
+  'addEventListener', 'removeEventListener', 'dispatchEvent', 'postMessage', 'matchMedia', 'escape', 'unescape',
+  'eval', 'require', 'define',
+  // 전역 객체
+  'window', 'document', 'console', 'navigator', 'location', 'history', 'screen', 'performance', 'crypto',
+  'localStorage', 'sessionStorage', 'indexedDB', 'globalThis', 'self', 'frames', 'parent', 'top', 'event',
+  'speechSynthesis', 'devicePixelRatio', 'innerWidth', 'innerHeight', 'outerWidth', 'outerHeight',
+  'arguments', 'undefined', 'NaN', 'Infinity',
+  // 키워드·리터럴
+  'if', 'else', 'for', 'while', 'do', 'switch', 'case', 'default', 'break', 'continue', 'return', 'function',
+  'const', 'let', 'var', 'new', 'delete', 'typeof', 'instanceof', 'in', 'of', 'void', 'this', 'super', 'class',
+  'extends', 'try', 'catch', 'finally', 'throw', 'async', 'await', 'yield', 'import', 'export', 'static', 'get',
+  'set', 'true', 'false', 'null', 'debugger', 'with',
+]);
+
+/** 코드 안에서 선언된 이름 — function/class/const/let/var(구조분해 포함)/매개변수/catch/for-of. */
+function declaredNames(js: string): Set<string> {
+  const names = new Set<string>();
+  const add = (s: string) => {
+    for (const m of s.matchAll(/[A-Za-z_$][\w$]*/g)) names.add(m[0]);
+  };
+  for (const m of js.matchAll(/\b(?:function|class)\s*\*?\s*([A-Za-z_$][\w$]*)/g)) names.add(m[1]);
+  // const/let/var 뒤의 선언 목록(구조분해·다중 선언). '=' 오른쪽은 제외하려고 '=' 앞까지만 취한다.
+  for (const m of js.matchAll(/\b(?:const|let|var)\s+([^=;]+?)(?:=|;|\bof\b|\bin\b)/g)) add(m[1]);
+  // 매개변수: function name(...) / function(...) / (...) => / x =>
+  for (const m of js.matchAll(/\bfunction\b[^(]*\(([^)]*)\)/g)) add(m[1]);
+  for (const m of js.matchAll(/\(([^()]*)\)\s*=>/g)) add(m[1]);
+  for (const m of js.matchAll(/(?:^|[^\w$.])([A-Za-z_$][\w$]*)\s*=>/g)) names.add(m[1]);
+  // 메서드 정의 name(...) { — 이름은 정의(호출 패턴과 겉모양이 같아 미정의로 오인하지 않게), 매개변수도 선언으로 친다.
+  for (const m of js.matchAll(/\b([A-Za-z_$][\w$]*)\s*\(([^()]*)\)\s*\{/g)) {
+    names.add(m[1]);
+    add(m[2]);
+  }
+  for (const m of js.matchAll(/\bcatch\s*\(\s*([A-Za-z_$][\w$]*)/g)) names.add(m[1]);
+  // 선언 없는 대입(`i = 0`, `total += 1`)은 느슨한 모드에서 전역이 되어 동작하므로 선언으로 친다(실측 오탐 방지).
+  for (const m of js.matchAll(/(?:^|[^\w$.])([A-Za-z_$][\w$]*)\s*(?:[+\-*/%]|\*\*)?=(?![=>])/g)) names.add(m[1]);
+  return names;
+}
+
+/**
+ * 정의가 어디에도 없는 이름을 호출(`foo(`)하거나 멤버 접근(`foo.`)하는 경우.
+ * 실측: 자동예시 899건 중 11건이 이 유형(모델이 '쓰려던' 함수 이름을 부르고 정의를 빠뜨림 —
+ * gameLoop(), saveRecords(), html2canvas(…) 등). new Function 문법 검사로는 못 잡는다.
+ * html의 id는 브라우저가 전역 변수로 노출하므로 선언으로 친다. 소문자 시작 이름만 본다(안전측).
+ */
+function undefinedRefs(js: string, html: string): string[] {
+  const code = stripCommentsAndStrings(js);
+  const declared = declaredNames(code);
+  for (const id of htmlIds(html)) declared.add(id);
+  const missing = new Set<string>();
+  const check = (name: string) => {
+    if (!/^[a-z_$]/.test(name)) return; // 대문자 시작(생성자·내장) 제외
+    if (name.length < 2) return; // 정규식 리터럴 플래그(/…/i.exec) 등 한 글자는 제외
+    if (KNOWN_GLOBALS.has(name) || declared.has(name)) return;
+    missing.add(name);
+  };
+  // 호출: 앞에 '.'이 없는 name(
+  for (const m of code.matchAll(/(?:^|[^\w$.])([A-Za-z_$][\w$]*)\s*\(/g)) check(m[1]);
+  // 멤버 접근: 앞에 '.'이 없는 name.  (숫자 리터럴 1.5 같은 건 [A-Za-z_$] 시작 조건으로 걸러짐)
+  for (const m of code.matchAll(/(?:^|[^\w$.])([A-Za-z_$][\w$]*)\s*\.[A-Za-z_$]/g)) check(m[1]);
+  return [...missing];
+}
+
+/**
+ * querySelector('.클래스')로 찾는 단일 클래스가 html class 속성과 js 어디에도 없으면 null → 다음 줄에서 죽는다.
+ * 실측 11건(그림판 집중). 클래스 이름이 js에 문자열로 한 번이라도 더 등장하면(classList.add 등 동적 부여) 통과.
+ */
+function missingClassSelectors(js: string, html: string): string[] {
+  const htmlClasses = new Set<string>();
+  for (const m of html.matchAll(/\bclass\s*=\s*["']([^"']+)["']/g)) for (const c of m[1].split(/\s+/)) if (c) htmlClasses.add(c);
+  const used = new Set<string>();
+  const selectorRe = /querySelector(?:All)?\(\s*["']\.([A-Za-z_][\w-]*)["']\s*\)/g;
+  for (const m of stripComments(js).matchAll(selectorRe)) used.add(m[1]);
+  if (used.size === 0) return [];
+  const jsWithoutSelectors = js.replace(selectorRe, '');
+  const out: string[] = [];
+  for (const c of used) {
+    if (htmlClasses.has(c)) continue;
+    if (new RegExp(`['"\`][^'"\`]*\\b${c.replace(/[-]/g, '\\-')}\\b[^'"\`]*['"\`]`).test(jsWithoutSelectors)) continue;
+    out.push(c);
+  }
+  return out;
+}
+
 /** js가 조회하는 id (리터럴로 쓴 것만 — 변수·템플릿으로 조립한 셀렉터는 안전측으로 무시) */
 function referencedIds(js: string): string[] {
   const out: string[] = [];
@@ -160,6 +293,12 @@ export function validateGeneratedCode(code: GeneratedCode): string | null {
   for (const id of jsCreatedIds(js)) known.add(id);
   const missing = [...new Set(referencedIds(stripComments(js)))].filter((id) => !known.has(id));
   if (missing.length) return `HTML에 없는 요소를 참조: ${missing.join(', ')}`;
+
+  const undef = undefinedRefs(js, html);
+  if (undef.length) return `정의 없는 이름을 호출/참조: ${undef.join(', ')}`;
+
+  const noClass = missingClassSelectors(js, html);
+  if (noClass.length) return `HTML에 없는 클래스를 참조: .${noClass.join(', .')}`;
 
   return null;
 }
