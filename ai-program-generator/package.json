@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "check-key": "node check-key.mjs",
-    "test": "vitest run"
+    "test": "vitest run",
+    "changelog": "node scripts/changelog.mjs"
   },
   "dependencies": {
     "@google/genai": "^1.29.0",
