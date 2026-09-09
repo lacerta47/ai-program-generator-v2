@@ -2,8 +2,10 @@ import { describe, it, expect } from 'vitest';
 import { getTypeGuide } from './typeGuides';
 
 describe('getTypeGuide', () => {
-  it('미로에만 규칙이 있고, 모르는 유형·미지정은 빈 문자열', () => {
+  it('미로·꾸미기에만 규칙이 있고, 모르는 유형·미지정은 빈 문자열', () => {
     expect(getTypeGuide('maze')).toMatch(/generateMaze/);
+    expect(getTypeGuide('dressup')).toMatch(/\(200, 220\)/); // 좌표 고정 규칙
+    expect(getTypeGuide('dressup')).not.toMatch(/<svg|canvas|<div/); // 그리는 방식은 강제하지 않는다
     expect(getTypeGuide('quiz')).toBe('');
     expect(getTypeGuide(undefined)).toBe('');
   });
