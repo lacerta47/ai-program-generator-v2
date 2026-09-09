@@ -66,7 +66,7 @@ export async function GET(req: NextRequest) {
       const rp = randomPlan(usedTypes);
       usedTypes.push(rp.type.id);
       // 개별 생성에 잔여 예산만큼의 상한 — hang/지연이 60s 캡을 넘겨 504 나는 걸 방지.
-      const { code, meta } = await generateExampleOnce(rp.prompt, AbortSignal.timeout(remaining));
+      const { code, meta } = await generateExampleOnce(rp.prompt, AbortSignal.timeout(remaining), rp.type.id);
       await publishExample(categoryId, rp, code, meta);
       made++;
     } catch (e) {
