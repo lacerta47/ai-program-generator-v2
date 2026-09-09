@@ -1,0 +1,123 @@
+{
+ "savedAt": "2026-09-09T05:49:05.588Z",
+ "note": "1차 선택(2026-09-10). 예시용=게시판에 남길 것, 프롬프트용=유형별 참고 예시 슬롯 후보",
+ "example": [
+  {
+   "id": "QqONvA2SASuGlDn6R992",
+   "type": "card",
+   "title": "나의 소개 카드"
+  },
+  {
+   "id": "cEu2hGM4bYHqGTqJnBJO",
+   "type": "fortune",
+   "title": "응원의 말 뽑기"
+  },
+  {
+   "id": "Wiyy1TNo9LvB2Ea5uki2",
+   "type": "roulette",
+   "title": "이름 뽑기 룰렛"
+  },
+  {
+   "id": "Lg0K7tRX79Cp7Ub80Cdj",
+   "type": "paint",
+   "title": "나의 그림판"
+  },
+  {
+   "id": "sJkjXep5Qnfxf8oy60a1",
+   "type": "sound",
+   "title": "나의 피아노"
+  },
+  {
+   "id": "9tJ0pD0kwu5UqFaL1caH",
+   "type": "sound",
+   "title": "나의 실로폰"
+  },
+  {
+   "id": "w4umrsvVEUCPBFx3sBAv",
+   "type": "clock",
+   "title": "나의 디지털 시계"
+  },
+  {
+   "id": "unEgJ35Pg8OHERR66H7M",
+   "type": "clock",
+   "title": "나의 스톱워치"
+  },
+  {
+   "id": "bMlGiRzZ7SmIZmb00DLn",
+   "type": "dressup",
+   "title": "웃는 얼굴 만들기"
+  },
+  {
+   "id": "4JkNZD2DMXACEEltA5CJ",
+   "type": "dressup",
+   "title": "나만의 동물 친구"
+  },
+  {
+   "id": "bB23ZMg3V9M4oY6X4sn5",
+   "type": "quiz",
+   "title": "우리 몸 퀴즈"
+  },
+  {
+   "id": "LCidB5ID3MaJ3YufhYGH",
+   "type": "quiz",
+   "title": "음식 퀴즈"
+  },
+  {
+   "id": "wjL0I5DWNfD4hHjvyn38",
+   "type": "calc",
+   "title": "숫자 맞히기 게임"
+  },
+  {
+   "id": "t9aDjfKtZbcwRY4UvKdb",
+   "type": "calc",
+   "title": "동전 세기 놀이"
+  },
+  {
+   "id": "tuzVIoD3zwAuXR4oQzG1",
+   "type": "aquarium",
+   "title": "나의 숲속 수족관"
+  },
+  {
+   "id": "RnVMw0OULQrcP9oqrd0L",
+   "type": "game",
+   "title": "가위바위보"
+  }
+ ],
+ "prompt": [
+  {
+   "id": "V3GA0UBGNKqt6N1dn1To",
+   "type": "card",
+   "title": "나의 소개 카드"
+  },
+  {
+   "id": "cEu2hGM4bYHqGTqJnBJO",
+   "type": "fortune",
+   "title": "응원의 말 뽑기"
+  },
+  {
+   "id": "9tJ0pD0kwu5UqFaL1caH",
+   "type": "sound",
+   "title": "나의 실로폰"
+  },
+  {
+   "id": "w4umrsvVEUCPBFx3sBAv",
+   "type": "clock",
+   "title": "나의 디지털 시계"
+  },
+  {
+   "id": "bB23ZMg3V9M4oY6X4sn5",
+   "type": "quiz",
+   "title": "우리 몸 퀴즈"
+  },
+  {
+   "id": "tuzVIoD3zwAuXR4oQzG1",
+   "type": "aquarium",
+   "title": "나의 숲속 수족관"
+  },
+  {
+   "id": "RnVMw0OULQrcP9oqrd0L",
+   "type": "game",
+   "title": "가위바위보"
+  }
+ ]
+}
