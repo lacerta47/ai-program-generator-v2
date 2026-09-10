@@ -8,6 +8,10 @@ describe('gateReasonKey — 실패 사유 → 집계 키', () => {
     expect(gateReasonKey('HTML에 없는 요소를 참조: a')).toBe('missingId');
     expect(gateReasonKey('정의 없는 이름을 호출/참조: gameLoop')).toBe('undefinedRef');
     expect(gateReasonKey('HTML에 없는 클래스를 참조: .x')).toBe('missingClass');
+    expect(gateReasonKey('지원하지 않는 브라우저 API 사용: storage')).toBe('forbiddenApi');
+    expect(gateReasonKey('Canvas API에 CSS 변수 문자열을 직접 사용: --water')).toBe('canvasCssVar');
+    expect(gateReasonKey('textContent로 지운 SVG를 다시 참조: button')).toBe('removedSvgChild');
+    expect(gateReasonKey('멈출 수 있는 무한 반복을 사용함')).toBe('blockingLoop');
     expect(gateReasonKey('알 수 없음')).toBe('other');
   });
 
@@ -86,7 +90,7 @@ describe('validateGeneratedCode — 실행 가능성 게이트', () => {
       function tick(dt, cb) { cb(dt); requestAnimationFrame(tick); }
       const draw = (ctx) => { ctx.fillRect(0, 0, 1, 1); };
       items.forEach(item => item.update());
-      try { localStorage.getItem('k'); } catch (err) { console.log(err.message); }
+      try { throw new Error('test'); } catch (err) { console.log(err.message); }
       for (const el of document.querySelectorAll('.x')) el.textContent = String(sin(a) + cos(b) + total);
       board.textContent = 'hi'; window.addEventListener('resize', () => draw(board));
       class Ball { move() { this.x += 1; } } new Ball().move(); const it2 = new Audio(); parseInt('1');
@@ -142,5 +146,43 @@ describe('validateGeneratedCode — 실행 가능성 게이트', () => {
   it('주석 속 예시 셀렉터는 실제 참조로 보지 않는다', () => {
     const js = `/* 예) getElementById('timer-display') */\nconst a = document.getElementById('real');`;
     expect(validateGeneratedCode({ ...base, html: '<p id="real"></p>', javascript: js })).toBeNull();
+  });
+
+  it('storage·clipboard와 안전성을 확인할 수 없는 btoa는 차단하고 ASCII·UTF-8 변환은 허용한다', () => {
+    expect(validateGeneratedCode({ ...base, html: '', javascript: `localStorage.setItem('score', '1');` })).toMatch(/storage/);
+    expect(validateGeneratedCode({ ...base, html: '', javascript: `window.sessionStorage.getItem('score');` })).toMatch(/storage/);
+    expect(validateGeneratedCode({ ...base, html: '', javascript: `navigator.clipboard.writeText('score');` })).toMatch(/clipboard/);
+    expect(validateGeneratedCode({ ...base, html: '', javascript: `const item = new ClipboardItem({});` })).toMatch(/clipboard/);
+    expect(validateGeneratedCode({ ...base, html: '', javascript: `const encoded = btoa('한글');` })).toMatch(/btoa/);
+    expect(validateGeneratedCode({ ...base, html: '', javascript: `const label = 'localStorage를 쓰지 않아요';` })).toBeNull();
+    expect(validateGeneratedCode({ ...base, html: '', javascript: `const label = 'btoa(한글)는 쓰지 않아요';` })).toBeNull();
+    expect(validateGeneratedCode({ ...base, html: '', javascript: `const encoded = btoa('<svg></svg>');` })).toBeNull();
+    expect(validateGeneratedCode({ ...base, html: '', javascript: `const title = '🎨 그림'; const encoded = btoa('<svg></svg>');` })).toBeNull();
+    expect(validateGeneratedCode({ ...base, html: '', javascript: `const SVG = '<svg viewBox="0 0 10 10"></svg>'; const encoded = btoa(SVG);` })).toBeNull();
+    expect(validateGeneratedCode({ ...base, html: '', javascript: `const COLOR = '#fff'; const SVG = '<svg fill="' + COLOR + '"></svg>'; const encoded = btoa(SVG);` })).toBeNull();
+    expect(validateGeneratedCode({ ...base, html: '', javascript: `const text = getLabel(); const encoded = btoa(text); function getLabel() { return '가'; }` })).toMatch(/btoa/);
+    expect(validateGeneratedCode({ ...base, html: '', javascript: `const text = '한글'; const encoded = btoa(unescape(encodeURIComponent(text)));` })).toBeNull();
+  });
+
+  it('Canvas에 CSS var 문자열을 직접 넘기는 확정 오류를 잡는다', () => {
+    expect(validateGeneratedCode({ ...base, html: '', javascript: `const g = {}; g.addColorStop(0, 'var(--water)');` })).toMatch(/Canvas API.*--water/);
+    expect(validateGeneratedCode({ ...base, html: '', javascript: `const ctx = {}; ctx.fillStyle = 'var(--ink)';` })).toMatch(/Canvas API.*--ink/);
+    const safe = `const ctx = {}; const color = getComputedStyle(document.documentElement).getPropertyValue('--ink').trim(); ctx.fillStyle = color;`;
+    expect(validateGeneratedCode({ ...base, html: '', javascript: safe })).toBeNull();
+  });
+
+  it('textContent로 버튼 자식을 지운 뒤 같은 버튼의 SVG를 다시 찾는 오류를 잡는다', () => {
+    const broken = `const button = document.getElementById('b'); button.textContent = '숨기기'; button.querySelector('svg').innerHTML = '<path />';`;
+    expect(validateGeneratedCode({ ...base, html: '<button id="b"><svg></svg></button>', javascript: broken })).toMatch(/지운 SVG/);
+    const safe = `const button = document.getElementById('b'); button.querySelector('.label').textContent = '숨기기'; button.querySelector('svg').innerHTML = '<path />';`;
+    expect(validateGeneratedCode({ ...base, html: '<button id="b"><svg></svg><span class="label"></span></button>', javascript: safe })).toBeNull();
+    const separateBranches = `const button = document.getElementById('b'); const on = true; if (on) { button.textContent = '숨기기'; } else { button.querySelector('svg').innerHTML = '<path />'; }`;
+    expect(validateGeneratedCode({ ...base, html: '<button id="b"><svg></svg></button>', javascript: separateBranches })).toBeNull();
+  });
+
+  it('명백한 무한 반복만 차단하고, 미로의 유한 while 루프는 통과시킨다', () => {
+    expect(validateGeneratedCode({ ...base, html: '', javascript: `while (true) {}` })).toMatch(/무한 반복/);
+    expect(validateGeneratedCode({ ...base, html: '', javascript: `for (;;) {}` })).toMatch(/무한 반복/);
+    expect(validateGeneratedCode({ ...base, html: '', javascript: `const stack = [1]; while (stack.length) stack.pop();` })).toBeNull();
   });
 });

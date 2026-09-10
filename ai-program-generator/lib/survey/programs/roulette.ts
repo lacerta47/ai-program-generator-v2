@@ -6,8 +6,14 @@ export const roulette: ProgramType = {
   icon: '🎡',
   basePrompt:
     '버튼을 누르면 빙글빙글 돌다가 멈추며 하나를 뽑아주는 룰렛 웹 프로그램을 만들어줘. 칸에는 예시 항목을 미리 채워 넣고, 아이들이 켜자마자 바로 돌릴 수 있게 완성형으로 만들어.\n' +
-    // 회전 텍스트는 한글이 잘리거나 뒤집히는 문제가 잦다. 가장 안 깨지는 방식(원판=색·번호, 항목=가로 범례, 결과=크게)으로 유도.
-    '**룰렛 한글 글자 배치 — 반드시 지킬 것 (안 지키면 글자가 깨져)**:\n' +
+    // 회전 텍스트·포인터 방향·결과 가시성이 자주 깨진다. 가장 단순한 고정 계약으로 유도하고 자동 검사도 같은 ID를 사용한다.
+    '**룰렛 표시와 당첨 계약 — 반드시 지킬 것**:\n' +
+    '- 회전하는 원판은 `id="roulette-wheel"`, 고정 포인터는 `id="roulette-pointer"`, 결과 영역은 `id="roulette-result"`를 사용해. 세 요소를 모두 반드시 만들어.\n' +
+    '- 포인터는 원판 바깥 12시 방향 가운데에 고정하고 원판과 함께 회전시키지 마. 삼각형 끝이 아래쪽, 즉 원판 중심을 정확히 향해야 해. CSS 삼각형이면 위쪽 테두리(border-top)에 색을 넣어 아래를 향하게 하고 `data-direction="down"`도 붙여.\n' +
+    '- 당첨 칸 계산은 포인터가 가리키는 12시 방향을 기준으로 해. 눈에 보이는 칸과 계산된 결과가 반드시 같아야 해.\n' +
+    '- 결과 영역에는 처음에 짧은 안내를 보여주고, 5초 안에 회전을 끝낸 뒤 `당첨 결과: 항목명`을 24px 이상의 큰 글자로 바꿔 보여줘. `aria-live="polite"`를 붙여. 결과를 팝업이나 색종이 뒤에 가리지 마.\n' +
+    '- 원판 크기는 `min(72vw, 42vh, 320px)` 안에서 반응형으로 잡고, 작은 화면에서도 제목·원판·돌리기 버튼·결과가 보이게 해. `body`에 `overflow: hidden`을 쓰지 마.\n' +
+    '**룰렛 한글 글자 배치 — 반드시 지킬 것**:\n' +
     '- 항목 이름은 절대 회전시키지 마. 모든 글자는 똑바로(수평으로) 읽혀야 해. 이게 가장 중요해.\n' +
     '- 가장 안전한 방법(권장): 원판 칸은 색(원하면 1,2,3… 번호)만 넣어 단순하게 그리고, 항목 이름 전체는 원판 옆이나 아래에 번호와 함께 세로로 나열한 가로 목록(범례)으로 보여줘. 예: "① 김밥  ② 라면  ③ 피자 …". 그리고 룰렛이 멈추면 뽑힌 항목을 화면에 큰 글씨로 똑바로 보여줘.\n' +
     '- 칸 안에 직접 이름을 넣고 싶으면, HTML 글자를 각 칸 위치(중심에서 바깥쪽)에 놓되 회전(transform: rotate)을 쓰지 말고 수평 그대로 둬. 여러 칸 글자가 겹치거나 중앙에 뭉치지 않게 해.\n' +
@@ -121,7 +127,7 @@ export const roulette: ProgramType = {
         { id: 'tick', label: '틱틱 소리', icon: '🎵', promptFragment: '룰렛이 돌아갈 때 Web Audio로 틱틱 소리가 나게 해.' },
         { id: 'whirl', label: '윙~ 소리', icon: '💨', promptFragment: '룰렛이 돌아갈 때 Web Audio로 윙윙 소리가 나게 해.' },
         { id: 'drum', label: '두구두구 소리', icon: '🥁', promptFragment: '룰렛이 돌아갈 때 Web Audio로 두구두구 드럼 소리가 나게 해.' },
-        { id: 'none', label: '조용하게', icon: '🔇', promptFragment: '' },
+        { id: 'none', label: '조용하게', icon: '🔇', promptFragment: '룰렛이 돌거나 멈출 때 음악·효과음을 넣지 마.' },
       ],
     },
 
@@ -161,7 +167,7 @@ export const roulette: ProgramType = {
       showIf: (a) => a.use === 'name',
       options: [
         { id: 'yes', label: '응, 크게!', icon: '🎤', promptFragment: '뽑힌 이름을 화면 한가운데에 아주 크게 잠깐 보여줘.' },
-        { id: 'no', label: '아니, 칸에만', icon: '🙂', promptFragment: '' },
+        { id: 'no', label: '아니, 칸에만', icon: '🙂', promptFragment: '뽑힌 이름을 화면 가운데에 별도로 크게 펼쳐 보이지 마.' },
       ],
     },
 
@@ -187,7 +193,7 @@ export const roulette: ProgramType = {
       options: [
         { id: 'yes', label: '응, 넣어줘', icon: '🔄', promptFragment: '결과 아래에 다시 돌리기 버튼을 넣어.' },
         { id: 'exclude', label: '뽑힌 건 빼고 다시', icon: '❌', promptFragment: '결과 아래에 "다시 돌리기" 버튼을 넣어. 뽑힌 항목은 자동으로 제외돼.' },
-        { id: 'no', label: '룰렛 다시 누르면 돌아가요', icon: '👆', promptFragment: '' },
+        { id: 'no', label: '룰렛 다시 누르면 돌아가요', icon: '👆', promptFragment: '별도의 다시 돌리기 버튼을 넣지 말고, 룰렛 자체를 다시 누르면 돌아가게 해.' },
       ],
     },
 

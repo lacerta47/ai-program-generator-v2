@@ -1,5 +1,6 @@
 import { adminDb } from '@/lib/firebase/admin';
-import { truncateCode, type Exemplar } from '@/lib/ai/exemplars';
+import { exemplarCodeReference, truncateCode, type Exemplar } from '@/lib/ai/exemplars';
+import { validateGeneratedCode } from '@/lib/ai/validateCode';
 import { PROGRAM_TYPES } from '@/lib/survey/programs';
 import type { PlanFields } from '@/lib/firebase/types';
 import type { GeneratedCode } from '@/lib/ai/types';
@@ -31,7 +32,17 @@ export interface ExemplarCandidate {
 
 async function readSlot(id: string): Promise<Exemplar | null> {
   const snap = await adminDb.collection(COL).doc(id).get();
-  return snap.exists ? (snap.data() as Exemplar) : null;
+  if (!snap.exists) return null;
+  const exemplar = snap.data() as Exemplar;
+  return { ...exemplar, codeReference: exemplarCodeReference(exemplar.code) };
+}
+
+function usableExemplar(exemplar: Exemplar | null): Exemplar | null {
+  if (!exemplar || exemplar.codeReference === 'plan-only') return exemplar;
+  const invalid = validateGeneratedCode(exemplar.code);
+  if (!invalid) return exemplar;
+  console.error(`exemplar 코드 검증 실패(${exemplar.sourcePostId}):`, invalid);
+  return null;
 }
 
 /**
@@ -41,10 +52,10 @@ async function readSlot(id: string): Promise<Exemplar | null> {
 export async function getExemplar(variant: ExemplarVariant, programType?: string): Promise<Exemplar | null> {
   try {
     if (variant === 'survey' && programType) {
-      const typed = await readSlot(docId('survey', programType));
+      const typed = usableExemplar(await readSlot(docId('survey', programType)));
       if (typed) return typed;
     }
-    return await readSlot(docId(variant));
+    return usableExemplar(await readSlot(docId(variant)));
   } catch (e) {
     console.error('exemplar 읽기 실패:', e);
     return null;
@@ -58,7 +69,10 @@ export async function listExemplarSlots(): Promise<{
   byType: Record<string, Exemplar | null>;
 }> {
   const snap = await adminDb.collection(COL).get();
-  const map = new Map(snap.docs.map((d) => [d.id, d.data() as Exemplar]));
+  const map = new Map(snap.docs.map((d) => {
+    const exemplar = d.data() as Exemplar;
+    return [d.id, { ...exemplar, codeReference: exemplarCodeReference(exemplar.code) } satisfies Exemplar] as const;
+  }));
   const byType: Record<string, Exemplar | null> = {};
   for (const id of PROGRAM_TYPE_IDS) byType[id] = map.get(docId('survey', id)) ?? null;
   return { default: map.get(docId('default')) ?? null, survey: map.get(docId('survey')) ?? null, byType };
@@ -76,6 +90,8 @@ export async function setExemplarFromPost(
   const post = postSnap.data() as { title?: string; plan?: PlanFields; code?: GeneratedCode };
   if (!post.plan) throw new Error('POST_HAS_NO_PLAN');
   if (!post.code) throw new Error('POST_HAS_NO_CODE');
+  const invalid = validateGeneratedCode(post.code);
+  if (invalid) throw new Error(`POST_CODE_INVALID:${invalid}`);
 
   const exemplar: Exemplar = {
     variant,
@@ -86,6 +102,7 @@ export async function setExemplarFromPost(
     sourceTitle: post.title ?? '(제목 없음)',
     approvedBy,
     approvedAt: Date.now(),
+    codeReference: exemplarCodeReference(post.code),
   };
   await adminDb.collection(COL).doc(docId(variant, programType)).set(exemplar);
   return exemplar;
