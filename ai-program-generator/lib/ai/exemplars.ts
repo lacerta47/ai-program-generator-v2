@@ -13,6 +13,8 @@ export interface Exemplar {
   sourceTitle: string;
   approvedBy: string;
   approvedAt: number;
+  /** 코드 참고 가능 여부. 구버전 문서는 읽을 때 코드로 다시 판정한다. */
+  codeReference?: 'full' | 'plan-only';
 }
 
 /** 참고 예시 코드 각 필드의 최대 길이(자). 초과분은 잘라 생략 마커를 붙인다. */
@@ -37,6 +39,13 @@ export function truncateCode(code: GeneratedCode, cap: number = EXEMPLAR_CODE_CA
   };
 }
 
+export function exemplarCodeReference(code: GeneratedCode): 'full' | 'plan-only' {
+  return [code.html, code.css, code.javascript]
+    .every((field) => typeof field === 'string' && field.length <= EXEMPLAR_CODE_CAP && !field.includes('…생략…'))
+    ? 'full'
+    : 'plan-only';
+}
+
 /**
  * 생성 프롬프트 앞에 붙일 참고 예시 블록(순수 함수).
  * 모델이 그대로 베끼지 않고 '완성도 기준'으로만 참고하도록 프레이밍한다.
@@ -44,10 +53,21 @@ export function truncateCode(code: GeneratedCode, cap: number = EXEMPLAR_CODE_CA
  */
 export function buildExemplarBlock(ex: Exemplar): string {
   const { plan } = ex;
-  // 방어적 축약: 저장 시점에 이미 축약되지만, 혹시 미축약 code/plan이 들어와도 프롬프트가 폭주하지 않게 한 번 더 보장.
-  const code = truncateCode(ex.code);
-  const p = (s: unknown) => truncateField(s, EXEMPLAR_PLAN_CAP);
-  return `아래는 완성도 높은 "참고 예시"입니다. 그대로 베끼지 말고, 이 정도의 완성도·짜임새를 기준으로만 삼으세요. 글씨 크기·색 대비·reduced-motion·이모지 절제 같은 디자인·접근성·안전 규칙은 예시의 스타일보다 항상 우선합니다(예시가 옛 기준일 수 있음). (예시 코드는 축약·생략되어 있을 수 있습니다.)
+  const p = (s: unknown) => {
+    if (typeof s !== 'string') return '';
+    return s.length <= EXEMPLAR_PLAN_CAP ? s : `${s.slice(0, EXEMPLAR_PLAN_CAP)}…`;
+  };
+  const codeSection = exemplarCodeReference(ex.code) === 'full'
+    ? `[참고 예시 — 완전한 결과 코드]
+HTML:
+${ex.code.html}
+CSS:
+${ex.code.css}
+JavaScript:
+${ex.code.javascript}`
+    : `[참고 예시 — 구현 기준]
+저장된 예시 코드에 생략된 부분이 있어 불완전한 코드는 제공하지 않습니다. 아래 계획서의 구성과 완성도만 참고하고, 새 계획서의 코드는 처음부터 끝까지 완전하게 작성하세요.`;
+  return `아래는 완성도 높은 "참고 예시"입니다. 그대로 베끼지 말고, 구조와 완성도 기준만 참고하세요. 디자인·접근성·안전·실행 환경 규칙은 예시보다 항상 우선합니다.
 
 [참고 예시 — 계획서]
 - 이름: ${p(plan.name)}
@@ -56,13 +76,7 @@ export function buildExemplarBlock(ex: Exemplar): string {
 - 동작: ${p(plan.how)}
 - 기타: ${p(plan.etc)}
 
-[참고 예시 — 결과 코드(축약)]
-HTML:
-${code.html}
-CSS:
-${code.css}
-JavaScript:
-${code.javascript}
+${codeSection}
 
 위 예시는 참고용일 뿐입니다. 이제 아래 '새 계획서'에 맞는 완성형 프로그램을 새로 만드세요.
 

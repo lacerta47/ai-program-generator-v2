@@ -7,6 +7,7 @@ export type SurveyAnswers = Record<string, string | string[]>;
  * 종류 설정엔 넣지 않고, 단일선택 단계의 선택지 끝에 UI가 자동으로 붙인다.
  */
 export const AI_PICK = 'aichoose';
+export const MAX_MULTI_SELECTIONS = 3;
 
 export interface SurveyOption {
   id: string;
@@ -14,6 +15,8 @@ export interface SurveyOption {
   icon?: string;
   /** 이 선택이 생성 프롬프트에 더하는 자연어 조각 */
   promptFragment: string;
+  /** 다중 선택에서 이 항목을 고르면 다른 항목을 함께 고를 수 없음(예: 없음, 아무것도 안 함). */
+  exclusive?: boolean;
   /**
    * '내 사진으로' 류 선택지 — 사진 첨부가 전제인 옵션.
    * 사진은 학생·교사(교실 보드)만 쓸 수 있으므로 그 외 계정에는 UI에서 숨기고,
@@ -34,6 +37,8 @@ export interface SurveyStep {
   question: string;
   options: SurveyOption[];
   multi?: boolean;
+  /** 다중 선택 단계의 개별 상한. 없으면 공통 상한(MAX_MULTI_SELECTIONS)을 사용한다. */
+  maxSelections?: number;
   /** 조건부 단계: 이전 답에 따라 노출 여부. 없으면 항상 노출. */
   showIf?: (a: SurveyAnswers) => boolean;
   /** '내가 고른 것' 역할 카드용 — 이 단계가 프로그램의 어느 부분을 정하는지 */

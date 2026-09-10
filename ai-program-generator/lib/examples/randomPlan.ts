@@ -1,5 +1,5 @@
 import type { ProgramType, SurveyAnswers, SurveyStep } from '@/lib/survey/types';
-import { AI_PICK } from '@/lib/survey/types';
+import { AI_PICK, MAX_MULTI_SELECTIONS } from '@/lib/survey/types';
 import { PROGRAM_TYPES } from '@/lib/survey/programs';
 import { visibleSteps, assemblePrompt, surveyToPlan } from '@/lib/survey/assemble';
 import type { PlanFields } from '@/lib/firebase/types';
@@ -16,9 +16,6 @@ export interface RandomPlan {
 
 /** 단일선택 단계를 AI 재량('아무거나')으로 넘길 확률. 높일수록 결과가 다양해진다. */
 const AI_PICK_RATE = 0.4;
-
-/** multi 단계에서 고를 최대 개수. */
-const MULTI_MAX = 3;
 
 /**
  * 예시 소재 시드 — 설문 옵션 밖의 변주를 만드는 유일한 통로.
@@ -50,8 +47,11 @@ function randomAnswer(step: SurveyStep, allowAiPick: boolean): string | string[]
   // needsPhoto('내 사진으로' 류)는 제외 — 봇은 사진이 없어서 뽑으면 "첨부한 사진" 지시만 남는 불량이 된다.
   const ids = step.options.filter((o) => !o.needsPhoto).map((o) => o.id);
   if (step.multi) {
-    const n = 1 + Math.floor(Math.random() * Math.min(MULTI_MAX, ids.length));
-    return [...ids].sort(() => Math.random() - 0.5).slice(0, n);
+    const exclusiveIds = step.options.filter((o) => o.exclusive && ids.includes(o.id)).map((o) => o.id);
+    if (exclusiveIds.length > 0 && Math.random() < 1 / ids.length) return [pick(exclusiveIds)];
+    const selectableIds = ids.filter((id) => !exclusiveIds.includes(id));
+    const n = 1 + Math.floor(Math.random() * Math.min(step.maxSelections ?? MAX_MULTI_SELECTIONS, selectableIds.length));
+    return [...selectableIds].sort(() => Math.random() - 0.5).slice(0, n);
   }
   if (allowAiPick && Math.random() < AI_PICK_RATE) return AI_PICK; // AI_PICK은 단일선택 단계에만
   return pick(ids);

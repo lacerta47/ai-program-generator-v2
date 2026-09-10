@@ -10,7 +10,7 @@ export async function generateExampleOnce(
   signal?: AbortSignal,
   programType?: string,
 ): Promise<{ code: GeneratedCode; meta: GenerationMeta }> {
-  const system = SYSTEM_PROMPTS['survey'] + getTypeGuide(programType) + LOGIC_META_INSTRUCTION;
+  const system = SYSTEM_PROMPTS['survey'] + getTypeGuide(programType, prompt) + LOGIC_META_INSTRUCTION;
   // fast: 예시는 속도 우선(thinking off·출력상한↓) — 실사용 /api/generate는 fast 미설정으로 기본 품질 유지.
   for await (const chunk of getAIProvider().generateStream({ prompt, system, mode: 'generate', fast: true, tier: 'free' }, signal)) {
     if (chunk.type === 'done') {

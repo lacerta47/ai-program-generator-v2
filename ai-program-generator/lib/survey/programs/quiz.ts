@@ -343,7 +343,7 @@ export const quiz: ProgramType = {
           id: 'none',
           label: '경고 없이 그냥',
           icon: '✅',
-          promptFragment: '',
+          promptFragment: '제한 시간 경고색·깜빡임·경고음을 넣지 마.',
         },
       ],
     },
