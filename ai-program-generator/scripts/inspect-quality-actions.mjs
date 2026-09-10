@@ -28,14 +28,14 @@ try {
       const output = resolve(dir, `${id}.actions.json`);
       if (existsSync(output)) {
         const saved = JSON.parse(readFileSync(output, 'utf8'));
-        if (saved.inspectionVersion === 11 && (!id.startsWith('maze-') || saved.mazeAutoPlay)) continue;
+        if (saved.inspectionVersion === 12 && (!id.startsWith('maze-') || saved.mazeAutoPlay)) continue;
       }
       const row = JSON.parse(readFileSync(resolve(dir, file), 'utf8'));
       if (!row.code) continue;
       const c = row.code;
       docs.set(id, `<!doctype html><html lang="ko"><meta charset="utf-8"><style>${c.css}</style><body>${c.html}<script>${c.javascript}</script></body></html>`);
       const context = await browser.newContext({ viewport: { width: 1200, height: 900 }, acceptDownloads: false });
-      const result = { id, inspectionVersion: 11, errors: [], actions: [], incomplete: false };
+      const result = { id, inspectionVersion: 12, errors: [], actions: [], incomplete: false };
       let stage = 'load', timer;
       await context.route('**/*', route => {
         const url = new URL(route.request().url());
@@ -214,13 +214,17 @@ try {
           }
           const randomButton = frame.locator('#dressup-random:visible');
           if (await randomButton.count()) {
-            const before = await snapshot();
-            let clicked = false;
-            try { await randomButton.click({ timeout: 1000 }); await page.waitForTimeout(150); clicked = true; } catch {}
-            const after = await snapshot();
-            const changedLayers = requiredLayers.filter((name) => before[name] !== after[name]);
-            result.dressupInteractions.random = { clicked, changedLayers };
-            if (!clicked || changedLayers.length < 3) contractError('random', '랜덤 버튼이 서로 다른 부품 레이어를 3개 이상 바꾸지 못함');
+            const trials = [];
+            for (let trial = 0; trial < 3; trial++) {
+              const before = await snapshot();
+              let clicked = false;
+              try { await randomButton.click({ timeout: 1000 }); await page.waitForTimeout(150); clicked = true; } catch {}
+              const after = await snapshot();
+              const changedLayers = ['base', 'eyes', 'mouth', 'head', 'accessories'].filter((name) => before[name] !== after[name]);
+              trials.push({ clicked, changedLayers });
+            }
+            result.dressupInteractions.random = { trials };
+            if (trials.some((trial) => !trial.clicked || trial.changedLayers.length < 3)) contractError('random', '랜덤 버튼이 3회 연속 검사에서 매번 서로 다른 실제 부품 레이어를 3개 이상 바꾸지 못함');
           } else if (['yes', 'both'].includes(row.answers?.random)) contractError('random', '요청한 랜덤 버튼이 없음');
           const resetButton = frame.locator('#dressup-reset:visible');
           if (await resetButton.count()) {

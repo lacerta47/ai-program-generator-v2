@@ -9,6 +9,7 @@ export const dressup: ProgramType = {
     '화면 가운데 `id="dressup-stage"`인 캐릭터 무대를 크게 놓고, 사진 꾸미기가 아니면 그 안에 `id="dressup-character"`와 `viewBox="0 0 400 400"`을 가진 inline SVG 캐릭터를 완성된 모습으로 보여줘. ' +
     'SVG에는 `layer-base`, `layer-eyes`, `layer-mouth`, `layer-head`, `layer-accessories`, `layer-effects` 그룹을 순서대로 한 번씩 넣고, 부품을 바꿀 때 해당 그룹만 갱신해. ' +
     '조작 영역은 `id="dressup-controls"`로 만들고, 보기판의 직접 선택 버튼에는 `data-dressup-layer`와 `data-dressup-option`을 붙여 선택한 버튼 하나만 `aria-pressed="true"`로 표시해. 이전·다음 방식은 부품별 묶음에 `data-dressup-layer`를, 화살표에 `data-dressup-action="previous|next"`를 붙여. ' +
+    '설문에서 고른 캐릭터 종류는 뒤에 나오는 소재보다 우선해. 소재가 다른 캐릭터 이름이어도 색·무늬·이름 테마로만 반영하고 캐릭터 종류와 골격은 절대 바꾸지 마. ' +
     '캐릭터와 부품은 이모지·외부 이미지 대신 같은 화풍의 SVG 도형으로 직접 그리고, 켜자마자 바로 꾸밀 수 있는 완성형으로 만들어.',
   buildName: (a) => {
     const labels: Record<string, string> = {
@@ -144,9 +145,9 @@ export const dressup: ProgramType = {
       role: 'rule',
       question: '"아무거나 꾸미기" 버튼을 넣을까?',
       options: [
-        { id: 'yes', label: '응, 랜덤으로!', icon: '🎲', promptFragment: '`id="dressup-random"`인 "아무거나 꾸미기" 버튼을 넣어. 누르면 서로 다른 부품 레이어를 최소 3개 바꾸고 현재 선택 표시도 함께 갱신해.' },
-        { id: 'reset', label: '처음으로 되돌리기만', icon: '↩️', promptFragment: '`id="dressup-reset"`인 "처음부터" 버튼을 넣어. 누르면 모든 레이어와 선택 표시를 처음 모습으로 정확히 되돌려.' },
-        { id: 'both', label: '둘 다', icon: '✨', promptFragment: '`id="dressup-random"`인 랜덤 버튼과 `id="dressup-reset"`인 초기화 버튼을 둘 다 넣어. 랜덤은 서로 다른 부품 레이어를 최소 3개 바꾸고, 초기화는 모든 레이어와 선택 표시를 처음 모습으로 정확히 되돌려.' },
+        { id: 'yes', label: '응, 랜덤으로!', icon: '🎲', promptFragment: '`id="dressup-random"`인 "아무거나 꾸미기" 버튼을 넣어. 누를 때마다 `base`, `eyes`, `mouth`, `head`, `accessories` 중 선택지가 2개 이상인 서로 다른 레이어 3개를 골라 각각 현재와 다른 값으로 바꾸고 선택 표시도 함께 갱신해. 배경과 효과는 3개에 포함하지 마.' },
+        { id: 'reset', label: '처음으로 되돌리기만', icon: '↩️', promptFragment: '`id="dressup-reset"`인 "처음부터" 버튼을 넣어. 최초 선택 상태의 깊은 복사본을 복원하고 모든 부품 레이어와 모든 `aria-pressed`, 현재 미리보기·이름을 한꺼번에 다시 그려. 초기화 중에는 반짝임처럼 `layer-effects`를 바꾸는 효과 함수를 호출하지 마.' },
+        { id: 'both', label: '둘 다', icon: '✨', promptFragment: '`id="dressup-random"`인 랜덤 버튼과 `id="dressup-reset"`인 초기화 버튼을 둘 다 넣어. 랜덤은 누를 때마다 `base`, `eyes`, `mouth`, `head`, `accessories` 중 선택지가 2개 이상인 서로 다른 레이어 3개를 골라 각각 현재와 다른 값으로 바꾸고 배경·효과는 제외해. 초기화는 최초 선택 상태의 깊은 복사본을 복원한 뒤 모든 부품 레이어와 모든 선택 표시·현재 미리보기·이름을 한꺼번에 다시 그리고, 초기화 중에는 `layer-effects`를 바꾸는 효과 함수를 호출하지 마.' },
       ],
     },
     // 9-b — 다 꾸민 뒤(목표·종결). 꾸미기만 있고 '완성'이라는 종결이 없던 공백을 메운다.

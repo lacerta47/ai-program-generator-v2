@@ -76,6 +76,7 @@ describe('설문 생성 프롬프트 규칙', () => {
     expect(dressup.basePrompt).toContain('viewBox="0 0 400 400"');
     expect(dressup.basePrompt).toContain('layer-accessories');
     expect(dressup.basePrompt).toContain('data-dressup-layer');
+    expect(dressup.basePrompt).toContain('캐릭터 종류는 뒤에 나오는 소재보다 우선');
     expect(accessory.maxSelections).toBe(2);
   });
 });

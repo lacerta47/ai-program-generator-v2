@@ -14,7 +14,11 @@ describe('getTypeGuide', () => {
     expect(getTypeGuide('dressup')).toMatch(/몬스터: 몸 중심/);
     expect(getTypeGuide('dressup')).toMatch(/최소 3개/);
     expect(getTypeGuide('dressup')).toMatch(/동시에 표시하는 소품은 최대 2개/);
-    expect(getTypeGuide('dressup')).toMatch(/서로 다른 레이어를 최소 3개/);
+    expect(getTypeGuide('dressup')).toMatch(/서로 다른 3개를 먼저 고른 뒤/);
+    expect(getTypeGuide('dressup')).toMatch(/현재 값을 제외한 선택지/);
+    expect(getTypeGuide('dressup')).toMatch(/배경·효과는 변경 개수에 포함하지 말고/);
+    expect(getTypeGuide('dressup')).toMatch(/모든 직접 선택 버튼의 .*aria-pressed/);
+    expect(getTypeGuide('dressup')).toMatch(/초기화 렌더링에서는 반짝임/);
     expect(getTypeGuide('paint')).toMatch(/toDataURL/);
     expect(getTypeGuide('paint')).toMatch(/localStorage/);
     expect(getTypeGuide('paint')).toMatch(/navigator\.clipboard/);
