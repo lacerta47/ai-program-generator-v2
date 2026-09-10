@@ -50,7 +50,7 @@ function randomAnswer(step: SurveyStep, allowAiPick: boolean): string | string[]
     const exclusiveIds = step.options.filter((o) => o.exclusive && ids.includes(o.id)).map((o) => o.id);
     if (exclusiveIds.length > 0 && Math.random() < 1 / ids.length) return [pick(exclusiveIds)];
     const selectableIds = ids.filter((id) => !exclusiveIds.includes(id));
-    const n = 1 + Math.floor(Math.random() * Math.min(MAX_MULTI_SELECTIONS, selectableIds.length));
+    const n = 1 + Math.floor(Math.random() * Math.min(step.maxSelections ?? MAX_MULTI_SELECTIONS, selectableIds.length));
     return [...selectableIds].sort(() => Math.random() - 0.5).slice(0, n);
   }
   if (allowAiPick && Math.random() < AI_PICK_RATE) return AI_PICK; // AI_PICK은 단일선택 단계에만

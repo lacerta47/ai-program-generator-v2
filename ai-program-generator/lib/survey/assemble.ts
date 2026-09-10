@@ -16,6 +16,7 @@ function selectedOptions(type: ProgramType, step: SurveyStep, answers: SurveyAns
   let ids = Array.isArray(a) ? a : a ? [a] : [];
   const exclusiveId = ids.find((id) => step.options.some((option) => option.id === id && option.exclusive));
   if (exclusiveId) ids = [exclusiveId];
+  else if (step.multi && step.maxSelections) ids = ids.slice(0, step.maxSelections);
   return step.options.filter((o) => ids.includes(o.id));
 }
 

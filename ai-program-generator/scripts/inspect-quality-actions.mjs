@@ -28,14 +28,14 @@ try {
       const output = resolve(dir, `${id}.actions.json`);
       if (existsSync(output)) {
         const saved = JSON.parse(readFileSync(output, 'utf8'));
-        if (saved.inspectionVersion === 8 && (!id.startsWith('maze-') || saved.mazeAutoPlay)) continue;
+        if (saved.inspectionVersion === 11 && (!id.startsWith('maze-') || saved.mazeAutoPlay)) continue;
       }
       const row = JSON.parse(readFileSync(resolve(dir, file), 'utf8'));
       if (!row.code) continue;
       const c = row.code;
       docs.set(id, `<!doctype html><html lang="ko"><meta charset="utf-8"><style>${c.css}</style><body>${c.html}<script>${c.javascript}</script></body></html>`);
       const context = await browser.newContext({ viewport: { width: 1200, height: 900 }, acceptDownloads: false });
-      const result = { id, inspectionVersion: 8, errors: [], actions: [], incomplete: false };
+      const result = { id, inspectionVersion: 11, errors: [], actions: [], incomplete: false };
       let stage = 'load', timer;
       await context.route('**/*', route => {
         const url = new URL(route.request().url());
@@ -138,6 +138,102 @@ try {
           const after = await readClock();
           result.clockProgression = { before, after, changed: Boolean(before && after && before !== after) };
           if (!result.clockProgression.changed) contractError('progression', '실행 후에도 표시 시간이 진행되지 않음');
+        }
+        if (row.type === 'dressup' && row.answers?.base !== 'photo') {
+          stage = 'dressup-contract';
+          const requiredLayers = ['base', 'eyes', 'mouth', 'head', 'accessories', 'effects'];
+          result.dressupContract = await frame.evaluate((layers) => {
+            const stageElement = document.querySelector('#dressup-stage');
+            const character = document.querySelector('#dressup-character');
+            const controls = document.querySelector('#dressup-controls');
+            const svgRect = character?.getBoundingClientRect();
+            const stageRect = stageElement?.getBoundingClientRect();
+            const layerState = Object.fromEntries(layers.map((name) => {
+              const element = document.querySelector(`#layer-${name}`);
+              const rect = element?.getBoundingClientRect();
+              const visible = rect && rect.width > 0 && rect.height > 0;
+              const insideSvg = !visible || !svgRect || (
+                rect.left >= svgRect.left - 4 && rect.right <= svgRect.right + 4 &&
+                rect.top >= svgRect.top - 4 && rect.bottom <= svgRect.bottom + 4
+              );
+              return [name, { present: Boolean(element), visible: Boolean(visible), insideSvg }];
+            }));
+            const partButtons = [...document.querySelectorAll('[data-dressup-layer][data-dressup-option]')];
+            const controlsByLayer = Object.fromEntries(['eyes', 'mouth', 'head'].map((name) => {
+              const direct = partButtons.filter((button) => button.getAttribute('data-dressup-layer') === name);
+              const carousel = document.querySelector(`[data-dressup-layer="${name}"]`);
+              const arrows = [...document.querySelectorAll(`[data-dressup-layer="${name}"][data-dressup-action], button[data-dressup-layer="${name}"][aria-label*="이전"], button[data-dressup-layer="${name}"][aria-label*="다음"]`)]
+                .concat(carousel ? [...carousel.querySelectorAll('button, [role="button"]')] : []);
+              return [name, { direct: direct.length, arrows: arrows.length }];
+            }));
+            return {
+              stage: Boolean(stageElement),
+              character: Boolean(character),
+              controls: Boolean(controls),
+              viewBox: character?.getAttribute('viewBox') || null,
+              stageContainsCharacter: Boolean(stageElement && character && stageElement.contains(character)),
+              characterInsideStage: Boolean(svgRect && stageRect && svgRect.left >= stageRect.left - 4 && svgRect.right <= stageRect.right + 4 && svgRect.top >= stageRect.top - 4 && svgRect.bottom <= stageRect.bottom + 4),
+              layers: layerState,
+              partButtonCount: partButtons.length,
+              controlsByLayer,
+            };
+          }, requiredLayers);
+          if (!result.dressupContract.stage || !result.dressupContract.character || !result.dressupContract.controls) contractError('contract', '꾸미기 무대·SVG 캐릭터·조작부 필수 요소가 누락됨');
+          if (result.dressupContract.viewBox?.replace(/\s+/g, ' ').trim() !== '0 0 400 400') contractError('contract', '캐릭터 SVG viewBox가 0 0 400 400이 아님');
+          if (!result.dressupContract.stageContainsCharacter || !result.dressupContract.characterInsideStage) contractError('visual-bounds', '캐릭터 SVG가 꾸미기 무대 영역을 벗어남');
+          for (const name of requiredLayers) {
+            const layer = result.dressupContract.layers[name];
+            if (!layer?.present) contractError('contract', `필수 SVG 레이어 누락: layer-${name}`);
+            else if (!layer.insideSvg) contractError('visual-bounds', `SVG 부품이 캐릭터 영역을 벗어남: layer-${name}`);
+          }
+          for (const name of ['eyes', 'mouth', 'head']) {
+            const controls = result.dressupContract.controlsByLayer[name];
+            if (controls.direct < 3 && controls.arrows < 2) contractError('controls', `${name} 직접 선택지 3개 또는 이전·다음 조작이 없음`);
+          }
+
+          const snapshot = () => frame.evaluate((layers) => Object.fromEntries(layers.map((name) => {
+            const element = document.querySelector(`#layer-${name}`);
+            return [name, element?.outerHTML || null];
+          })), requiredLayers);
+          const initialLayers = await snapshot();
+          const initialPressed = await frame.evaluate(() => [...document.querySelectorAll('[data-dressup-layer][data-dressup-option][aria-pressed="true"]')].map((button) => `${button.getAttribute('data-dressup-layer')}:${button.getAttribute('data-dressup-option')}`).sort());
+          result.dressupInteractions = { layers: {}, random: null, reset: null };
+          for (const name of ['eyes', 'mouth', 'head']) {
+            const before = await snapshot();
+            const direct = frame.locator(`[data-dressup-layer="${name}"][data-dressup-option]:not([aria-pressed="true"]):visible`).first();
+            const next = frame.locator(`[data-dressup-layer="${name}"][data-dressup-action="next"]:visible, button[data-dressup-layer="${name}"][aria-label*="다음"]:visible, [data-dressup-layer="${name}"] .next-button:visible, [data-dressup-layer="${name}"] button[aria-label*="다음"]:visible`).first();
+            const usesDirect = await direct.count() > 0;
+            const button = usesDirect ? direct : next;
+            let clicked = false;
+            if (await button.count()) try { await button.click({ timeout: 1000 }); await page.waitForTimeout(120); clicked = true; } catch {}
+            const after = await snapshot();
+            const changed = before[name] !== after[name];
+            const pressed = usesDirect ? await frame.locator(`[data-dressup-layer="${name}"][aria-pressed="true"]`).count() : null;
+            result.dressupInteractions.layers[name] = { mode: usesDirect ? 'direct' : 'carousel', clicked, changed, pressed };
+            if (!clicked || !changed || (usesDirect && pressed !== 1)) contractError('controls', `${name} 선택이 해당 레이어${usesDirect ? '와 선택 표시를' : '를'} 바꾸지 못함`);
+          }
+          const randomButton = frame.locator('#dressup-random:visible');
+          if (await randomButton.count()) {
+            const before = await snapshot();
+            let clicked = false;
+            try { await randomButton.click({ timeout: 1000 }); await page.waitForTimeout(150); clicked = true; } catch {}
+            const after = await snapshot();
+            const changedLayers = requiredLayers.filter((name) => before[name] !== after[name]);
+            result.dressupInteractions.random = { clicked, changedLayers };
+            if (!clicked || changedLayers.length < 3) contractError('random', '랜덤 버튼이 서로 다른 부품 레이어를 3개 이상 바꾸지 못함');
+          } else if (['yes', 'both'].includes(row.answers?.random)) contractError('random', '요청한 랜덤 버튼이 없음');
+          const resetButton = frame.locator('#dressup-reset:visible');
+          if (await resetButton.count()) {
+            let clicked = false;
+            try { await resetButton.click({ timeout: 1000 }); await page.waitForTimeout(150); clicked = true; } catch {}
+            const after = await snapshot();
+            const pressed = await frame.evaluate(() => [...document.querySelectorAll('[data-dressup-layer][data-dressup-option][aria-pressed="true"]')].map((button) => `${button.getAttribute('data-dressup-layer')}:${button.getAttribute('data-dressup-option')}`).sort());
+            const restoredLayers = requiredLayers.every((name) => initialLayers[name] === after[name]);
+            const restoredPressed = JSON.stringify(initialPressed) === JSON.stringify(pressed);
+            result.dressupInteractions.reset = { clicked, restoredLayers, restoredPressed };
+            if (!clicked || !restoredLayers || !restoredPressed) contractError('reset', '초기화가 최초 캐릭터와 선택 상태를 정확히 복원하지 못함');
+          } else if (['reset', 'both'].includes(row.answers?.random)) contractError('reset', '요청한 초기화 버튼이 없음');
+          if (['card', 'name', 'compare'].includes(row.answers?.finish) && !await frame.locator('#dressup-finish:visible').count()) contractError('finish', '요청한 완성 버튼이 없음');
         }
         if (row.type === 'maze') {
           stage = 'maze-generator-probe';
@@ -358,6 +454,8 @@ try {
           }).slice(0, 10).map((element) => ({ tag: element.tagName, id: element.id || null, className: typeof element.className === 'string' ? element.className.slice(0, 80) : null, clientWidth: element.clientWidth, scrollWidth: element.scrollWidth }));
           return { width, scrollWidth: document.documentElement.scrollWidth, horizontalOverflow: overflow > 4, offscreen, internalOverflow };
         });
+        await frame.evaluate(() => window.scrollTo(0, 0));
+        await page.waitForTimeout(50);
         await page.screenshot({ path: resolve(dir, `${id}.mobile.png`), fullPage: true });
         if (result.responsive.offscreen.length || result.responsive.internalOverflow.length) contractError('responsive', '390px 화면에서 잘리거나 내부 영역을 벗어난 핵심 요소가 있음');
       }

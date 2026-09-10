@@ -37,6 +37,8 @@ export interface SurveyStep {
   question: string;
   options: SurveyOption[];
   multi?: boolean;
+  /** 다중 선택 단계의 개별 상한. 없으면 공통 상한(MAX_MULTI_SELECTIONS)을 사용한다. */
+  maxSelections?: number;
   /** 조건부 단계: 이전 답에 따라 노출 여부. 없으면 항상 노출. */
   showIf?: (a: SurveyAnswers) => boolean;
   /** '내가 고른 것' 역할 카드용 — 이 단계가 프로그램의 어느 부분을 정하는지 */

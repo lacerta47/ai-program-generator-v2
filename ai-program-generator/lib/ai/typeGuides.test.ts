@@ -4,8 +4,17 @@ import { getTypeGuide } from './typeGuides';
 describe('getTypeGuide', () => {
   it('품질 점검에서 고위험으로 확인된 유형에만 규칙이 있고, 모르는 유형·미지정은 빈 문자열', () => {
     expect(getTypeGuide('maze')).toMatch(/generateMaze/);
-    expect(getTypeGuide('dressup')).toMatch(/\(200, 220\)/); // 좌표 고정 규칙
-    expect(getTypeGuide('dressup')).not.toMatch(/<svg|canvas|<div/); // 그리는 방식은 강제하지 않는다
+    expect(getTypeGuide('dressup')).toMatch(/얼굴 원 중심 \(200,210\)/); // 종류별 좌표 고정 규칙
+    expect(getTypeGuide('dressup')).toMatch(/viewBox="0 0 400 400"/);
+    expect(getTypeGuide('dressup')).toContain("'소재'는 이름·색·무늬 같은 테마에만 쓰고 종류와 골격을 바꾸지 마세요");
+    expect(getTypeGuide('dressup')).toMatch(/layer-base.*layer-eyes.*layer-mouth.*layer-head.*layer-accessories.*layer-effects/s);
+    expect(getTypeGuide('dressup')).toMatch(/로봇: 머리 사각형/);
+    expect(getTypeGuide('dressup')).toMatch(/눈사람: 머리 원/);
+    expect(getTypeGuide('dressup')).toMatch(/동물 친구: 얼굴 중심/);
+    expect(getTypeGuide('dressup')).toMatch(/몬스터: 몸 중심/);
+    expect(getTypeGuide('dressup')).toMatch(/최소 3개/);
+    expect(getTypeGuide('dressup')).toMatch(/동시에 표시하는 소품은 최대 2개/);
+    expect(getTypeGuide('dressup')).toMatch(/서로 다른 레이어를 최소 3개/);
     expect(getTypeGuide('paint')).toMatch(/toDataURL/);
     expect(getTypeGuide('paint')).toMatch(/localStorage/);
     expect(getTypeGuide('paint')).toMatch(/navigator\.clipboard/);
@@ -44,6 +53,7 @@ describe('getTypeGuide', () => {
 
     expect(guide).toMatch(/드래그/);
     expect(guide).not.toMatch(/\(200, 220\)/);
+    expect(guide).not.toMatch(/viewBox="0 0 400 400"/);
   });
 
   it('미로 가이드에 넣은 예시 코드는 실제로 동작하고, 만든 미로는 항상 출구까지 길이 있다', () => {

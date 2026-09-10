@@ -6,8 +6,10 @@ export const dressup: ProgramType = {
   icon: '🎭',
   basePrompt:
     '부품(얼굴·눈·입·모자·소품 등)을 골라 나만의 캐릭터를 완성하는 꾸미기 놀이 웹 프로그램을 만들어줘. ' +
-    '화면 가운데에 캐릭터가 크게 보이고, 그 아래나 옆의 버튼으로 각 부분을 바꿔 끼울 수 있어. ' +
-    '부품은 전부 SVG나 CSS 도형으로 코드로 그려(외부 이미지 금지). 켜자마자 바로 꾸밀 수 있는 완성형으로 만들어.',
+    '화면 가운데 `id="dressup-stage"`인 캐릭터 무대를 크게 놓고, 사진 꾸미기가 아니면 그 안에 `id="dressup-character"`와 `viewBox="0 0 400 400"`을 가진 inline SVG 캐릭터를 완성된 모습으로 보여줘. ' +
+    'SVG에는 `layer-base`, `layer-eyes`, `layer-mouth`, `layer-head`, `layer-accessories`, `layer-effects` 그룹을 순서대로 한 번씩 넣고, 부품을 바꿀 때 해당 그룹만 갱신해. ' +
+    '조작 영역은 `id="dressup-controls"`로 만들고, 보기판의 직접 선택 버튼에는 `data-dressup-layer`와 `data-dressup-option`을 붙여 선택한 버튼 하나만 `aria-pressed="true"`로 표시해. 이전·다음 방식은 부품별 묶음에 `data-dressup-layer`를, 화살표에 `data-dressup-action="previous|next"`를 붙여. ' +
+    '캐릭터와 부품은 이모지·외부 이미지 대신 같은 화풍의 SVG 도형으로 직접 그리고, 켜자마자 바로 꾸밀 수 있는 완성형으로 만들어.',
   buildName: (a) => {
     const labels: Record<string, string> = {
       face: '웃는 얼굴 만들기',
@@ -103,6 +105,7 @@ export const dressup: ProgramType = {
       role: 'decor',
       question: '어떤 소품으로 꾸밀까? (여러 개 OK)',
       multi: true,
+      maxSelections: 2,
       options: [
         { id: 'glasses', label: '안경', icon: '👓', promptFragment: '안경을 씌우고 벗길 수 있게 넣어.' },
         { id: 'scarf', label: '목도리', icon: '🧣', promptFragment: '목도리를 두르고 벗길 수 있게 넣어.' },
@@ -130,9 +133,9 @@ export const dressup: ProgramType = {
       role: 'control',
       question: '부품을 어떻게 바꿀까?',
       options: [
-        { id: 'buttons', label: '버튼으로 하나씩', icon: '👆', promptFragment: '각 부분마다 "다음/이전" 같은 버튼을 눌러 하나씩 바꾸게 해.' },
-        { id: 'palette', label: '보기판에서 골라서', icon: '🎨', promptFragment: '고를 수 있는 부품들을 보기판에 늘어놓고 눌러서 골라 끼우게 해.' },
-        { id: 'both', label: '둘 다', icon: '✨', promptFragment: '버튼으로 넘기기와 보기판에서 고르기를 둘 다 할 수 있게 해.' },
+        { id: 'buttons', label: '버튼으로 하나씩', icon: '👆', promptFragment: '각 부품의 현재 미리보기 양옆에 작은 이전·다음 버튼을 붙여 하나씩 바꾸게 해. 부품별 묶음에는 `data-dressup-layer`를, 화살표에는 `data-dressup-action="previous|next"`를 붙이고 큰 조작 패널을 여러 개 만들지 마.' },
+        { id: 'palette', label: '보기판에서 골라서', icon: '🎨', promptFragment: '눈·입·머리 장식마다 SVG로 그린 작은 미리보기 선택지 3개 이상을 한 줄 보기판에 놓고 눌러서 골라 끼우게 해.' },
+        { id: 'both', label: '둘 다', icon: '✨', promptFragment: '미리보기 선택지 한 줄의 양끝에 이전·다음 화살표를 붙인 하나의 통합 조작부로 만들어. 넘기기용 UI와 보기판 UI를 따로 중복해서 만들지 마.' },
       ],
     },
     // 9 — 랜덤/되돌리기
@@ -141,9 +144,9 @@ export const dressup: ProgramType = {
       role: 'rule',
       question: '"아무거나 꾸미기" 버튼을 넣을까?',
       options: [
-        { id: 'yes', label: '응, 랜덤으로!', icon: '🎲', promptFragment: '누르면 부품이 무작위로 정해져 랜덤 캐릭터가 완성되는 "아무거나 꾸미기" 버튼을 넣어.' },
-        { id: 'reset', label: '처음으로 되돌리기만', icon: '↩️', promptFragment: '처음 상태로 되돌리는 "처음부터" 버튼을 넣어.' },
-        { id: 'both', label: '둘 다', icon: '✨', promptFragment: '"아무거나 꾸미기" 랜덤 버튼과 "처음부터" 되돌리기 버튼을 둘 다 넣어.' },
+        { id: 'yes', label: '응, 랜덤으로!', icon: '🎲', promptFragment: '`id="dressup-random"`인 "아무거나 꾸미기" 버튼을 넣어. 누르면 서로 다른 부품 레이어를 최소 3개 바꾸고 현재 선택 표시도 함께 갱신해.' },
+        { id: 'reset', label: '처음으로 되돌리기만', icon: '↩️', promptFragment: '`id="dressup-reset"`인 "처음부터" 버튼을 넣어. 누르면 모든 레이어와 선택 표시를 처음 모습으로 정확히 되돌려.' },
+        { id: 'both', label: '둘 다', icon: '✨', promptFragment: '`id="dressup-random"`인 랜덤 버튼과 `id="dressup-reset"`인 초기화 버튼을 둘 다 넣어. 랜덤은 서로 다른 부품 레이어를 최소 3개 바꾸고, 초기화는 모든 레이어와 선택 표시를 처음 모습으로 정확히 되돌려.' },
       ],
     },
     // 9-b — 다 꾸민 뒤(목표·종결). 꾸미기만 있고 '완성'이라는 종결이 없던 공백을 메운다.
@@ -156,19 +159,19 @@ export const dressup: ProgramType = {
           id: 'card',
           label: '완성 카드로 보여주기',
           icon: '🖼️',
-          promptFragment: '"완성!" 버튼을 누르면 꾸민 캐릭터를 액자 같은 카드 모양으로 예쁘게 보여줘.',
+          promptFragment: '`id="dressup-finish"`인 "완성!" 버튼을 누르면 현재 꾸민 캐릭터를 액자 같은 카드 모양으로 예쁘게 보여줘.',
         },
         {
           id: 'name',
           label: '이름 붙여 주기',
           icon: '🏷️',
-          promptFragment: '"완성!" 버튼을 누르면 캐릭터에 이름을 붙일 수 있는 칸이 나오고, 적은 이름을 캐릭터 아래에 보여줘.',
+          promptFragment: '`id="dressup-finish"`인 "완성!" 버튼을 누르면 캐릭터에 이름을 붙일 수 있는 칸이 나오고, 적은 이름을 캐릭터 아래에 보여줘.',
         },
         {
           id: 'compare',
           label: '처음 모습과 비교하기',
           icon: '🔍',
-          promptFragment: '"완성!" 버튼을 누르면 처음 기본 모습과 지금 꾸민 모습을 나란히 보여줘.',
+          promptFragment: '`id="dressup-finish"`인 "완성!" 버튼을 누르면 처음 기본 모습과 지금 꾸민 모습을 나란히 보여줘.',
         },
         {
           id: 'keep',

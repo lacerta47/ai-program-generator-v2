@@ -26,13 +26,13 @@ describe('설문 생성 프롬프트 규칙', () => {
     }
   });
 
-  it('자동 계획은 다중 선택을 3개 이하로 만들고 독점 옵션을 섞지 않는다', () => {
+  it('자동 계획은 단계별 다중 선택 상한을 지키고 독점 옵션을 섞지 않는다', () => {
     for (let i = 0; i < 500; i++) {
       const { type, answers } = randomPlan();
       for (const step of type.steps.filter((item) => item.multi)) {
         const answer = answers[step.id];
         if (!Array.isArray(answer)) continue;
-        expect(answer.length).toBeLessThanOrEqual(3);
+        expect(answer.length).toBeLessThanOrEqual(step.maxSelections ?? 3);
         const hasExclusive = answer.some((id) => step.options.some((option) => option.id === id && option.exclusive));
         if (hasExclusive) expect(answer).toHaveLength(1);
       }
@@ -65,5 +65,17 @@ describe('설문 생성 프롬프트 규칙', () => {
 
     expect(instrument.options.some((option) => option.id === 'animal')).toBe(false);
     expect(instrument.options.some((option) => option.label.includes('동물 소리'))).toBe(false);
+  });
+
+  it('꾸미기는 SVG 레이어 계약과 소품 2개 상한을 사용한다', () => {
+    const dressup = PROGRAM_TYPES.find((type) => type.id === 'dressup')!;
+    const accessory = dressup.steps.find((step) => step.id === 'accessory')!;
+
+    expect(dressup.basePrompt).toContain('id="dressup-stage"');
+    expect(dressup.basePrompt).toContain('id="dressup-character"');
+    expect(dressup.basePrompt).toContain('viewBox="0 0 400 400"');
+    expect(dressup.basePrompt).toContain('layer-accessories');
+    expect(dressup.basePrompt).toContain('data-dressup-layer');
+    expect(accessory.maxSelections).toBe(2);
   });
 });

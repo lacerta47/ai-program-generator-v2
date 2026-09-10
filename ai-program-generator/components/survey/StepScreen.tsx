@@ -22,6 +22,7 @@ export default function StepScreen({
   const selected = (id: string) =>
     Array.isArray(value) ? value.includes(id) : value === id;
   const options = step.options.filter((o) => !o.needsPhoto || canPhoto);
+  const selectionLimit = step.maxSelections ?? MAX_MULTI_SELECTIONS;
 
   return (
     <div className="anim-pop-in">
@@ -39,13 +40,13 @@ export default function StepScreen({
       </div>
 
       <h2 className="mb-5 text-[24px]">{step.question}</h2>
-      {step.multi && <p className="mb-3 -mt-3 text-[14px] text-muted">최대 {MAX_MULTI_SELECTIONS}개까지 골라요</p>}
+      {step.multi && <p className="mb-3 -mt-3 text-[14px] text-muted">최대 {selectionLimit}개까지 골라요</p>}
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {options.map((o) => {
           const maxed = step.multi
             && Array.isArray(value)
-            && value.length >= MAX_MULTI_SELECTIONS
+            && value.length >= selectionLimit
             && !selected(o.id)
             && !o.exclusive;
           return (

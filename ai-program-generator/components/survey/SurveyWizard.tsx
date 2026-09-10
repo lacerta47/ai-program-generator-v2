@@ -215,6 +215,7 @@ export default function SurveyWizard() {
     if (step.multi) {
       // 다중: 토글, 자동 진행 안 함
       setAnswers((prev) => {
+        const selectionLimit = step.maxSelections ?? MAX_MULTI_SELECTIONS;
         const cur = Array.isArray(prev[step.id]) ? (prev[step.id] as string[]) : [];
         const option = step.options.find((item) => item.id === optionId);
         const exclusiveIds = new Set(step.options.filter((item) => item.exclusive).map((item) => item.id));
@@ -225,7 +226,7 @@ export default function SurveyWizard() {
           next = [optionId];
         } else {
           const withoutExclusive = cur.filter((id) => !exclusiveIds.has(id));
-          next = withoutExclusive.length >= MAX_MULTI_SELECTIONS ? withoutExclusive : [...withoutExclusive, optionId];
+          next = withoutExclusive.length >= selectionLimit ? withoutExclusive : [...withoutExclusive, optionId];
         }
         return { ...prev, [step.id]: next };
       });
