@@ -93,12 +93,27 @@ const AQUARIUM_GUIDE = `
 3. 소리는 첫 사용자 입력 뒤에 AudioContext를 준비하고 재생마다 새 source를 만드세요. 소리가 실패해도 수족관은 계속 움직여야 합니다.
 4. SVG 아이콘 버튼은 글자를 별도 span에 넣고 그 span만 바꾸세요. 버튼 전체의 \`textContent\`를 바꾸지 마세요.`;
 
+// 룰렛 15건 모바일 재시험에서 원판 테두리·가상요소가 폭을 늘리거나, 음수 top의 포인터와 원판이
+// 화면 위로 잘리는 문제가 확인됐다. 디자인은 제한하지 않고 박스 모델과 흐름 배치만 고정한다.
+const ROULETTE_GUIDE = `
+
+**룰렛 모바일 배치 규칙 (반드시 지킬 것)**:
+1. CSS 첫 부분에 \`*, *::before, *::after { box-sizing: border-box; }\`를 넣으세요. 원판의 테두리까지 지정한 너비와 높이 안에 포함해야 합니다.
+2. 제목·원판·돌리기 버튼·결과·항목 목록은 문서 흐름에 위에서 아래로 배치하세요. 제목·버튼·결과에 \`position: absolute\`를 쓰지 마세요.
+3. 원판을 감싼 요소는 \`width: min(72vw, 42vh, 320px)\`, \`aspect-ratio: 1\`, \`position: relative\`, \`flex: 0 0 auto\`로 만드세요. 원판 자체는 \`width: 100%\`, \`height: 100%\`로 하고 고정 px 너비를 다시 주지 마세요.
+4. 포인터가 원판 위로 나오는 높이만큼 원판 감싼 요소 위에 최소 32px 여백을 두세요. 포인터에 음수 top을 쓰더라도 제목이나 화면 위쪽과 겹치거나 잘리면 안 됩니다.
+5. 포인터는 \`#roulette-pointer\` 한 개만 사용하세요. 원판·원판 감싼 요소의 \`::before\`·\`::after\`로 포인터, 추가 원, 타원, 테두리 장식을 만들지 마세요.
+6. 앱의 가장 바깥 컨테이너는 \`width: min(100%, 600px)\`, \`margin-inline: auto\`, 모바일 좌우 padding 16px 이상으로 만드세요. \`width: 90%\`와 고정 padding·margin을 더해 화면 폭을 넘기지 마세요.
+7. 390px 화면에서 제목·포인터·원판·버튼·\`#roulette-result\`가 좌우 또는 위쪽으로 잘리지 않아야 하고 문서의 가로 스크롤이 생기면 안 됩니다.
+8. 멈춘 뒤 결과 문장은 다른 표현으로 바꾸지 말고 반드시 정확히 \`당첨 결과: 항목명\` 형식으로 표시하세요.`;
+
 /** 유형 id → 제작 규칙. 없는 유형은 빈 문자열(아무것도 덧붙이지 않음). */
 const SURVEY_TYPE_GUIDES: Record<string, string> = {
   maze: MAZE_GUIDE,
   dressup: DRESSUP_GUIDE,
   paint: PAINT_GUIDE,
   aquarium: AQUARIUM_GUIDE,
+  roulette: ROULETTE_GUIDE,
 };
 
 function requestsAudio(prompt: string): boolean {

@@ -23,6 +23,12 @@ describe('getTypeGuide', () => {
     expect(getTypeGuide('aquarium')).toMatch(/AudioContext/);
     expect(getTypeGuide('aquarium')).toMatch(/CanvasGradient/);
     expect(getTypeGuide('aquarium')).toMatch(/NaN/);
+    expect(getTypeGuide('roulette')).toMatch(/box-sizing: border-box/);
+    expect(getTypeGuide('roulette')).toMatch(/width: min\(72vw, 42vh, 320px\)/);
+    expect(getTypeGuide('roulette')).toMatch(/최소 32px 여백/);
+    expect(getTypeGuide('roulette')).toMatch(/추가 원, 타원/);
+    expect(getTypeGuide('roulette')).toMatch(/390px 화면/);
+    expect(getTypeGuide('roulette')).toMatch(/당첨 결과: 항목명/);
     expect(getTypeGuide('quiz')).toBe('');
     expect(getTypeGuide(undefined)).toBe('');
   });
