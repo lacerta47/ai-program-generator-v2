@@ -13,7 +13,7 @@
 
 ## 진행 중 PR
 
-- **#158** [기타] chore: Firebase Admin 14와 Node 22 보안 기반 정비 — Firebase Admin SDK를 14.4.0으로 올리고 Node.js 22·비대화형 ESLint·CI 검사를 정렬했습니다. 의존성 감사의 오래된 예외를 제거하고 `npm audit` 0건을 확인했습니다.
+- **#158** [기타] chore: Firebase Admin과 Node 22 보안 기반 정비 — Firebase Admin 14.4.0의 Vercel API 500 회귀가 확인되어 검증된 13.10.0으로 고정하고, Node.js 22·비대화형 ESLint·CI 검사를 정렬했습니다. 의존성 감사는 critical/high 0건이며 13 계열 전이 의존성의 moderate 7건은 후속 호환성 검증 대상으로 남겼습니다.
 - **#157** [기능] feat: 생성 품질과 의존성 보안 강화 — 생성 프롬프트와 유형별 검증 규칙을 강화하고, 룰렛 모바일 규칙과 꾸미기 SVG 골격·조작 계약을 반영했습니다. 후속 점검에서 Next.js를 15.5.25로 패치하고 PostCSS·Sharp·protobufjs 안전 버전을 고정해 의존성 감사의 critical/high를 제거했습니다.
 
 ## 2026-06

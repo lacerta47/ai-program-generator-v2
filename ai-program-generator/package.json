@@ -18,7 +18,7 @@
     "@google/genai": "^1.29.0",
     "best-effort-json-parser": "^1.4.1",
     "firebase": "^12.6.0",
-    "firebase-admin": "^14.4.0",
+    "firebase-admin": "13.10.0",
     "highlight.js": "^11.11.1",
     "jszip": "^3.10.1",
     "korcen": "^1.0.1",
