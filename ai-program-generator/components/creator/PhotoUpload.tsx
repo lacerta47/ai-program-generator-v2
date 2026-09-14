@@ -27,6 +27,7 @@ export default function PhotoUpload({ value, onChange }: { value: string | null;
     <div className="flex flex-col gap-2">
       {value ? (
         <div className="relative w-fit">
+          {/* eslint-disable-next-line @next/next/no-img-element -- 로컬 data URI 미리보기라 Next Image 최적화 대상이 아니다. */}
           <img src={value} alt="올린 사진" className="h-28 rounded-[var(--r-md)] border-2 border-line object-cover" />
           <button
             type="button"

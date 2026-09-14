@@ -28,7 +28,8 @@ for (const name of readdirSync(source)) {
     const row = JSON.parse(readFileSync(resolve(source, name), 'utf8'));
     if (typeFilter && !typeFilter.has(row.type)) continue;
     const target = resolve(output, name.replace(/-after\.json$/, '-before.json'));
-    const { gates: _oldGates, ...baseline } = row;
+    const baseline = { ...row };
+    delete baseline.gates;
     writeFileSync(target, JSON.stringify({ ...baseline, version: 'before', reusedFrom: resolve(source, name) }, null, 2));
     rows++;
   } else if (/-after\.actions\.json$/.test(name)) {

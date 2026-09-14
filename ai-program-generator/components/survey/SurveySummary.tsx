@@ -98,7 +98,7 @@ export default function SurveySummary({
                     <span
                       className={`anim-pop-in mt-1.5 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[12px] font-medium ${concept.soft}`}
                     >
-                      <ConceptIcon size={13} aria-hidden /> 이건 '{concept.label}' 개념이에요
+                      <ConceptIcon size={13} aria-hidden /> 이건 &lsquo;{concept.label}&rsquo; 개념이에요
                     </span>
                   )}
                 </div>

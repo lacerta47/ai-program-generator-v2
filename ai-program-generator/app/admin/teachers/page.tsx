@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { GraduationCap } from 'lucide-react';
 import Header from '@/components/common/Header';
 import AdminGate from '@/components/admin/AdminGate';
@@ -37,18 +37,21 @@ function Content() {
   const [editTarget, setEditTarget] = useState<Teacher | null>(null); // 총 한도 보충 모달 대상
   const [editVal, setEditVal] = useState('');
 
-  const reload = () =>
-    listTeachers()
-      .then((r) => setTeachers(r.teachers))
-      .catch((e) => {
-        console.error('선생님 목록 조회 실패:', e);
-        toast('선생님 목록을 불러오지 못했어요.');
-      })
-      .finally(() => setLoading(false));
+  const reload = useCallback(
+    () =>
+      listTeachers()
+        .then((r) => setTeachers(r.teachers))
+        .catch((e) => {
+          console.error('선생님 목록 조회 실패:', e);
+          toast('선생님 목록을 불러오지 못했어요.');
+        })
+        .finally(() => setLoading(false)),
+    [toast],
+  );
 
   useEffect(() => {
     reload();
-  }, []);
+  }, [reload]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
