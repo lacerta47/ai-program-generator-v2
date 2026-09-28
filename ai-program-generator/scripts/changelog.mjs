@@ -17,6 +17,8 @@ const CATEGORY = { feat: '기능', fix: '수정', docs: '문서', chore: '운영
 
 const raw = execSync('gh pr list --state merged --limit 1000 --json number,title,mergedAt,body', { encoding: 'utf8' });
 const prs = JSON.parse(raw).sort((a, b) => a.number - b.number);
+const openRaw = execSync('gh pr list --state open --limit 1000 --json number,title,body', { encoding: 'utf8' });
+const openPrs = JSON.parse(openRaw).sort((a, b) => a.number - b.number);
 
 const kst = (iso) => new Date(new Date(iso).getTime() + 9 * 3600e3).toISOString().slice(0, 10);
 const category = (t) => CATEGORY[t.match(/^(\w+)(\(|:)/)?.[1] ?? ''] ?? '기타';
@@ -44,6 +46,14 @@ let md = `# LUN 변경 이력 (PR 기준)\n\n> 저장소 머지된 PR ${prs.leng
 md += '## 요약\n\n| 월 | PR 수 | 주요 흐름 |\n|---|---|---|\n';
 for (const m of months) md += `| ${m} | ${Object.values(byMonth[m]).flat().length} | ${FLOW[m] ?? ''} |\n`;
 md += '\n';
+if (openPrs.length) {
+  md += '## 진행 중 PR\n\n';
+  for (const p of openPrs) {
+    const s = summary(p.body);
+    md += `- **#${p.number}** [${category(p.title)}] ${p.title}${s ? ` — ${s}` : ''}\n`;
+  }
+  md += '\n';
+}
 for (const m of months) {
   md += `## ${m}\n\n`;
   for (const d of Object.keys(byMonth[m]).sort()) {

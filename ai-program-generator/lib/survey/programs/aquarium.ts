@@ -90,7 +90,7 @@ export const aquarium: ProgramType = {
       question: '바닥에 산호와 해초 장식을 넣을까?',
       options: [
         { id: 'yes', label: '응, 예쁘게 넣어줘!', icon: '🪸', promptFragment: '수족관 바닥에 산호(🪸)와 해초를 SVG로 그려서 넣어.' },
-        { id: 'no', label: '깔끔하게', icon: '🫧', promptFragment: '' },
+        { id: 'no', label: '깔끔하게', icon: '🫧', promptFragment: '바닥에 산호·해초 장식을 넣지 마.' },
       ],
     },
 
@@ -198,7 +198,7 @@ export const aquarium: ProgramType = {
           id: 'none',
           label: '그대로예요',
           icon: '🫧',
-          promptFragment: '',
+          promptFragment: '생물을 눌러도 특별한 반응이나 추가 효과를 넣지 마.',
         },
       ],
     },
@@ -210,7 +210,7 @@ export const aquarium: ProgramType = {
       question: '소리를 넣을까?',
       options: [
         { id: 'yes', label: '응, 넣어줘!', icon: '🔊', promptFragment: '배경 소리를 Web Audio API로 넣어줘.' },
-        { id: 'no', label: '조용하게', icon: '🔇', promptFragment: '' },
+        { id: 'no', label: '조용하게', icon: '🔇', promptFragment: '배경음·효과음을 넣지 마.' },
       ],
     },
 
@@ -250,7 +250,7 @@ export const aquarium: ProgramType = {
           id: 'no',
           label: '항상 같게',
           icon: '☀️',
-          promptFragment: '',
+          promptFragment: '낮·밤 전환 없이 같은 수족관 배경을 유지해.',
         },
       ],
     },

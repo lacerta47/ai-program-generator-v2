@@ -7,9 +7,16 @@ export function visibleSteps(type: ProgramType, answers: SurveyAnswers): SurveyS
   return type.steps.filter((s) => !s.showIf || s.showIf(answers));
 }
 
-function selectedOptions(step: SurveyStep, answers: SurveyAnswers) {
-  const a = answers[step.id];
-  const ids = Array.isArray(a) ? a : a ? [a] : [];
+function selectedOptions(type: ProgramType, step: SurveyStep, answers: SurveyAnswers) {
+  let a = answers[step.id];
+  // 예전 그림판 답에 남아 있는 Clipboard 선택도 보안 미리보기에서 작동하는 PNG 저장으로 이관한다.
+  if (type.id === 'paint' && step.id === 'save' && typeof a === 'string' && ['copy', 'clipboard', 'both'].includes(a)) {
+    a = 'download';
+  }
+  let ids = Array.isArray(a) ? a : a ? [a] : [];
+  const exclusiveId = ids.find((id) => step.options.some((option) => option.id === id && option.exclusive));
+  if (exclusiveId) ids = [exclusiveId];
+  else if (step.multi && step.maxSelections) ids = ids.slice(0, step.maxSelections);
   return step.options.filter((o) => ids.includes(o.id));
 }
 
@@ -22,7 +29,7 @@ export function assemblePrompt(type: ProgramType, answers: SurveyAnswers): strin
       parts.push(`'${step.question}' 부분은 가장 어울리게 알아서 정해줘.`);
       continue;
     }
-    for (const opt of selectedOptions(step, answers)) {
+    for (const opt of selectedOptions(type, step, answers)) {
       if (opt.promptFragment) parts.push(opt.promptFragment);
     }
   }
@@ -34,7 +41,7 @@ export function surveyToPlan(type: ProgramType, answers: SurveyAnswers): PlanFie
   const chosen = visibleSteps(type, answers).flatMap((s) =>
     answers[s.id] === AI_PICK
       ? [`${s.question} → 아무거나 (AI)`]
-      : selectedOptions(s, answers).map((o) => `${s.question} → ${o.label}`),
+      : selectedOptions(type, s, answers).map((o) => `${s.question} → ${o.label}`),
   );
   return {
     name: type.buildName(answers),

@@ -64,6 +64,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: '이 글에는 계획서가 없어 예시로 쓸 수 없어요.' }, { status: 400 });
     if (code === 'POST_HAS_NO_CODE')
       return NextResponse.json({ error: '이 글에는 코드가 없어요.' }, { status: 400 });
+    if (code.startsWith('POST_CODE_INVALID:'))
+      return NextResponse.json({ error: `코드 검증을 통과하지 못한 작품이에요. ${code.slice('POST_CODE_INVALID:'.length)}` }, { status: 400 });
     console.error('exemplar 지정 실패:', e);
     return NextResponse.json({ error: '예시 지정에 실패했어요.' }, { status: 500 });
   }

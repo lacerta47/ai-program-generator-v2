@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { ArrowLeft, Check, HelpCircle, RotateCcw, Search, Sprout, Wand2, X } from 'lucide-react';
 import type { GeneratedCode, GenerationMeta } from '@/lib/ai/types';
 import type { ProgramType, SurveyAnswers, SurveyStep } from '@/lib/survey/types';
-import { AI_PICK } from '@/lib/survey/types';
+import { AI_PICK, MAX_MULTI_SELECTIONS } from '@/lib/survey/types';
 import { PROGRAM_TYPES } from '@/lib/survey/programs';
 import { visibleSteps, assemblePrompt, surveyToPlan } from '@/lib/survey/assemble';
 import { buildDebugRequest } from '@/lib/ai/fixRequest';
@@ -215,8 +215,19 @@ export default function SurveyWizard() {
     if (step.multi) {
       // 다중: 토글, 자동 진행 안 함
       setAnswers((prev) => {
+        const selectionLimit = step.maxSelections ?? MAX_MULTI_SELECTIONS;
         const cur = Array.isArray(prev[step.id]) ? (prev[step.id] as string[]) : [];
-        const next = cur.includes(optionId) ? cur.filter((x) => x !== optionId) : [...cur, optionId];
+        const option = step.options.find((item) => item.id === optionId);
+        const exclusiveIds = new Set(step.options.filter((item) => item.exclusive).map((item) => item.id));
+        let next: string[];
+        if (cur.includes(optionId)) {
+          next = cur.filter((x) => x !== optionId);
+        } else if (option?.exclusive) {
+          next = [optionId];
+        } else {
+          const withoutExclusive = cur.filter((id) => !exclusiveIds.has(id));
+          next = withoutExclusive.length >= selectionLimit ? withoutExclusive : [...withoutExclusive, optionId];
+        }
         return { ...prev, [step.id]: next };
       });
       return;

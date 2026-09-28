@@ -264,6 +264,137 @@ function missingClassSelectors(js: string, html: string): string[] {
   return out;
 }
 
+/** 원문 위치를 유지하면서 주석·문자열만 공백으로 바꾼다(실제 API 호출 위치 판별용). */
+function maskCommentsAndStrings(src: string): string {
+  const chars = src.split('');
+  let i = 0;
+  while (i < src.length) {
+    const c = src[i], d = src[i + 1];
+    if (c === '/' && d === '/') {
+      while (i < src.length && src[i] !== '\n') chars[i++] = ' ';
+      continue;
+    }
+    if (c === '/' && d === '*') {
+      chars[i++] = ' '; chars[i++] = ' ';
+      while (i < src.length && !(src[i] === '*' && src[i + 1] === '/')) chars[i++] = ' ';
+      if (i < src.length) { chars[i++] = ' '; chars[i++] = ' '; }
+      continue;
+    }
+    if (c === '"' || c === "'" || c === '`') {
+      const quote = c;
+      chars[i++] = ' ';
+      while (i < src.length) {
+        if (src[i] === '\\') { chars[i++] = ' '; if (i < src.length) chars[i++] = ' '; continue; }
+        const done = src[i] === quote;
+        chars[i++] = ' ';
+        if (done) break;
+      }
+      continue;
+    }
+    i++;
+  }
+  return chars.join('');
+}
+
+/**
+ * 미리보기 sandbox에서는 Web Storage가 항상 막힌다. try/catch로 오류만 숨기면 '저장됐다'는
+ * 기능을 보여 주면서 실제 기록은 사라지는 결과가 된다. btoa 역시 한글 문자열에서 예외가 나지만
+ * 생성물에 필수인 API가 아니므로 둘 다 생성 계약에서 제외한다.
+ */
+function hasUnsafeBtoa(js: string): boolean {
+  const mask = maskCommentsAndStrings(js);
+  const asciiConstants = new Set<string>();
+  const asciiExpression = (expression: string) => {
+    let i = 0, terms = 0;
+    while (i < expression.length) {
+      while (/\s/.test(expression[i] || '')) i++;
+      const c = expression[i];
+      if (c === '"' || c === "'" || c === '`') {
+        const start = ++i;
+        while (i < expression.length && expression[i] !== c) { if (expression[i] === '\\') i++; i++; }
+        if (i >= expression.length) return false;
+        const value = expression.slice(start, i++);
+        if (!/^[\x00-\x7f]*$/.test(value) || /\\u(?:\{|[0-9a-f])/i.test(value) || value.includes('${')) return false;
+      } else {
+        const identifier = expression.slice(i).match(/^[A-Za-z_$][\w$]*/)?.[0];
+        if (!identifier || !asciiConstants.has(identifier)) return false;
+        i += identifier.length;
+      }
+      terms++;
+      while (/\s/.test(expression[i] || '')) i++;
+      if (i >= expression.length) break;
+      if (expression[i++] !== '+') return false;
+    }
+    return terms > 0;
+  };
+  const declarations = [...js.matchAll(/\bconst\s+([A-Za-z_$][\w$]*)\s*=\s*([^;]+);/g)];
+  for (let pass = 0; pass < declarations.length; pass++) {
+    let changed = false;
+    for (const m of declarations) {
+      if (m.index === undefined || asciiConstants.has(m[1]) || !/^\s*const\b/.test(mask.slice(m.index))) continue;
+      if (asciiExpression(m[2])) { asciiConstants.add(m[1]); changed = true; }
+    }
+    if (!changed) break;
+  }
+  for (const m of mask.matchAll(/\bbtoa\s*\(/g)) {
+    const tail = js.slice(m.index!);
+    const literal = tail.match(/^btoa\s*\(\s*(["'`])((?:\\.|(?!\1)[\s\S])*)\1\s*\)/);
+    if (literal && /^[\x00-\x7f]*$/.test(literal[2]) && !/\\u(?:\{|[0-9a-f])/i.test(literal[2]) && !literal[2].includes('${')) continue;
+    const constant = tail.match(/^btoa\s*\(\s*([A-Za-z_$][\w$]*)\s*\)/);
+    if (constant && asciiConstants.has(constant[1])) continue;
+    if (/^btoa\s*\(\s*unescape\s*\(\s*encodeURIComponent\s*\([^)]*\)\s*\)\s*\)/.test(tail)) continue;
+    return true;
+  }
+  return false;
+}
+
+function forbiddenBrowserApis(js: string): string[] {
+  const code = maskCommentsAndStrings(js);
+  const forbidden: string[] = [];
+  if (/\b(?:localStorage|sessionStorage)\b/.test(code)) forbidden.push('storage');
+  if (/\bnavigator\s*\.\s*clipboard\b|\bClipboardItem\b/.test(code)) forbidden.push('clipboard');
+  if (hasUnsafeBtoa(js)) forbidden.push('btoa');
+  return forbidden;
+}
+
+/** Canvas는 CSS var() 문자열을 해석하지 않는다. addColorStop은 예외, 색 속성은 무시되어 잘못 그려진다. */
+function canvasCssVariableUse(js: string): string | null {
+  const mask = maskCommentsAndStrings(js);
+  const patterns = [
+    /\.addColorStop\s*\([^,]+,\s*(["'`])\s*var\(--([\w-]+)\)\s*\1/g,
+    /\.(fillStyle|strokeStyle)\s*=\s*(["'`])\s*var\(--([\w-]+)\)\s*\2/g,
+  ];
+  for (const [index, pattern] of patterns.entries()) {
+    for (const m of js.matchAll(pattern)) {
+      if (m.index !== undefined && /\.(?:addColorStop|fillStyle|strokeStyle)\b/.test(mask.slice(m.index))) return (index === 0 ? m[2] : m[3]) || 'unknown';
+    }
+  }
+  return null;
+}
+
+/** receiver.textContent는 모든 자식을 지운다. 같은 receiver의 SVG를 곧바로 다시 찾으면 항상 null이다. */
+function removedSvgChildReference(js: string): string | null {
+  const mask = maskCommentsAndStrings(js);
+  for (const m of mask.matchAll(/\b([A-Za-z_$][\w$]*)\.textContent\s*=/g)) {
+    const receiver = m[1];
+    const start = m.index! + m[0].length;
+    const originalTail = js.slice(start, start + 800);
+    const maskedTail = mask.slice(start, start + 800);
+    const query = new RegExp(`\\b${receiver}\\.querySelector\\(\\s*["']svg["']\\s*\\)`).exec(originalTail);
+    if (!query || !new RegExp(`\\b${receiver}\\.querySelector\\(`).test(maskedTail.slice(0, query.index + query[0].length))) continue;
+    if (/[{}]/.test(maskedTail.slice(0, query.index))) continue; // 서로 다른 분기·블록은 실행 순서를 확정할 수 없다.
+    const rebuild = new RegExp(`\\b${receiver}\\.(?:innerHTML\\s*=|insertAdjacentHTML\\s*\\()`).exec(maskedTail);
+    if (!rebuild || rebuild.index > query.index) return receiver;
+  }
+  return null;
+}
+
+/** 무조건 반복은 생성물의 메인 스레드를 멈출 수 있으므로 명백한 형태만 차단한다. */
+function blockingLoops(js: string): boolean {
+  const code = stripCommentsAndStrings(js);
+  return /\bwhile\s*\(\s*true\s*\)/.test(code) || /\bfor\s*\(\s*;\s*;\s*\)/.test(code);
+}
+
 /** js가 조회하는 id (리터럴로 쓴 것만 — 변수·템플릿으로 조립한 셀렉터는 안전측으로 무시) */
 function referencedIds(js: string): string[] {
   const out: string[] = [];
@@ -279,6 +410,10 @@ export function gateReasonKey(reason: string): string {
   if (reason.startsWith('HTML에 없는 요소')) return 'missingId';
   if (reason.startsWith('정의 없는 이름')) return 'undefinedRef';
   if (reason.startsWith('HTML에 없는 클래스')) return 'missingClass';
+  if (reason.startsWith('지원하지 않는 브라우저 API')) return 'forbiddenApi';
+  if (reason.startsWith('Canvas API에 CSS 변수')) return 'canvasCssVar';
+  if (reason.startsWith('textContent로 지운 SVG')) return 'removedSvgChild';
+  if (reason.startsWith('멈출 수 있는 무한 반복')) return 'blockingLoop';
   return 'other';
 }
 
@@ -304,6 +439,12 @@ export function validateGeneratedCode(code: GeneratedCode): string | null {
     return `JS 문법 오류: ${(e as Error).message}`;
   }
 
+  const canvasVar = canvasCssVariableUse(js);
+  if (canvasVar) return `Canvas API에 CSS 변수 문자열을 직접 사용: --${canvasVar}`;
+
+  const removedSvg = removedSvgChildReference(js);
+  if (removedSvg) return `textContent로 지운 SVG를 다시 참조: ${removedSvg}`;
+
   // 참조 추출은 주석을 벗긴 코드에서 — 주석 속 예시 코드를 실제 참조로 오인하지 않도록.
   // (반대로 '만들어지는 id'는 원문에서 모아 더 관대하게 판단한다.)
   const known = htmlIds(html);
@@ -319,6 +460,11 @@ export function validateGeneratedCode(code: GeneratedCode): string | null {
 
   const noClass = missingClassSelectors(js, html);
   if (noClass.length) return `HTML에 없는 클래스를 참조: .${noClass.join(', .')}`;
+
+  const forbidden = forbiddenBrowserApis(js);
+  if (forbidden.length) return `지원하지 않는 브라우저 API 사용: ${forbidden.join(', ')}`;
+
+  if (blockingLoops(js)) return '멈출 수 있는 무한 반복을 사용함';
 
   return null;
 }

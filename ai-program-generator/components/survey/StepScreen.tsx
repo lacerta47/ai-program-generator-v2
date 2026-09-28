@@ -1,7 +1,7 @@
 'use client';
 
 import type { SurveyStep } from '@/lib/survey/types';
-import { AI_PICK } from '@/lib/survey/types';
+import { AI_PICK, MAX_MULTI_SELECTIONS } from '@/lib/survey/types';
 
 export default function StepScreen({
   step,
@@ -22,6 +22,7 @@ export default function StepScreen({
   const selected = (id: string) =>
     Array.isArray(value) ? value.includes(id) : value === id;
   const options = step.options.filter((o) => !o.needsPhoto || canPhoto);
+  const selectionLimit = step.maxSelections ?? MAX_MULTI_SELECTIONS;
 
   return (
     <div className="anim-pop-in">
@@ -39,23 +40,33 @@ export default function StepScreen({
       </div>
 
       <h2 className="mb-5 text-[24px]">{step.question}</h2>
-      {step.multi && <p className="mb-3 -mt-3 text-[14px] text-muted">여러 개 골라도 돼요</p>}
+      {step.multi && <p className="mb-3 -mt-3 text-[14px] text-muted">최대 {selectionLimit}개까지 골라요</p>}
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        {options.map((o) => (
+        {options.map((o) => {
+          const maxed = step.multi
+            && Array.isArray(value)
+            && value.length >= selectionLimit
+            && !selected(o.id)
+            && !o.exclusive;
+          return (
           <button
             key={o.id}
             onClick={() => onChoose(o.id)}
+            disabled={maxed}
             className={`press flex items-center gap-3 rounded-[var(--r-lg)] border-2 p-4 text-left ${
               selected(o.id)
                 ? 'border-brand bg-brand-soft'
-                : 'border-line bg-surface hover:border-brand/50'
+                : maxed
+                  ? 'cursor-not-allowed border-line bg-surface opacity-50'
+                  : 'border-line bg-surface hover:border-brand/50'
             }`}
           >
             {o.icon && <span className="text-[34px] leading-none" aria-hidden>{o.icon}</span>}
             <span className="text-[18px] font-medium">{o.label}</span>
           </button>
-        ))}
+          );
+        })}
 
         {/* 단일선택 단계엔 '아무거나 좋아!'(AI가 그 부분을 알아서 정함)를 자동으로 붙인다 */}
         {!step.multi && (

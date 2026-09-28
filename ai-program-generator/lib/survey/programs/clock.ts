@@ -127,7 +127,7 @@ export const clock: ProgramType = {
         { id: 'colorchange', label: '시간 따라 색 변하기', icon: '🌈', promptFragment: '시간이 줄거나 늘수록 화면 색이 점점 변하게 해.' },
         { id: 'cheer', label: '응원 문구', icon: '💬', promptFragment: '"조금만 더!" 같은 응원 문구를 가끔 보여줘.' },
         { id: 'lap', label: '기록 남기기', icon: '📝', promptFragment: '"기록" 버튼으로 그때의 시간을 목록에 남기게 해.' },
-        { id: 'none', label: '없어도 돼', icon: '👍', promptFragment: '' },
+        { id: 'none', label: '없어도 돼', icon: '👍', promptFragment: '진행 막대·색 변화·응원 문구·기록 기능을 넣지 마.', exclusive: true },
       ],
     },
   ],

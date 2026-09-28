@@ -19,6 +19,7 @@ interface SlotExemplar {
   sourceTitle: string;
   sourcePostId: string;
   approvedAt: number;
+  codeReference?: 'full' | 'plan-only';
 }
 interface Candidate {
   id: string;
@@ -126,9 +127,16 @@ function ExemplarsContent() {
       </div>
       {slot ? (
         <div className="flex items-center justify-between gap-2">
-          <span className="min-w-0 flex-1 truncate text-[13px] text-muted" title={slot.sourcePostId}>
-            {slot.sourceTitle}
-          </span>
+          <div className="min-w-0 flex-1">
+            <span className="block truncate text-[13px] text-muted" title={slot.sourcePostId}>
+              {slot.sourceTitle}
+            </span>
+            <span className={`mt-1 inline-flex rounded-full px-2 py-0.5 text-[12px] font-medium ${
+              slot.codeReference === 'full' ? 'bg-brand-soft text-brand-strong' : 'bg-surface-2 text-muted'
+            }`}>
+              {slot.codeReference === 'full' ? '코드도 참고' : '계획서만 참고'}
+            </span>
+          </div>
           <Button variant="ghost" onClick={onClear} disabled={busy} aria-label={`${title} 비우기`}>
             <Trash2 size={15} aria-hidden />
           </Button>

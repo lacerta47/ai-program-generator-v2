@@ -136,7 +136,7 @@ export const calc: ProgramType = {
         { id: 'click', label: '딸깍 소리', icon: '🎵', promptFragment: '버튼을 누를 때마다 Web Audio로 딸깍 소리가 나게 해.' },
         { id: 'boop', label: '뿅 소리', icon: '💫', promptFragment: '버튼을 누를 때마다 Web Audio로 귀여운 뿅 소리가 나게 해.' },
         { id: 'piano', label: '피아노 소리', icon: '🎹', promptFragment: '버튼을 누를 때마다 Web Audio로 피아노 음이 나게 해.' },
-        { id: 'none', label: '소리 없이', icon: '🔇', promptFragment: '' },
+        { id: 'none', label: '소리 없이', icon: '🔇', promptFragment: '버튼·정답·오답 소리를 넣지 마.' },
       ],
     },
 
@@ -178,7 +178,7 @@ export const calc: ProgramType = {
         { id: 'back', label: '뒤로 지우기', icon: '⬅️', promptFragment: '마지막 숫자 하나만 지우는 ← 버튼을 넣어.' },
         { id: 'mute', label: '소리 끄기', icon: '🔕', promptFragment: '소리를 켜고 끌 수 있는 버튼을 넣어.' },
         { id: 'history', label: '계산 기록', icon: '📜', promptFragment: '이전에 계산한 내용을 아래에 목록으로 보여줘.' },
-        { id: 'copy', label: '복사 버튼', icon: '📋', promptFragment: '결과값을 클립보드에 복사하는 버튼을 넣어.' },
+        { id: 'copy', label: '결과 크게 보기', icon: '📋', promptFragment: '복사 대신 결과값을 화면 안에 크게 펼쳐 보여주는 버튼을 넣어.' },
       ],
     },
 

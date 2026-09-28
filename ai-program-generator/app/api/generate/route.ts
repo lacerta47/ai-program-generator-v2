@@ -199,7 +199,8 @@ export async function POST(req: NextRequest) {
     if (exemplar) finalPrompt = buildExemplarBlock(exemplar) + prompt;
   }
   // 선택지 유형별 제작 규칙(미로 알고리즘 등) — 아이의 선택은 그대로, 깨지지 않게 만드는 방법만 덧붙인다.
-  system = system + getTypeGuide(exemplarType);
+  // 참고 예시의 오디오 코드가 새 계획의 소리 요구로 오인되지 않도록 원본 요청만 판별한다.
+  system = system + getTypeGuide(exemplarType, prompt, Boolean(parsedPhoto));
   // 사진이 첨부됐으면 그 사진을 활용하라는 지시를 시스템 프롬프트에 덧붙인다.
   if (parsedPhoto) system = system + PHOTO_INSTRUCTION;
   // 교육 메타(Phase 0) — logicSummary·conceptTags 필드 채우기 지시(생성·수정 공통).

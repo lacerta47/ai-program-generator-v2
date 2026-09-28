@@ -61,13 +61,6 @@ export const sound: ProgramType = {
             '누를 때마다 맑은 벨 소리가 나는 마법 벨 버튼들을 만들어. Web Audio API로 맑은 사인파 벨 소리를 합성해줘.',
         },
         {
-          id: 'animal',
-          label: '동물 소리 버튼',
-          icon: '🐸',
-          promptFragment:
-            '버튼마다 동물 소리가 나는 동물 소리판을 만들어. 🐄 소 울음·🐸 개구리·🦊 여우·🐧 펭귄 등 다양한 동물 버튼을 넣고, Web Audio API로 각 동물 특유의 음색을 합성해줘. 버튼에 동물 이모지를 크게 표시해.',
-        },
-        {
           id: 'dj',
           label: 'DJ 패드',
           icon: '🎧',
@@ -201,7 +194,7 @@ export const sound: ProgramType = {
       options: [
         { id: 'slider', label: '슬라이더로 조절', icon: '🎚️', promptFragment: '소리 크기를 조절할 수 있는 슬라이더를 넣어.' },
         { id: 'buttons', label: '크게/작게 버튼', icon: '🔊', promptFragment: '🔊 크게·🔉 작게 버튼 두 개로 소리를 조절할 수 있게 넣어.' },
-        { id: 'no', label: '그냥 크게', icon: '📢', promptFragment: '' },
+        { id: 'no', label: '그냥 크게', icon: '📢', promptFragment: '볼륨 슬라이더·크게·작게 버튼을 넣지 마.' },
       ],
     },
 
@@ -226,7 +219,7 @@ export const sound: ProgramType = {
       question: '내 연주를 기억했다가 다시 들어볼까?',
       options: [
         { id: 'yes', label: '응, 넣어줘!', icon: '⏺️', promptFragment: '내 연주를 기억했다가 다시 들려주는 버튼을 넣어. 녹음이 잘 안 되는 환경에서는 그냥 다시 칠 수 있게 해.' },
-        { id: 'no', label: '아니, 괜찮아', icon: '🎵', promptFragment: '' },
+        { id: 'no', label: '아니, 괜찮아', icon: '🎵', promptFragment: '연주 녹음·기억·다시 듣기 기능을 넣지 마.' },
       ],
     },
 
@@ -238,7 +231,7 @@ export const sound: ProgramType = {
       options: [
         { id: 'stars', label: '별 모으기', icon: '⭐', promptFragment: '올바른 음을 누를 때마다 별을 모아 화면에 보여주는 기능을 넣어.' },
         { id: 'points', label: '점수 올리기', icon: '🔢', promptFragment: '올바른 음을 누를 때마다 점수가 올라가는 기능을 넣어.' },
-        { id: 'none', label: '점수 없이', icon: '🎵', promptFragment: '' },
+        { id: 'none', label: '점수 없이', icon: '🎵', promptFragment: '별·점수·성공 판정 기능을 넣지 마.' },
       ],
     },
 
@@ -253,7 +246,7 @@ export const sound: ProgramType = {
         { id: 'keyboard', label: '키보드로도 연주', icon: '⌨️', promptFragment: '마우스뿐 아니라 키보드 자판으로도 연주할 수 있게 해.' },
         { id: 'tempo', label: '빠르기 조절', icon: '🏃', promptFragment: '연주 빠르기(템포)를 조절할 수 있는 버튼을 넣어.' },
         { id: 'clap', label: '박수 챌린지 — 빛나는 리듬 따라 두드리기', icon: '👏', promptFragment: '화면에 빛나는 리듬 패턴이 표시되고 박수(클릭/탭)로 따라 치는 박수 챌린지 모드를 넣어.' },
-        { id: 'nothing', label: '없어도 돼', icon: '👍', promptFragment: '' },
+        { id: 'nothing', label: '없어도 돼', icon: '👍', promptFragment: '메아리·키보드 연주·템포 조절·박수 챌린지를 넣지 마.', exclusive: true },
       ],
     },
   ],
