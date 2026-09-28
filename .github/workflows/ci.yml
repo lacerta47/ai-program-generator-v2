@@ -12,11 +12,11 @@ jobs:
       run:
         working-directory: ai-program-generator
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
           cache-dependency-path: ai-program-generator/package-lock.json
 
@@ -25,6 +25,9 @@ jobs:
 
       - name: Type check
         run: ./node_modules/.bin/tsc --noEmit
+
+      - name: Lint
+        run: npm run lint
 
       # 순수 로직 단위 테스트(vitest, lib/**/*.test.ts) — Firestore·Next 런타임 미사용이라 시크릿 불필요
       - name: Unit tests

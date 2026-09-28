@@ -110,7 +110,6 @@ export default function Creator() {
       } catch {}
     }, 400);
     return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [plan]);
 
   async function handleSaveEdit() {

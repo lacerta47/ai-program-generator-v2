@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ChevronRight, ChevronDown, Folder, FolderOpen, FileCode2, Plus, Pencil, ArrowUp, ArrowDown, Trash2, Lock, Globe, RotateCcw } from 'lucide-react';
 import type { Category } from '@/lib/firebase/types';
-import { buildTree, depthOf, descendantIds, type CategoryNode } from '@/lib/board/categoryTree';
+import { buildTree, descendantIds, type CategoryNode } from '@/lib/board/categoryTree';
 import { authedJson } from '@/lib/client/authedFetch';
 import type { CategoryStat } from '@/app/api/admin/categories/stats/route';
 import {

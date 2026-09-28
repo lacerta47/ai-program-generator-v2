@@ -9,6 +9,7 @@ export default function Header({ active }: { active?: 'creator' | 'board' | 'sur
     <header className="sticky top-0 z-30 border-b-2 border-line bg-bg/90 backdrop-blur-sm">
       <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-x-3 gap-y-2 px-4 py-3 sm:px-6">
         {/* 일반 <a>로 전체 새로고침 (Link는 클라이언트 라우팅이라 새로고침이 안 됨) */}
+        {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- 홈 이동 시 생성 상태를 완전히 초기화해야 한다. */}
         <a
           href="/"
           className="group flex items-center gap-2.5 text-[24px] sm:text-[27px]"
