@@ -12,6 +12,8 @@
     "lint": "eslint .",
     "check-key": "node check-key.mjs",
     "test": "vitest run",
+    "test:api": "vitest run --config vitest.api.config.mts",
+    "test:rules": "firebase emulators:exec --only firestore --project demo-lun-rules \"vitest run --config vitest.rules.config.mts\"",
     "changelog": "node scripts/changelog.mjs"
   },
   "dependencies": {
@@ -34,12 +36,14 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.7",
+    "@firebase/rules-unit-testing": "^5.0.2",
     "@tailwindcss/postcss": "^4.0.0",
     "@types/node": "^22.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "eslint": "^9.39.5",
     "eslint-config-next": "^15.5.25",
+    "firebase-tools": "^15.32.0",
     "tailwindcss": "^4.0.0",
     "typescript": "^5.8.0",
     "vitest": "^5.0.0"
