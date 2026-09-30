@@ -33,6 +33,9 @@ jobs:
       - name: Unit tests
         run: npm test
 
+      - name: API authorization tests
+        run: npm run test:api
+
       - name: Production build
         run: npm run build
         # 빌드 시점엔 실제 비밀키 불필요(런타임에만 사용). 클라이언트 Firebase init이
@@ -44,3 +47,28 @@ jobs:
           NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: ci-dummy.appspot.com
           NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: "0"
           NEXT_PUBLIC_FIREBASE_APP_ID: ci-dummy
+
+  firestore-rules:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ai-program-generator
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: ai-program-generator/package-lock.json
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Firestore rules tests
+        run: npm run test:rules

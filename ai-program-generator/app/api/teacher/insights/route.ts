@@ -82,7 +82,10 @@ export async function GET(req: NextRequest) {
         lastActive: lastActive.get(s.uid) ?? null,
         concepts: CONCEPT_ORDER.filter((c) => concepts.get(s.uid)?.has(c)),
       }))
-      .sort((a, b) => (b.lastActive ?? 0) - (a.lastActive ?? 0));
+      .sort((a, b) =>
+        (b.lastActive ?? 0) - (a.lastActive ?? 0)
+        || (Number(a.hakbun) || 0) - (Number(b.hakbun) || 0)
+      );
 
     const summary = {
       studentCount: roster.length,
