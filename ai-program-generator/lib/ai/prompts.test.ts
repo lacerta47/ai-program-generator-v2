@@ -14,6 +14,7 @@ const OUTPUT_FIELDS = [
 describe('생성 프롬프트 출력 계약', () => {
   it.each([DEFAULT_SYSTEM_PROMPT, SURVEY_SYSTEM_PROMPT])('공통 프롬프트가 실제 7필드를 모두 요구한다', (prompt) => {
     for (const field of OUTPUT_FIELDS) expect(prompt).toContain(field);
+    expect(prompt).toContain('가로세로 48px 이상');
     expect(prompt).not.toContain('세 개의 키');
     expect(prompt).not.toContain('15만 자');
   });

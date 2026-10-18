@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { getTypeGuide } from './typeGuides';
+import { getDesignPreset, getTypeGuide } from './typeGuides';
 
 describe('getTypeGuide', () => {
-  it('품질 점검에서 고위험으로 확인된 유형에만 규칙이 있고, 모르는 유형·미지정은 빈 문자열', () => {
+  it('모든 설문 유형에 디자인 프리셋을 붙이고, 고위험 유형에는 안정성 규칙도 붙인다', () => {
     expect(getTypeGuide('maze')).toMatch(/generateMaze/);
     expect(getTypeGuide('dressup')).toMatch(/얼굴 원 중심 \(200,210\)/); // 종류별 좌표 고정 규칙
     expect(getTypeGuide('dressup')).toMatch(/viewBox="0 0 400 400"/);
@@ -43,8 +43,33 @@ describe('getTypeGuide', () => {
     expect(getTypeGuide('roulette')).toMatch(/390px 화면/);
     expect(getTypeGuide('roulette')).toMatch(/당첨 결과: 항목명/);
     expect(getTypeGuide('game', '위에서 장애물이 떨어지는 피하기 게임.')).toMatch(/게임 공통 안정성 규칙/);
-    expect(getTypeGuide('quiz')).toBe('');
+    expect(getTypeGuide('quiz')).toMatch(/도구·학습 놀이 디자인 프리셋/);
+    expect(getTypeGuide('quiz')).not.toMatch(/게임 공통 안정성 규칙/);
+    expect(getTypeGuide('unknown')).toBe('');
     expect(getTypeGuide(undefined)).toBe('');
+  });
+
+  it.each([
+    ['quiz', '도구·학습 놀이'],
+    ['card', '도구·학습 놀이'],
+    ['calc', '도구·학습 놀이'],
+    ['fortune', '도구·학습 놀이'],
+    ['clock', '도구·학습 놀이'],
+    ['paint', '창작 놀이터'],
+    ['sound', '창작 놀이터'],
+    ['aquarium', '창작 놀이터'],
+    ['dressup', '창작 놀이터'],
+    ['game', '친근한 게임'],
+    ['maze', '친근한 게임'],
+    ['roulette', '친근한 게임'],
+  ])('%s 유형을 %s 프리셋에 연결한다', (programType, heading) => {
+    const guide = getDesignPreset(programType);
+
+    expect(guide).toContain(`${heading} 디자인 프리셋`);
+    expect(guide).toContain('학생 선택 디자인 연동 규칙');
+    expect(guide).toContain('프리셋의 기본 색이나 분위기로 바꾸지 마세요');
+    expect(guide).toContain('구체적인 선택이 우선');
+    expect(guide).toContain('그 대상에만 적용하세요');
   });
 
   it('게임에는 공통 규칙과 선택된 장르 규칙만 붙인다', () => {

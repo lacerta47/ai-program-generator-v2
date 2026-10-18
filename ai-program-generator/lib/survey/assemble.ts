@@ -23,6 +23,7 @@ function selectedOptions(type: ProgramType, step: SurveyStep, answers: SurveyAns
 /** basePrompt + 노출 단계의 선택 조각들을 순서대로 결합 */
 export function assemblePrompt(type: ProgramType, answers: SurveyAnswers): string {
   const parts: string[] = [type.basePrompt];
+  const designSelections: string[] = [];
   for (const step of visibleSteps(type, answers)) {
     if (answers[step.id] === AI_PICK) {
       // "아무거나 좋아!" — 그 부분은 AI가 어울리게 알아서 정하게 위임
@@ -30,8 +31,16 @@ export function assemblePrompt(type: ProgramType, answers: SurveyAnswers): strin
       continue;
     }
     for (const opt of selectedOptions(type, step, answers)) {
-      if (opt.promptFragment) parts.push(opt.promptFragment);
+      if (opt.promptFragment) {
+        parts.push(opt.promptFragment);
+        if (step.role === 'appearance' || step.role === 'decor') {
+          designSelections.push(`- ${step.question} → ${opt.label}: ${opt.promptFragment}`);
+        }
+      }
     }
+  }
+  if (designSelections.length) {
+    parts.push(`[학생이 고른 디자인]\n자동 디자인 프리셋보다 아래 선택을 우선하세요.\n${designSelections.join('\n')}`);
   }
   return parts.join(' ');
 }
