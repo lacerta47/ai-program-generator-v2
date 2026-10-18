@@ -10,7 +10,7 @@ interface StreamOpts {
   signal?: AbortSignal;
   /** 사진 1장(data-URI). 멀티모달 생성용 — 서버가 검증·전달. */
   photo?: string;
-  /** 선택지 만들기의 유형 id(PROGRAM_TYPES id) — 서버가 유형별 참고 예시를 고르는 데만 쓴다. */
+  /** 선택지 만들기의 유형 id(PROGRAM_TYPES id) — 서버가 참고 예시·유형 가이드·모델 정책에 사용한다. */
   programType?: string;
 }
 

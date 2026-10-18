@@ -118,6 +118,27 @@ const ROULETTE_GUIDE = `
 7. 390px 화면에서 제목·포인터·원판·버튼·\`#roulette-result\`가 좌우 또는 위쪽으로 잘리지 않아야 하고 문서의 가로 스크롤이 생기면 안 됩니다.
 8. 멈춘 뒤 결과 문장은 다른 표현으로 바꾸지 말고 반드시 정확히 \`당첨 결과: 항목명\` 형식으로 표시하세요.`;
 
+// 신규 게임 6종 90회 점검에서, 성공작은 핵심 동작보다 장식을 먼저 늘릴 이유가 없었고
+// 블록 쌓기 3건은 빈 보드 상태에서 첫 draw/render를 호출해 같은 런타임 오류가 났다.
+// 모든 장르의 긴 알고리즘을 한꺼번에 넣지 않고, 짧은 공통 규칙과 해당 장르 규칙만 붙인다.
+const GAME_COMMON_GUIDE = `
+
+**게임 공통 안정성 규칙 (반드시 지킬 것)**:
+1. 선택한 핵심 게임 동작을 먼저 완성하고, 선택하지 않은 효과음·파티클·추가 화면·복잡한 SVG 장식은 만들지 마세요.
+2. DOM 요소 찾기 → 게임 상태와 배열 초기화 → 첫 화면 그리기 → 입력 연결 → 게임 루프 시작 순서를 지키세요. 화면을 그리는 함수는 필요한 배열과 현재 객체가 모두 준비된 뒤에만 호출하세요.
+3. 시작 전 화면도 빈 게임 상태를 오류 없이 그릴 수 있어야 합니다. 게임 루프는 하나만 만들고, 다시 시작할 때 이전 animation frame·interval·timeout을 취소한 뒤 상태를 한 번만 초기화하세요.
+4. 핵심 게임과 선택한 기능에 필요한 HTML·CSS·JavaScript만 작성하고, 요청하지 않은 설명 패널·효과음·파티클·대형 SVG 데이터는 생략하세요.`;
+
+const BLOCKSTACK_GAME_GUIDE = `
+
+**블록 쌓기 필수 구현 규칙 (반드시 지킬 것)**:
+1. 10×18 보드는 첫 render/draw 호출보다 먼저 \`Array.from({ length: 18 }, () => Array(10).fill(null))\`와 같은 완성된 2차원 배열로 만드세요. \`board = []\` 또는 \`grid = []\` 상태에서 화면을 그리지 마세요.
+2. 시작 전 빈 보드를 보여줄 때도 이미 초기화된 보드를 사용하세요. 시작 버튼과 다시하기 버튼은 같은 초기화 함수를 호출하게 하세요.
+3. 셀을 읽거나 쓰기 전에 x와 y 범위를 먼저 검사하세요. x < 0, x >= 10, y >= 18이면 충돌이고, y < 0이면 보드 행을 읽지 말고 건너뛰세요.
+4. 충돌 확인에서는 경계 검사를 통과한 뒤에만 \`board[y][x]\` 또는 \`grid[y][x]\`를 읽으세요.
+5. 줄을 지운 뒤에도 보드는 항상 정확히 18개 행이고 각 행은 10개 칸이어야 합니다.
+6. javascript 맨 아래의 첫 실행 순서는 보드 초기화 → 첫 render/draw로 고정하세요.`;
+
 /** 유형 id → 제작 규칙. 없는 유형은 빈 문자열(아무것도 덧붙이지 않음). */
 const SURVEY_TYPE_GUIDES: Record<string, string> = {
   maze: MAZE_GUIDE,
@@ -135,9 +156,16 @@ function requestsAudio(prompt: string): boolean {
     .some((sentence) => positiveAudioRequest.test(sentence));
 }
 
+function gameGuide(prompt: string): string {
+  const blockStack = /10×18 고정 격자|블록 쌓기 게임/.test(prompt);
+  return GAME_COMMON_GUIDE + (blockStack ? BLOCKSTACK_GAME_GUIDE : '');
+}
+
 export function getTypeGuide(programType?: string, prompt = '', hasPhoto = false): string {
   const typeGuide = programType === 'dressup' && hasPhoto
     ? PHOTO_DRESSUP_GUIDE
+    : programType === 'game'
+    ? gameGuide(prompt)
     : (programType && SURVEY_TYPE_GUIDES[programType]) || '';
   const audioGuide = programType === 'sound' || requestsAudio(prompt) ? USER_GESTURE_AUDIO_GUIDE : '';
   return typeGuide + audioGuide;

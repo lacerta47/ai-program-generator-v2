@@ -1,4 +1,4 @@
-import { GoogleGenAI, Type } from '@google/genai';
+import { GoogleGenAI, ThinkingLevel, Type } from '@google/genai';
 import type { AIProvider, GeneratedCode, GenerateInput, GenerationChunk } from './types';
 import { parsePartialCode } from './partialJson';
 import { UserFacingError, QuotaExhaustedError, GateError } from './errors';
@@ -7,11 +7,19 @@ import { validateGeneratedCode, gateReasonKey } from './validateCode';
 // 제공자별 세부사항(모델 선택, JSON 모드, 파싱, 폴백)을 이 파일 안에 가둔다.
 // 다른 제공자로 교체할 때는 이 파일에 대응하는 구현만 추가하면 된다.
 
-// 2026-04부터 gemini-2.5-pro는 무료 티어 제외 → flash 계열 사용.
-// 무료 티어는 모델별 일일 한도가 매우 작아(flash 기준 20회/일),
-// flash 한도 소진 시 별도 한도를 가진 flash-lite로 자동 폴백한다.
-const PRIMARY_MODEL = 'gemini-2.5-flash';
-const FALLBACK_MODEL = 'gemini-2.5-flash-lite';
+const STANDARD_MODEL = 'gemini-3.8-flash';
+const HIGH_QUALITY_MODEL = 'gemini-4-argon';
+const LEGACY_FALLBACK_MODEL = 'gemini-2.5-flash-lite';
+
+export function selectGeminiModels(
+  input: Pick<GenerateInput, 'quality' | 'tier'>,
+): { primary: string; fallback: string } {
+  // Argon은 무료 티어를 지원하지 않는다. 호출자가 high를 잘못 넘겨도 무료 키에서는 선택하지 않는다.
+  if (input.quality === 'high' && input.tier !== 'free') {
+    return { primary: HIGH_QUALITY_MODEL, fallback: STANDARD_MODEL };
+  }
+  return { primary: STANDARD_MODEL, fallback: LEGACY_FALLBACK_MODEL };
+}
 
 const RESPONSE_SCHEMA = {
   type: Type.OBJECT,
@@ -55,16 +63,17 @@ export class GeminiProvider implements AIProvider {
       );
     }
     const ai = new GoogleGenAI({ apiKey });
+    const models = selectGeminiModels(input);
 
     // 초기화 시점에 폴백/재시도 적용(첫 청크 전에 429/503이 표면화됨).
     let stream;
     try {
-      stream = await startStream(ai, PRIMARY_MODEL, input, signal);
+      stream = await startStream(ai, models.primary, input, signal);
     } catch (e) {
       if (!isQuotaExhausted(e)) throw e;
-      console.warn(`[gemini] ${PRIMARY_MODEL} 일일 무료 한도 소진 → ${FALLBACK_MODEL}로 폴백`);
+      console.warn(`[gemini] ${models.primary} 할당량 소진 → ${models.fallback}로 폴백`);
       try {
-        stream = await startStream(ai, FALLBACK_MODEL, input, signal);
+        stream = await startStream(ai, models.fallback, input, signal);
       } catch (e2) {
         if (isQuotaExhausted(e2)) {
           throw new QuotaExhaustedError(
@@ -179,10 +188,17 @@ function startStream(ai: GoogleGenAI, model: string, input: GenerateInput, signa
         // 모델 최대(65536)의 절반이라 무한 반복 시 최악 비용을 절반으로 바운드. thinking 예산은
         // 품질 트레이드오프라 실사용에선 의도적으로 손대지 않음(기본 유지). 대형 출력 잘림이 보이면 상향.
         //
-        // 빠른 모드(input.fast, 자동 예시 전용): thinking을 끄고(thinkingBudget=0) 출력 상한을 낮춰
-        // 1건당 지연을 크게 줄인다. 예시는 테스트 보드용이라 품질 트레이드오프를 감수한다.
+        // 빠른 모드(input.fast, 자동 예시 전용): 3.8은 thinkingLevel low를 사용한다.
+        // 구형 폴백 모델은 기존 thinkingBudget=0을 유지한다.
         maxOutputTokens: input.fast ? 8192 : 32768,
-        ...(input.fast ? { thinkingConfig: { thinkingBudget: 0 } } : {}),
+        ...(input.fast
+          ? {
+              thinkingConfig:
+                model === LEGACY_FALLBACK_MODEL
+                  ? { thinkingBudget: 0 }
+                  : { thinkingLevel: ThinkingLevel.LOW },
+            }
+          : {}),
         abortSignal: signal,
       },
     }),

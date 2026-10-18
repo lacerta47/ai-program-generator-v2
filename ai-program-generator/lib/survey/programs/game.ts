@@ -1,5 +1,9 @@
 import type { ProgramType } from '../types';
 
+const LEGACY_ACTION_GENRES = new Set(['dodge', 'collect', 'mole', 'run']);
+const HERO_GENRES = new Set(['dodge', 'collect', 'run', 'shooter']);
+const MOVEMENT_GENRES = new Set(['dodge', 'collect', 'run']);
+
 export const game: ProgramType = {
   id: 'game',
   label: '게임',
@@ -15,6 +19,12 @@ export const game: ProgramType = {
     if (a.genre === 'run') return '달리기 게임';
     if (a.genre === 'rps') return '가위바위보';
     if (a.genre === 'memory') return '짝 맞추기 게임';
+    if (a.genre === 'blockstack') return '블록 쌓기 게임';
+    if (a.genre === 'breakout') return '블록 깨기 게임';
+    if (a.genre === 'snake') return '꼬리 키우기 게임';
+    if (a.genre === 'shooter') return '우주 슈팅 게임';
+    if (a.genre === 'tower') return '탑 높이 쌓기 게임';
+    if (a.genre === 'numbermerge') return '숫자 합치기 게임';
     return '나의 게임';
   },
   steps: [
@@ -62,6 +72,48 @@ export const game: ProgramType = {
           promptFragment:
             '뒤집힌 카드에서 같은 그림 두 장을 찾는 기억력 짝 맞추기 게임. 카드를 두 장 뒤집어 그림이 같으면 열린 채로 두고, 다르면 잠시 보여준 뒤 다시 뒤집어. 모든 짝을 찾으면 축하 화면을 보여줘.',
         },
+        {
+          id: 'blockstack',
+          label: '블록 쌓기',
+          icon: '🧱',
+          promptFragment:
+            '10×18 고정 격자에서 여러 모양의 블록이 한 칸씩 내려오는 블록 쌓기 게임. 블록은 좌우 이동과 회전을 할 수 있고, 이동하거나 회전하기 전에 벽·바닥·쌓인 블록과 겹치는지 검사해. 더 내려갈 수 없으면 블록을 격자에 고정하고, 가득 찬 줄은 아래쪽부터 지운 뒤 위의 줄을 내려. 새 블록의 생성 위치가 이미 막혀 있으면 게임 오버로 처리해. 다음 블록을 보여주고, 키보드 방향키와 화면의 큰 조작 버튼을 모두 제공해.',
+        },
+        {
+          id: 'breakout',
+          label: '블록 깨기',
+          icon: '🏓',
+          promptFragment:
+            '화면 아래의 막대를 움직여 공을 튕기고 위쪽 블록을 깨는 게임. 공은 벽·막대·블록과 닿은 면에 맞게 튕기고, 같은 충돌을 여러 번 계산해 공이 붙지 않게 해. 공을 놓치면 목숨 3개 중 하나가 줄고 공과 막대를 안전한 시작 위치로 되돌려. 블록을 모두 깨면 성공 화면을, 목숨이 0이면 게임 오버 화면을 보여줘. 방향키·마우스 드래그·터치 드래그로 막대를 움직일 수 있게 해.',
+        },
+        {
+          id: 'snake',
+          label: '꼬리 키우기',
+          icon: '🐍',
+          promptFragment:
+            '고정 격자에서 일정한 시간 간격마다 한 칸씩 움직이는 꼬리 키우기 게임. 먹이는 뱀이 차지하지 않은 빈 칸에만 만들고, 먹으면 꼬리가 한 칸 길어지며 점수가 올라가. 진행 방향의 바로 반대 방향으로는 즉시 꺾을 수 없게 하고, 벽이나 자기 몸에 닿으면 게임 오버로 처리해. 방향키와 화면의 큰 방향 버튼을 모두 제공해.',
+        },
+        {
+          id: 'shooter',
+          label: '우주 슈팅',
+          icon: '👾',
+          promptFragment:
+            '화면 아래의 주인공을 좌우로 움직이며 위쪽 적을 향해 발사하는 우주 슈팅 게임. 적·탄환·충돌 판정을 각각 관리하고, 화면 밖으로 나가거나 맞은 대상은 반복 처리되지 않게 안전하게 제거해. 적을 맞히면 점수가 오르고, 적과 부딪히거나 적이 바닥에 닿으면 목숨이 줄며, 목숨이 0이면 게임 오버로 처리해. 방향키와 화면 이동 버튼으로 움직이고, 스페이스바와 화면의 큰 발사 버튼으로 발사할 수 있게 해.',
+        },
+        {
+          id: 'tower',
+          label: '탑 높이 쌓기',
+          icon: '🏗️',
+          promptFragment:
+            '블록이 좌우로 움직일 때 알맞은 순간에 떨어뜨려 탑을 높이 쌓는 게임. 클릭·터치·스페이스바로 블록을 떨어뜨리고, 아래 블록과 겹친 부분만 다음 층의 발판으로 남겨. 겹치지 않은 부분은 잘라 떨어뜨리고, 전혀 겹치지 않으면 게임 오버로 처리해. 쌓은 층수를 점수로 크게 보여주고 탑이 높아져도 화면 안에서 현재 층을 볼 수 있게 카메라를 올려.',
+        },
+        {
+          id: 'numbermerge',
+          label: '숫자 합치기',
+          icon: '🔢',
+          promptFragment:
+            '4×4 격자에서 같은 숫자 타일을 합치는 게임. 처음에는 빈 칸 두 곳에 타일을 만들고, 한 방향으로 움직일 때 타일을 압축하고 같은 숫자를 합친 뒤 다시 압축해. 한 번 움직이는 동안 각 타일은 한 번만 합쳐지게 해. 실제로 격자가 움직였을 때만 빈 칸에 새 타일을 하나 만들고, 목표 숫자를 만들면 성공 화면을 보여줘. 빈 칸이 없고 상하좌우로 합칠 수도 없을 때만 게임 오버로 처리해. 방향키·스와이프·화면 방향 버튼을 모두 제공해.',
+        },
       ],
     },
     // STEP 2 — 모을 것 (genre=collect일 때만) [Chain Level 1]
@@ -102,7 +154,7 @@ export const game: ProgramType = {
       id: 'star_effect',
       role: 'appearance',
       question: '별을 잡을 때 어떤 효과가 날까?',
-      showIf: (a) => a.collectitem === 'star',
+      showIf: (a) => a.genre === 'collect' && a.collectitem === 'star',
       options: [
         {
           id: 'sparkle',
@@ -124,11 +176,11 @@ export const game: ProgramType = {
         },
       ],
     },
-    // STEP 4 — 주인공 (액션 장르만 — mole은 두더지가, rps/memory는 카드·손이 주인공이라 제외)
+    // STEP 4 — 주인공 (캐릭터를 직접 움직이는 장르만)
     {
       id: 'hero',
       role: 'appearance',
-      showIf: (a) => !['mole', 'rps', 'memory'].includes(String(a.genre)),
+      showIf: (a) => HERO_GENRES.has(String(a.genre)),
       question: '주인공 모습은?',
       options: [
         {
@@ -170,11 +222,11 @@ export const game: ProgramType = {
         },
       ],
     },
-    // STEP 5 — 조작 (액션 장르만 — mole/rps/memory는 클릭이 전부라 제외)
+    // STEP 5 — 조작 (기존 이동형 장르만 — 새 장르는 장르 규칙에 맞는 조작을 고정 제공)
     {
       id: 'control',
       role: 'control',
-      showIf: (a) => !['mole', 'rps', 'memory'].includes(String(a.genre)),
+      showIf: (a) => MOVEMENT_GENRES.has(String(a.genre)),
       question: '어떻게 조작할까?',
       options: [
         {
@@ -241,11 +293,11 @@ export const game: ProgramType = {
         },
       ],
     },
-    // STEP 7 — 점수 규칙 (액션 장르만 — rps는 승패 기록, memory는 시도 횟수로 별도 규칙)
+    // STEP 7 — 점수 규칙 (기존 액션 장르만 — 나머지는 장르별 점수 규칙 사용)
     {
       id: 'scoring',
       role: 'rule',
-      showIf: (a) => !['rps', 'memory'].includes(String(a.genre)),
+      showIf: (a) => LEGACY_ACTION_GENRES.has(String(a.genre)),
       question: '점수 규칙은?',
       options: [
         {
@@ -280,7 +332,7 @@ export const game: ProgramType = {
     {
       id: 'endcond',
       role: 'rule',
-      showIf: (a) => !['rps', 'memory'].includes(String(a.genre)),
+      showIf: (a) => LEGACY_ACTION_GENRES.has(String(a.genre)),
       question: '게임은 언제 끝날까?',
       options: [
         {
@@ -316,7 +368,7 @@ export const game: ProgramType = {
     {
       id: 'speed',
       role: 'flow',
-      showIf: (a) => !['rps', 'memory'].includes(String(a.genre)),
+      showIf: (a) => LEGACY_ACTION_GENRES.has(String(a.genre)),
       question: '게임 속도는?',
       options: [
         {
@@ -338,7 +390,7 @@ export const game: ProgramType = {
       id: 'speedup',
       role: 'flow',
       question: '얼마나 빨라질까?',
-      showIf: (a) => a.speed === 'fast',
+      showIf: (a) => LEGACY_ACTION_GENRES.has(String(a.genre)) && a.speed === 'fast',
       options: [
         {
           id: 'gentle',
@@ -364,7 +416,7 @@ export const game: ProgramType = {
     {
       id: 'powerup',
       role: 'rule',
-      showIf: (a) => !['rps', 'memory'].includes(String(a.genre)),
+      showIf: (a) => LEGACY_ACTION_GENRES.has(String(a.genre)),
       question: '파워업 아이템도 넣을까? (여러 개 골라도 돼)',
       multi: true,
       options: [
@@ -401,6 +453,7 @@ export const game: ProgramType = {
       role: 'output',
       question: '파워업을 잡을 때 어떤 효과를 줄까?',
       showIf: (a) => {
+        if (!LEGACY_ACTION_GENRES.has(String(a.genre))) return false;
         const p = a.powerup;
         if (Array.isArray(p)) return p.length > 0 && !p.includes('none');
         return false;
@@ -565,6 +618,157 @@ export const game: ProgramType = {
         { id: 'normal', label: '12장 (보통)', icon: '🙂', promptFragment: '카드는 12장(6쌍)으로 해.' },
         { id: 'hard', label: '16장 (어려워요)', icon: '🔥', promptFragment: '카드는 16장(8쌍)으로 어렵게 해.' },
         { id: 'choose', label: '고를 수 있게', icon: '🎚️', promptFragment: '시작 화면에서 쉬움(8장)·보통(12장)·어려움(16장)을 골라 시작할 수 있게 해.' },
+      ],
+    },
+    // STEP 13-e — 블록 쌓기: 블록 모습
+    {
+      id: 'blockstack_theme',
+      role: 'appearance',
+      question: '블록을 어떤 모습으로 꾸밀까?',
+      showIf: (a) => a.genre === 'blockstack',
+      options: [
+        { id: 'color', label: '알록달록 블록', icon: '🧱', promptFragment: '블록은 모양마다 선명한 색이 다른 알록달록 블록으로 꾸며.' },
+        { id: 'gem', label: '반짝이는 보석', icon: '💎', promptFragment: '블록을 빛나는 보석 조각처럼 꾸며.' },
+        { id: 'candy', label: '달콤한 사탕', icon: '🍬', promptFragment: '블록을 알록달록한 사탕 조각처럼 꾸며.' },
+        { id: 'space', label: '우주 블록', icon: '🌌', promptFragment: '블록을 별과 행성이 그려진 우주 블록처럼 꾸며.' },
+      ],
+    },
+    // STEP 13-f — 블록 쌓기: 난이도
+    {
+      id: 'blockstack_difficulty',
+      role: 'flow',
+      question: '블록은 얼마나 빠르게 내려올까?',
+      showIf: (a) => a.genre === 'blockstack',
+      options: [
+        { id: 'easy', label: '천천히', icon: '🐢', promptFragment: '블록이 초반에는 천천히 내려오게 해.' },
+        { id: 'normal', label: '보통 속도', icon: '🙂', promptFragment: '블록이 초반에는 보통 속도로 내려오게 해.' },
+        { id: 'fast', label: '빠르게', icon: '⚡', promptFragment: '블록이 초반부터 빠르게 내려오게 해.' },
+      ],
+    },
+    // STEP 13-g — 블록 깨기: 블록 모습
+    {
+      id: 'breakout_theme',
+      role: 'appearance',
+      question: '어떤 블록을 깨 볼까?',
+      showIf: (a) => a.genre === 'breakout',
+      options: [
+        { id: 'rainbow', label: '무지개 블록', icon: '🌈', promptFragment: '깨는 블록은 줄마다 색이 다른 무지개 블록으로 꾸며.' },
+        { id: 'space', label: '우주 블록', icon: '🪐', promptFragment: '깨는 블록을 별과 행성 모양의 우주 블록으로 꾸며.' },
+        { id: 'candy', label: '사탕 블록', icon: '🍭', promptFragment: '깨는 블록을 알록달록한 사탕처럼 꾸며.' },
+        { id: 'ice', label: '얼음 블록', icon: '🧊', promptFragment: '깨는 블록을 투명하고 반짝이는 얼음처럼 꾸며.' },
+      ],
+    },
+    // STEP 13-h — 블록 깨기: 난이도
+    {
+      id: 'breakout_difficulty',
+      role: 'flow',
+      question: '어느 정도로 어렵게 할까?',
+      showIf: (a) => a.genre === 'breakout',
+      options: [
+        { id: 'easy', label: '넓은 막대·느린 공', icon: '🐣', promptFragment: '막대를 넓게 하고 공을 느리게 움직여 쉽게 만들어.' },
+        { id: 'normal', label: '보통', icon: '🙂', promptFragment: '막대 너비와 공 속도를 보통으로 만들어.' },
+        { id: 'hard', label: '좁은 막대·빠른 공', icon: '🔥', promptFragment: '막대를 조금 좁게 하고 공을 빠르게 움직여 어렵게 만들어.' },
+      ],
+    },
+    // STEP 13-i — 꼬리 키우기: 먹이
+    {
+      id: 'snake_food',
+      role: 'goal',
+      question: '무엇을 먹고 꼬리를 키울까?',
+      showIf: (a) => a.genre === 'snake',
+      options: [
+        { id: 'fruit', label: '과일', icon: '🍎', promptFragment: '먹이는 사과·딸기 같은 알록달록한 과일이야.' },
+        { id: 'star', label: '별', icon: '⭐', promptFragment: '먹이는 반짝이는 별이야.' },
+        { id: 'cheese', label: '치즈', icon: '🧀', promptFragment: '먹이는 노란 치즈 조각이야.' },
+        { id: 'candy', label: '사탕', icon: '🍬', promptFragment: '먹이는 달콤한 사탕이야.' },
+      ],
+    },
+    // STEP 13-j — 꼬리 키우기: 속도
+    {
+      id: 'snake_difficulty',
+      role: 'flow',
+      question: '얼마나 빠르게 움직일까?',
+      showIf: (a) => a.genre === 'snake',
+      options: [
+        { id: 'easy', label: '천천히', icon: '🐢', promptFragment: '처음에는 한 칸씩 천천히 움직이게 해.' },
+        { id: 'normal', label: '보통 속도', icon: '🙂', promptFragment: '처음에는 한 칸씩 보통 속도로 움직이게 해.' },
+        { id: 'fast', label: '빠르게', icon: '⚡', promptFragment: '처음부터 한 칸씩 빠르게 움직이게 해.' },
+      ],
+    },
+    // STEP 13-k — 우주 슈팅: 적
+    {
+      id: 'shooter_enemy',
+      role: 'goal',
+      question: '어떤 적을 물리칠까?',
+      showIf: (a) => a.genre === 'shooter',
+      options: [
+        { id: 'alien', label: '외계인', icon: '👽', promptFragment: '적은 위에서 내려오는 장난꾸러기 외계인이야.' },
+        { id: 'meteor', label: '운석', icon: '☄️', promptFragment: '적은 위에서 내려오는 여러 크기의 운석이야.' },
+        { id: 'ghost', label: '우주 유령', icon: '👻', promptFragment: '적은 둥실둥실 내려오는 귀여운 우주 유령이야.' },
+        { id: 'balloon', label: '풍선', icon: '🎈', promptFragment: '적은 위쪽에서 움직이는 알록달록한 풍선이야.' },
+      ],
+    },
+    // STEP 13-l — 우주 슈팅: 발사체
+    {
+      id: 'shooter_weapon',
+      role: 'appearance',
+      question: '무엇을 발사할까?',
+      showIf: (a) => a.genre === 'shooter',
+      options: [
+        { id: 'laser', label: '레이저', icon: '🔴', promptFragment: '주인공은 짧고 밝은 레이저를 위로 발사해.' },
+        { id: 'star', label: '별빛', icon: '🌟', promptFragment: '주인공은 반짝이는 별빛을 위로 발사해.' },
+        { id: 'bubble', label: '비눗방울', icon: '🫧', promptFragment: '주인공은 둥근 비눗방울을 위로 발사해.' },
+        { id: 'firework', label: '불꽃', icon: '🎆', promptFragment: '주인공은 맞으면 작은 불꽃이 퍼지는 빛을 위로 발사해.' },
+      ],
+    },
+    // STEP 13-m — 탑 높이 쌓기: 재료
+    {
+      id: 'tower_material',
+      role: 'appearance',
+      question: '무엇으로 탑을 쌓을까?',
+      showIf: (a) => a.genre === 'tower',
+      options: [
+        { id: 'block', label: '나무 블록', icon: '🧱', promptFragment: '탑은 따뜻한 색의 나무 블록으로 쌓아.' },
+        { id: 'cake', label: '케이크', icon: '🎂', promptFragment: '탑은 크림과 과일이 올라간 케이크 층으로 쌓아.' },
+        { id: 'book', label: '책', icon: '📚', promptFragment: '탑은 알록달록한 책으로 쌓아.' },
+        { id: 'cloud', label: '구름', icon: '☁️', promptFragment: '탑은 폭신한 구름 조각으로 쌓아.' },
+      ],
+    },
+    // STEP 13-n — 탑 높이 쌓기: 이동 속도
+    {
+      id: 'tower_speed',
+      role: 'flow',
+      question: '블록은 얼마나 빠르게 움직일까?',
+      showIf: (a) => a.genre === 'tower',
+      options: [
+        { id: 'easy', label: '천천히', icon: '🐢', promptFragment: '떨어뜨릴 블록이 좌우로 천천히 움직이게 해.' },
+        { id: 'normal', label: '보통 속도', icon: '🙂', promptFragment: '떨어뜨릴 블록이 좌우로 보통 속도로 움직이게 해.' },
+        { id: 'fast', label: '빠르게', icon: '⚡', promptFragment: '떨어뜨릴 블록이 좌우로 빠르게 움직이게 해.' },
+      ],
+    },
+    // STEP 13-o — 숫자 합치기: 목표
+    {
+      id: 'numbermerge_goal',
+      role: 'goal',
+      question: '어떤 숫자까지 만들어 볼까?',
+      showIf: (a) => a.genre === 'numbermerge',
+      options: [
+        { id: '64', label: '64 (쉬워요)', icon: '🐣', promptFragment: '64 타일을 만들면 성공하게 해.' },
+        { id: '128', label: '128 (보통)', icon: '🙂', promptFragment: '128 타일을 만들면 성공하게 해.' },
+        { id: '256', label: '256 (어려워요)', icon: '🔥', promptFragment: '256 타일을 만들면 성공하게 해.' },
+      ],
+    },
+    // STEP 13-p — 숫자 합치기: 타일 모습
+    {
+      id: 'numbermerge_theme',
+      role: 'appearance',
+      question: '숫자 타일을 어떻게 꾸밀까?',
+      showIf: (a) => a.genre === 'numbermerge',
+      options: [
+        { id: 'rainbow', label: '무지개', icon: '🌈', promptFragment: '숫자가 커질수록 타일 색이 달라지는 무지개 모습으로 꾸며.' },
+        { id: 'space', label: '우주', icon: '🪐', promptFragment: '숫자 타일을 별과 행성이 떠오르는 우주 모습으로 꾸며.' },
+        { id: 'candy', label: '사탕', icon: '🍬', promptFragment: '숫자 타일을 알록달록한 사탕 모습으로 꾸며.' },
+        { id: 'nature', label: '숲', icon: '🌿', promptFragment: '숫자 타일을 잎과 꽃이 있는 자연 모습으로 꾸며.' },
       ],
     },
     // STEP 14 — 이름 등록

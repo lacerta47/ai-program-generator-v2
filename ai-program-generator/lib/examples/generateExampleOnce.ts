@@ -2,6 +2,7 @@ import type { GeneratedCode, GenerationMeta } from '@/lib/ai/types';
 import { getAIProvider } from '@/lib/ai/provider';
 import { SYSTEM_PROMPTS, LOGIC_META_INSTRUCTION } from '@/lib/ai/prompts';
 import { getTypeGuide } from '@/lib/ai/typeGuides';
+import { getGenerationQuality } from '@/lib/ai/modelPolicy';
 
 /** 예시용 서버 생성 — /easy와 동일 톤(survey 시스템 프롬프트 + 유형별 제작 규칙 + 교육 메타). done 청크의 code·meta 반환.
  *  무료 소진 시 gemini.ts가 UserFacingError를 던지며 그대로 위로 전파(호출부가 exhausted 처리). */
@@ -11,8 +12,15 @@ export async function generateExampleOnce(
   programType?: string,
 ): Promise<{ code: GeneratedCode; meta: GenerationMeta }> {
   const system = SYSTEM_PROMPTS['survey'] + getTypeGuide(programType, prompt) + LOGIC_META_INSTRUCTION;
-  // fast: 예시는 속도 우선(thinking off·출력상한↓) — 실사용 /api/generate는 fast 미설정으로 기본 품질 유지.
-  for await (const chunk of getAIProvider().generateStream({ prompt, system, mode: 'generate', fast: true, tier: 'free' }, signal)) {
+  // fast: 예시는 속도 우선(thinking low·출력상한↓) — 실사용 /api/generate는 fast 미설정으로 기본 품질 유지.
+  for await (const chunk of getAIProvider().generateStream({
+    prompt,
+    system,
+    mode: 'generate',
+    quality: getGenerationQuality(programType, 'free'),
+    fast: true,
+    tier: 'free',
+  }, signal)) {
     if (chunk.type === 'done') {
       return {
         code: chunk.code,

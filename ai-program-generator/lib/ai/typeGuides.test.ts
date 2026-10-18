@@ -42,8 +42,23 @@ describe('getTypeGuide', () => {
     expect(getTypeGuide('roulette')).toMatch(/추가 원, 타원/);
     expect(getTypeGuide('roulette')).toMatch(/390px 화면/);
     expect(getTypeGuide('roulette')).toMatch(/당첨 결과: 항목명/);
+    expect(getTypeGuide('game', '위에서 장애물이 떨어지는 피하기 게임.')).toMatch(/게임 공통 안정성 규칙/);
     expect(getTypeGuide('quiz')).toBe('');
     expect(getTypeGuide(undefined)).toBe('');
+  });
+
+  it('게임에는 공통 규칙과 선택된 장르 규칙만 붙인다', () => {
+    const blockStack = getTypeGuide('game', '10×18 고정 격자에서 여러 모양의 블록이 내려오는 블록 쌓기 게임.');
+    const breakout = getTypeGuide('game', '막대를 움직여 공을 튕기고 위쪽 블록을 깨는 게임.');
+
+    expect(blockStack).toMatch(/DOM 요소 찾기 → 게임 상태와 배열 초기화 → 첫 화면 그리기/);
+    expect(blockStack).toMatch(/첫 render\/draw 호출보다 먼저/);
+    expect(blockStack).toMatch(/Array\.from\(\{ length: 18 \}/);
+    expect(blockStack).toMatch(/y < 0이면 보드 행을 읽지 말고/);
+    expect(blockStack).toMatch(/보드 초기화 → 첫 render\/draw/);
+    expect(breakout).toMatch(/게임 공통 안정성 규칙/);
+    expect(breakout).not.toMatch(/블록 쌓기 필수 구현 규칙/);
+    expect(breakout).not.toMatch(/Array\.from\(\{ length: 18 \}/);
   });
 
   it('소리를 요구한 유형에는 공통 오디오 규칙을 조건부로 붙인다', () => {

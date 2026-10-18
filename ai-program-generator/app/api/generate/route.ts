@@ -12,6 +12,7 @@ import { readEffectiveLimit } from '@/lib/admin/usageConfig';
 import { reserveStudentQuota, refundStudentQuota } from '@/lib/server/studentQuota';
 import { allowGenerate } from '@/lib/server/genRate';
 import { UserFacingError, GateError } from '@/lib/ai/errors';
+import { getGenerationQuality } from '@/lib/ai/modelPolicy';
 import { recordGateFail } from '@/lib/server/gateStats';
 
 // AI 호출은 반드시 서버에서만 실행한다(키 노출 방지).
@@ -98,7 +99,7 @@ export async function POST(req: NextRequest) {
     programType?: unknown;
   };
   const promptVariant: SystemPromptVariant = variant === 'survey' ? 'survey' : 'default';
-  // 선택지 만들기의 유형 id — 유형별 참고 예시 선택에만 쓴다. 모르는 값이면 무시(공통 예시로 폴백).
+  // 선택지 만들기의 유형 id — 참고 예시·유형 가이드·모델 정책에 쓴다. 모르는 값이면 무시한다.
   const exemplarType = promptVariant === 'survey' && isProgramTypeId(programType) ? programType : undefined;
 
   if (typeof prompt !== 'string' || !prompt.trim()) {
@@ -224,7 +225,14 @@ export async function POST(req: NextRequest) {
       const send = (obj: unknown) =>
         controller.enqueue(encoder.encode(JSON.stringify(obj) + '\n'));
       try {
-        for await (const chunk of provider.generateStream({ prompt: finalPrompt, system, mode, photo: parsedPhoto, tier: 'paid' }, req.signal)) {
+        for await (const chunk of provider.generateStream({
+          prompt: finalPrompt,
+          system,
+          mode,
+          quality: getGenerationQuality(exemplarType, 'paid'),
+          photo: parsedPhoto,
+          tier: 'paid',
+        }, req.signal)) {
           if (req.signal.aborted) throw new Error('ABORTED');
           if (chunk.type === 'done') {
             recordTokenUsage(day, chunk.usage); // 토큰 사용량 집계(비용 실측)

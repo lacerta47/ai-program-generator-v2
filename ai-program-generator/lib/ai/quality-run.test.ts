@@ -12,6 +12,7 @@ import { PROGRAM_TYPES } from '../survey/programs';
 import { buildPreviewDoc } from '../program';
 import { QuotaExhaustedError } from './errors';
 import { buildExemplarBlock, exemplarCodeReference, type Exemplar } from './exemplars';
+import { getGenerationQuality } from './modelPolicy';
 
 vi.mock('./validateCode', () => ({ validateGeneratedCode: () => null, gateReasonKey: () => '' }));
 vi.mock('server-only', () => ({}));
@@ -257,7 +258,7 @@ it.skipIf(process.env.LUN_QUALITY_RUN !== '1')('paired generation and sandbox ev
         };
         const start = Date.now();
         try {
-          for await (const chunk of new GeminiProvider().generateStream({ prompt: generationPrompt, system: config.prompts.SYSTEM_PROMPTS.survey + config.typeGuides.getTypeGuide(job.type, job.prompt) + config.prompts.LOGIC_META_INSTRUCTION, mode: 'generate', tier: 'paid' }, AbortSignal.timeout(180000))) {
+          for await (const chunk of new GeminiProvider().generateStream({ prompt: generationPrompt, system: config.prompts.SYSTEM_PROMPTS.survey + config.typeGuides.getTypeGuide(job.type, job.prompt) + config.prompts.LOGIC_META_INSTRUCTION, mode: 'generate', quality: getGenerationQuality(job.type, 'paid'), tier: 'paid' }, AbortSignal.timeout(180000))) {
             if (chunk.type === 'done') { row.code = chunk.code; row.usage = chunk.usage; row.meta = chunk.meta; }
           }
           if (!row.code) row.generationError = 'no-done';
