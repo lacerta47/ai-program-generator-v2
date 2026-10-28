@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { putPreview } from '@/lib/preview-store';
-import { adminAuth } from '@/lib/firebase/admin';
 import { allowFixedWindow } from '@/lib/server/rateLimit';
+import { verifyActiveToken } from '@/lib/server/verifyActiveToken';
 
 export const runtime = 'nodejs';
 
@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
   if (!idToken) return NextResponse.json({ error: '로그인이 필요해요.' }, { status: 401 });
   let uid: string;
   try {
-    uid = (await adminAuth.verifyIdToken(idToken)).uid;
+    uid = (await verifyActiveToken(idToken)).uid;
   } catch {
     return NextResponse.json({ error: '로그인이 만료됐어요. 다시 로그인해 주세요.' }, { status: 401 });
   }

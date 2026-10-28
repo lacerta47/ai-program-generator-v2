@@ -71,13 +71,24 @@ export async function POST(req: NextRequest) {
   }
 
   const email = `${loginId}@${DOMAIN}`;
+  let createdUid: string | undefined;
   try {
     const user = await adminAuth.createUser({ email, password });
+    createdUid = user.uid;
     await adminAuth.setCustomUserClaims(user.uid, { teacher: true });
-    await adminDb.doc(`teachers/${user.uid}`).set({ name, totalQuota, schoolCode: loginId, createdAt: Date.now() });
-    await adminDb.doc(`schools/${loginId}`).set({ name, teacherUid: user.uid });
+    const batch = adminDb.batch();
+    batch.set(adminDb.doc(`teachers/${user.uid}`), { name, totalQuota, schoolCode: loginId, createdAt: Date.now() });
+    batch.set(adminDb.doc(`schools/${loginId}`), { name, teacherUid: user.uid });
+    await batch.commit();
     return NextResponse.json({ uid: user.uid, email, password });
   } catch (e) {
+    if (createdUid) {
+      try {
+        await adminAuth.deleteUser(createdUid);
+      } catch (rollbackError) {
+        console.error('선생님 생성 롤백 실패:', createdUid, rollbackError);
+      }
+    }
     const code = (e as { code?: string }).code ?? '';
     if (code === 'auth/email-already-exists') {
       return NextResponse.json({ error: '이미 있는 아이디예요.' }, { status: 409 });

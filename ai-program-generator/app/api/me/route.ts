@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminAuth } from '@/lib/firebase/admin';
 import { deleteAccountCascade } from '@/lib/server/deleteAccount';
+import { verifyActiveToken } from '@/lib/server/verifyActiveToken';
 
 export const runtime = 'nodejs';
 
@@ -14,7 +14,7 @@ export async function DELETE(req: NextRequest) {
 
   let uid: string;
   try {
-    const decoded = await adminAuth.verifyIdToken(idToken);
+    const decoded = await verifyActiveToken(idToken);
     if (decoded.admin === true || decoded.teacher === true || decoded.student === true) {
       return NextResponse.json({ error: '이 계정은 탈퇴할 수 없어요.' }, { status: 403 });
     }

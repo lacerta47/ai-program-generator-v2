@@ -13,7 +13,7 @@ import 'server-only';
 // frame-ancestors: 우리 앱 오리진만 이 미리보기를 iframe으로 감쌀 수 있게 제한
 //   (미리보기는 교차 사이트 오리진에서 서빙되므로 'self'만으로는 부족 — 앱 오리진을 명시)
 
-const APP = process.env.NEXT_PUBLIC_APP_ORIGIN || 'https://ai-program-generator-v2.vercel.app';
+const APP = process.env.NEXT_PUBLIC_APP_ORIGIN || 'https://eduai-lun.co.kr';
 // Vercel 프리뷰 배포는 배포마다 URL이 달라 위 APP과 다르다. 그 배포에서도 미리보기가 뜨도록
 // 현재 배포 자신의 오리진을 허용목록에 추가한다(프로덕션에선 APP과 동일하거나 무해).
 const SELF_DEPLOY = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : '';
@@ -21,6 +21,7 @@ const SELF_DEPLOY = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}`
 const FRAME_ANCESTORS = [
   "frame-ancestors 'self'",
   APP,
+  'https://ai-program-generator-v2.vercel.app',
   SELF_DEPLOY,
   'http://localhost:3000',
   'http://127.0.0.1:3000',
@@ -28,7 +29,20 @@ const FRAME_ANCESTORS = [
   .filter(Boolean)
   .join(' ');
 
-export const PREVIEW_CSP = `sandbox allow-scripts; ${FRAME_ANCESTORS}`;
+// 생성 코드는 인라인으로 실행하되 외부 통신과 외부 리소스 로딩은 차단한다.
+export const PREVIEW_CSP = [
+  'sandbox allow-scripts',
+  FRAME_ANCESTORS,
+  "default-src 'none'",
+  "script-src 'unsafe-inline'",
+  "style-src 'unsafe-inline'",
+  'img-src data: blob:',
+  'media-src data: blob:',
+  'font-src data:',
+  "connect-src 'none'",
+  "form-action 'none'",
+  "base-uri 'none'",
+].join('; ');
 
 /** 미리보기 응답 공통 헤더(캐시 금지). 성공 응답에서 캐시가 필요하면 Cache-Control만 덮어쓴다. */
 export const PREVIEW_SECURITY_HEADERS = {

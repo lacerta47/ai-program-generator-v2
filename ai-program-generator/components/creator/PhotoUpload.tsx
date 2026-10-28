@@ -3,15 +3,31 @@ import { useRef, useState } from 'react';
 import { ImagePlus, X } from 'lucide-react';
 import { compressImage } from '@/lib/client/imageCompress';
 import Button from '@/components/ui/Button';
+import { authedJson } from '@/lib/client/authedFetch';
 
 /** 사진 1장 업로드(압축 후 data-URI). 학생/교사 생성 화면에만 렌더. value/onChange로 부모가 상태 보유. */
 export default function PhotoUpload({ value, onChange }: { value: string | null; onChange: (v: string | null) => void }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
+  const [consenting, setConsenting] = useState(false);
   const [error, setError] = useState('');
   // 사진 국외 이전(→ Google Gemini, 미국) 별도 동의. 체크해야만 첨부(=전송)할 수 있어,
   // 동의 없이 사진이 해외 AI로 전송되는 일이 없다. (개인정보처리방침 §5 '선택 이전' 대응)
   const [agreed, setAgreed] = useState(false);
+  async function agree(checked: boolean) {
+    setAgreed(false);
+    if (!checked) return;
+    setConsenting(true);
+    setError('');
+    try {
+      await authedJson('/api/me/photo-consent', { method: 'POST' });
+      setAgreed(true);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : '동의를 저장하지 못했어요.');
+    } finally {
+      setConsenting(false);
+    }
+  }
   async function pick(file: File) {
     setBusy(true);
     setError('');
@@ -44,7 +60,8 @@ export default function PhotoUpload({ value, onChange }: { value: string | null;
             <input
               type="checkbox"
               checked={agreed}
-              onChange={(e) => setAgreed(e.target.checked)}
+              onChange={(e) => void agree(e.target.checked)}
+              disabled={consenting}
               className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--brand)]"
             />
             <span>
@@ -59,11 +76,11 @@ export default function PhotoUpload({ value, onChange }: { value: string | null;
             type="button"
             variant="soft"
             onClick={() => inputRef.current?.click()}
-            disabled={busy || !agreed}
+            disabled={busy || consenting || !agreed}
             title={!agreed ? '먼저 사진 전송 동의에 체크해 주세요.' : undefined}
             className="w-fit"
           >
-            <ImagePlus size={18} aria-hidden /> {busy ? '사진 줄이는 중…' : '사진 올리기(선택)'}
+            <ImagePlus size={18} aria-hidden /> {consenting ? '동의 저장 중…' : busy ? '사진 줄이는 중…' : '사진 올리기(선택)'}
           </Button>
         </>
       )}

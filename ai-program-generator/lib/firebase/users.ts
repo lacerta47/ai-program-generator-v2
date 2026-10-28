@@ -1,14 +1,11 @@
-import { doc, getDoc, runTransaction, serverTimestamp, Timestamp } from 'firebase/firestore';
+import { doc, getDoc } from 'firebase/firestore';
 import { db } from './client';
-import { hasProfanity, isReservedNickname } from '@/lib/moderation';
+import { authedFetch } from '@/lib/client/authedFetch';
 import type { UserProfile } from './types';
 
 const COL = 'users';
-const NICK_COL = 'nicknames';
 
 export const NICKNAME_COOLDOWN_DAYS = 15;
-const DAY_MS = 24 * 60 * 60 * 1000;
-const COOLDOWN_MS = NICKNAME_COOLDOWN_DAYS * DAY_MS;
 
 export type NicknameFailReason = 'taken' | 'cooldown' | 'profanity' | 'reserved';
 
@@ -29,51 +26,19 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
   return snap.exists() ? (snap.data() as UserProfile) : null;
 }
 
-const keyOf = (name: string) => name.trim().toLowerCase();
-
 /**
- * 닉네임 설정/변경.
- * - 유일성: nicknames/{소문자별명} 문서를 계정이 영구 점유(다른 계정은 못 가져감, 재활용 없음)
- * - 변경 쿨다운: 마지막 변경 후 15일 이내엔 변경 불가
- *   (변경시각은 서버 타임스탬프로 저장 → 규칙에서도 request.time + duration 으로 강제)
- * - 같은 별명 재저장은 no-op
+ * 닉네임 설정/변경. 서버 API가 ID 토큰의 uid로 점유·15일 쿨다운을 트랜잭션에서 검사한다.
+ * 같은 별명 재저장은 no-op.
  */
 export async function claimNickname(uid: string, displayName: string): Promise<void> {
-  const name = displayName.trim();
-  const key = keyOf(name);
-
-  // 비속어 별명 차단(트랜잭션 전에 먼저 검사)
-  if (await hasProfanity(name)) throw new NicknameError('profanity');
-  // 관리자/운영자 사칭 예약어 차단
-  if (isReservedNickname(name)) throw new NicknameError('reserved');
-
-  await runTransaction(db, async (tx) => {
-    const profileRef = doc(db, COL, uid);
-    const nickRef = doc(db, NICK_COL, key);
-    const profileSnap = await tx.get(profileRef);
-    const nickSnap = await tx.get(nickRef);
-
-    const profile = profileSnap.data() as UserProfile | undefined;
-
-    // 같은 이름이면 변경 없음
-    if (profile?.nickname === name) return;
-
-    // 이미 다른 별명을 쓰던 중이면(=변경) 쿨다운 확인
-    // (구버전 number 타임스탬프는 Timestamp가 아니므로 1회 통과 후 새로 기록됨)
-    const last = profile?.nicknameUpdatedAt;
-    if (profile?.nickname && last instanceof Timestamp) {
-      const elapsed = Date.now() - last.toMillis();
-      if (elapsed < COOLDOWN_MS) {
-        throw new NicknameError('cooldown', Math.ceil((COOLDOWN_MS - elapsed) / DAY_MS));
-      }
-    }
-
-    // 다른 계정이 이미 점유한 별명이면 거부
-    if (nickSnap.exists() && (nickSnap.data() as { uid: string }).uid !== uid) {
-      throw new NicknameError('taken');
-    }
-
-    if (!nickSnap.exists()) tx.set(nickRef, { uid });
-    tx.set(profileRef, { nickname: name, nicknameUpdatedAt: serverTimestamp() }, { merge: true });
+  void uid; // 서버가 ID 토큰에서 실제 uid를 확인한다.
+  const res = await authedFetch('/api/me/nickname', {
+    method: 'POST',
+    body: JSON.stringify({ nickname: displayName }),
   });
+  const result = await res.json() as { reason?: NicknameFailReason; daysLeft?: number; error?: string };
+  if (!res.ok) {
+    if (result.reason) throw new NicknameError(result.reason, result.daysLeft);
+    throw new Error(result.error ?? '별명을 정하지 못했어요.');
+  }
 }

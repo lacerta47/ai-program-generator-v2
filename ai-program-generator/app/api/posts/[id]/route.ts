@@ -1,8 +1,45 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminAuth, adminDb } from '@/lib/firebase/admin';
+import { adminDb } from '@/lib/firebase/admin';
 import { deletePostSubcollections } from '@/lib/server/deletePost';
+import { PostWriteError, documentId, preparePostEdit } from '@/lib/server/postWrite';
+import { ProfanityError } from '@/lib/moderation';
+import { verifyActiveToken } from '@/lib/server/verifyActiveToken';
 
 export const runtime = 'nodejs';
+
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const header = req.headers.get('authorization') ?? '';
+  const token = header.startsWith('Bearer ') ? header.slice(7) : '';
+  if (!token) return NextResponse.json({ error: '로그인이 필요해요.' }, { status: 401 });
+  let user;
+  try {
+    user = await verifyActiveToken(token);
+  } catch {
+    return NextResponse.json({ error: '로그인이 만료됐어요. 다시 로그인해 주세요.' }, { status: 401 });
+  }
+  const { id } = await params;
+  try {
+    documentId(id, '작품');
+    const ref = adminDb.doc(`posts/${id}`);
+    const post = await ref.get();
+    if (!post.exists) return NextResponse.json({ error: '글을 찾을 수 없어요.' }, { status: 404 });
+    const edit = await preparePostEdit(await req.json(), user, {
+      ownerUid: post.data()?.ownerUid as string,
+      authorName: post.data()?.authorName as string,
+    });
+    if (Buffer.byteLength(JSON.stringify({ ...post.data(), ...edit }), 'utf8') > 900000) {
+      return NextResponse.json({ error: '작품이 너무 커요. 사진이나 코드를 줄여 주세요.' }, { status: 413 });
+    }
+    await ref.update(edit);
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    if (error instanceof PostWriteError) return NextResponse.json({ error: error.message }, { status: error.status });
+    if (error instanceof ProfanityError) return NextResponse.json({ error: error.message }, { status: 400 });
+    if (error instanceof SyntaxError) return NextResponse.json({ error: '작품 정보가 올바르지 않아요.' }, { status: 400 });
+    console.error('게시물 수정 실패:', error);
+    return NextResponse.json({ error: '작품을 고치지 못했어요.' }, { status: 500 });
+  }
+}
 
 // 글 삭제(본인 또는 관리자) — 글과 함께 그 글의 신고(reports)도 캐스케이드 삭제한다.
 // 클라 직접삭제(deleteDoc)는 reports를 못 지워 고아가 쌓이므로(reports delete는 admin 전용),
@@ -14,7 +51,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   let uid: string;
   let isAdmin = false;
   try {
-    const decoded = await adminAuth.verifyIdToken(idToken);
+    const decoded = await verifyActiveToken(idToken);
     uid = decoded.uid;
     isAdmin = decoded.admin === true;
   } catch {
@@ -23,6 +60,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
 
   const { id } = await params;
   try {
+    documentId(id, '작품');
     const postRef = adminDb.doc(`posts/${id}`);
     const snap = await postRef.get();
     if (!snap.exists) return NextResponse.json({ error: '글을 찾을 수 없어요.' }, { status: 404 });
@@ -43,6 +81,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     }
     return NextResponse.json({ ok: true });
   } catch (e) {
+    if (e instanceof PostWriteError) return NextResponse.json({ error: e.message }, { status: e.status });
     console.error('[/api/posts/[id]] 삭제 실패:', e);
     return NextResponse.json({ error: '삭제하지 못했어요.' }, { status: 500 });
   }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { requireAdmin } from '@/lib/admin/requireAdmin';
 import { deleteAccountCascade } from '@/lib/server/deleteAccount';
+import { setAccountDisabled } from '@/lib/server/accountStatus';
 
 export const runtime = 'nodejs';
 
@@ -47,7 +48,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ ui
       await adminDb.doc(`teachers/${uid}`).set({ totalQuota: q }, { merge: true });
     }
     if (typeof b.disabled === 'boolean') {
-      await adminAuth.updateUser(uid, { disabled: b.disabled });
+      await setAccountDisabled(uid, b.disabled);
     }
     return NextResponse.json({ ok: true });
   } catch (e) {

@@ -5,8 +5,11 @@ const { verifyIdToken } = vi.hoisted(() => ({
   verifyIdToken: vi.fn(),
 }));
 
+vi.mock('server-only', () => ({}));
+
 vi.mock('@/lib/firebase/admin', () => ({
   adminAuth: { verifyIdToken },
+  adminDb: { doc: () => ({ get: async () => ({ data: () => undefined }) }) },
 }));
 
 import { requireAdmin } from './requireAdmin';

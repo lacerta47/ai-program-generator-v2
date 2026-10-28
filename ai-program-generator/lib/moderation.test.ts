@@ -24,6 +24,7 @@ describe('hasProfanity — korcen + 보강 목록', () => {
     expect(await hasProfanity('Nigeria')).toBe(false);
     expect(await hasProfanity('물걸레 로봇')).toBe(false);
     expect(await hasProfanity('1등 신나는 게임')).toBe(false);
+    expect(await hasProfanity('!!!')).toBe(false);
   });
 });
 
@@ -38,6 +39,7 @@ describe('findProfanity — 걸린 단어 짚기', () => {
 
   it("공백 우회처럼 단어 하나로 특정 못 하면 ''", async () => {
     expect(await findProfanity('씨 발')).toBe('');
+    expect(await findProfanity('씨 발 !!!')).toBe('');
   });
 });
 

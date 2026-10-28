@@ -23,6 +23,7 @@ export function createStudents(body: {
   password: string;
   limitType: 'daily' | 'total';
   limitValue: number;
+  guardianConsentConfirmed: true;
 }): Promise<{ created: { email: string; hakbun: string; password: string }[]; skipped: { hakbun: string; reason: string }[]; schoolCode: string }> {
   return authedJson('/api/teacher/students', {
     method: 'POST',

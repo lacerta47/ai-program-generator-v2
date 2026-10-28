@@ -3,8 +3,7 @@
 // 엔진: korcen(한국어 비속어 — 띄어쓰기/초성/숫자삽입 등 우회표기 탐지, 오탐 적음)
 //   + 보강 목록: korcen이 놓치는 표기(예: '씨발' 계열)와 영어 비속어를 부분일치로 추가 차단.
 //
-// 이 검사는 클라이언트 1차 방어선이다(입력 시점 차단). 데이터 계층 write 함수에서 호출해
-// 모든 작성 경로가 같은 관문을 지나게 한다. (악의적 우회까지 막으려면 추후 서버 강제 필요)
+// 클라이언트가 먼저 안내하고, 게시물·닉네임 서버 API가 저장 전에 다시 검사한다.
 
 // korcen은 CommonJS라 dynamic import 시 named/ default 위치가 번들러에 따라 다를 수 있어 방어적으로 해석.
 type KorcenApi = {
@@ -84,6 +83,7 @@ export async function hasProfanity(text: string): Promise<boolean> {
   // 원문 + 문장부호 제거본(공백 유지) 양쪽에 korcen 적용 — '병,신' 같은 문장부호 우회까지 차단.
   // 카테고리: 욕설/성적/비하/인종/패드립/미성년 (정치·외국어는 오탐 우려로 제외).
   for (const s of [t, dePunctKo(t)]) {
+    if (!s.trim()) continue;
     if (k.check(s) || k.sexual(s) || k.belittle(s) || k.race(s) || k.parents(s) || k.minor(s)) {
       return true;
     }

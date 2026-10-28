@@ -30,7 +30,7 @@ jobs:
       - name: npm audit (High/Critical 추적)
         run: |
           # audit는 취약점이 있으면 비-0으로 끝나므로 || true로 받고 JSON을 직접 판정
-          npm audit --omit=dev --json > audit.json || true
+          npm audit --json > audit.json || true
 
           node <<'EOF' >> "$GITHUB_STEP_SUMMARY"
           const fs = require('fs');

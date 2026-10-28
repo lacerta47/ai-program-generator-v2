@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminAuth, adminDb } from '@/lib/firebase/admin';
+import { adminDb } from '@/lib/firebase/admin';
 import { ensureTeacherBoard } from '@/lib/server/teacherBoard';
+import { verifyActiveToken } from '@/lib/server/verifyActiveToken';
 
 export const runtime = 'nodejs';
 
@@ -11,7 +12,7 @@ export async function GET(req: NextRequest) {
 
   let uid: string;
   try {
-    const decoded = await adminAuth.verifyIdToken(idToken);
+    const decoded = await verifyActiveToken(idToken);
     if (decoded.student !== true) {
       return NextResponse.json({ error: '학생만 쓸 수 있어요.' }, { status: 403 });
     }

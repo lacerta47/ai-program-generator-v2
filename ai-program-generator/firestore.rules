@@ -1,20 +1,20 @@
 rules_version = '2';
 
 // AI 프로그램 생성기 — Firestore 보안 규칙
-// 핵심: 게시물은 공개 읽기, 작성은 로그인 사용자, 수정/삭제는 "작성자 본인 또는 관리자"만.
+// 핵심: 게시물은 공개 읽기, 작성·수정은 인증된 서버 API, 삭제는 서버 API에서 권한 확인.
 // 관리자는 Auth custom claim { admin: true } 로 판별 (scripts/set-admin.mjs 로 부여).
 // usage(생성 한도 카운터)는 서버 Admin SDK 전용 — 클라이언트 접근 규칙 없음(기본 거부).
 //
 // ── 설계 경계 (리뷰·유지보수 주의) ──────────────────────────────────
-// posts·categories·users·nicknames는 클라가 SDK로 직접 write 한다(게시물 생성을 서버 경유로
-// 돌리는 길은 의도적으로 비채택). → 크기·필드 화이트리스트·사칭(notImpersonating)·교실보드
-// (boardTeacherUid) 검증이 많아 보여도 규칙이 '유일한' 강제점이다. 서버 라우트로 옮기면 보안
-// 경계 자체가 사라지므로 일부러 여기 둔다(현 규칙량은 Firestore 복잡도 한계와는 무관하게 여유).
+// 게시물 생성·수정은 서버 API에서 검열·권한·형태를 검사하고 Admin SDK로 기록한다.
+// 클라이언트 SDK의 직접 쓰기는 차단한다. 다른 컬렉션의 규칙은 아래 조건을 유지한다.
 service cloud.firestore {
   match /databases/{database}/documents {
 
     function isSignedIn() {
-      return request.auth != null;
+      return request.auth != null
+        && (!exists(/databases/$(database)/documents/accountStatus/$(request.auth.uid))
+          || get(/databases/$(database)/documents/accountStatus/$(request.auth.uid)).data.get('blocked', false) != true);
     }
     function isAdmin() {
       return isSignedIn() && request.auth.token.admin == true;
@@ -22,104 +22,10 @@ service cloud.firestore {
     function isOwner(uid) {
       return isSignedIn() && request.auth.uid == uid;
     }
-    // 이메일 인증 완료(Google 로그인은 자동 true). 무분별 가입·게시 양산 차단용.
-    function isVerified() {
-      return isSignedIn() && request.auth.token.email_verified == true;
-    }
-    // 발급 계정(선생님/학생) — 가짜 이메일이라 email_verified 없이도 쓰기 허용(역할 기반).
-    function isRoleAccount() {
-      return isSignedIn() && (request.auth.token.teacher == true || request.auth.token.student == true);
-    }
-
-    // code 객체 형태/크기 검증 (Firestore 문서 1MiB 한도 보호)
-    function validCode(c) {
-      return c.keys().hasOnly(['html', 'css', 'javascript'])
-        && c.html is string && c.html.size() <= 150000
-        && c.css is string && c.css.size() <= 150000
-        && c.javascript is string && c.javascript.size() <= 150000;
-    }
-    // plan(계획서 5필드) 검증 — 옵셔널이라 호출부에서 존재 시에만 검사
-    function validPlan(p) {
-      return p.keys().hasOnly(['name', 'look', 'usage', 'how', 'etc'])
-        && p.name is string && p.name.size() <= 2000
-        && p.look is string && p.look.size() <= 5000
-        && p.usage is string && p.usage.size() <= 5000
-        && p.how is string && p.how.size() <= 5000
-        && p.etc is string && p.etc.size() <= 5000;
-    }
-
-    // 작성자명·닉네임 운영자 사칭 차단(예약어 부분일치·대소문자 무시). 클라 isReservedNickname의 서버 강제판.
-    // 띄어쓰기 우회(관 리 자)까지는 못 막지만 직접 SDK로 "관리자" 박는 흔한 사칭은 규칙 단에서 거부.
-    function notImpersonating(s) {
-      return !s.matches('(?i).*(관리자|운영자|운영진|운영팀|관리팀|매니저|스태프|admin|administrator|manager|staff|moderator|official).*');
-    }
-
-    // 게시물 생성 문서 형태/크기 검증
-    function validPost(d) {
-      return d.keys().hasOnly(['title', 'categoryId', 'ownerUid', 'authorName', 'code', 'plan', 'prompt', 'createdAt', 'updatedAt', 'forkedFrom', 'forkedFromAuthor', 'boardTeacherUid', 'photo', 'logicSummary', 'conceptTags', 'logicLine', 'conceptNotes'])
-        && d.title is string && d.title.size() > 0 && d.title.size() <= 100
-        && d.categoryId is string && d.categoryId.size() > 0 && d.categoryId.size() <= 128
-        && d.ownerUid is string
-        && d.authorName is string && d.authorName.size() > 0 && d.authorName.size() <= 20 && notImpersonating(d.authorName)
-        && d.prompt is string && d.prompt.size() <= 50000
-        // createdAt 미래조작(상단 영구고정) 차단 — 보드가 createdAt desc 정렬이라 미래값이면 도배. 신고 규칙과 동일 상한.
-        && d.createdAt is number && d.createdAt <= request.time.toMillis() + 3600000
-        && validCode(d.code)
-        && (!('plan' in d) || validPlan(d.plan))
-        && (!('forkedFrom' in d) || (d.forkedFrom is string && d.forkedFrom.size() <= 128))
-        && (!('forkedFromAuthor' in d) || (d.forkedFromAuthor is string && d.forkedFromAuthor.size() <= 20))
-        && (d.boardTeacherUid == null || (d.boardTeacherUid is string && d.boardTeacherUid.size() <= 128))
-        && (!('photo' in d) || (
-             d.photo is string
-             && d.photo.matches('data:image/.*')
-             && d.photo.size() <= 350000
-             && d.boardTeacherUid != null
-           ))
-        // 교육 메타(Phase 0) — 옵셔널. 로직 설명 문자열 + 개념 태그 리스트(길이만 제한, 표시용).
-        && (!('logicSummary' in d) || (d.logicSummary is string && d.logicSummary.size() <= 2000))
-        && (!('conceptTags' in d) || (d.conceptTags is list && d.conceptTags.size() <= 5))
-        // 교육(#8) — 아이가 직접 쓴 핵심 한 줄(옵셔널, 한 줄 분량 제한).
-        && (!('logicLine' in d) || (d.logicLine is string && d.logicLine.size() <= 200))
-        // 개념별 '내 작품 예시'(옵셔널) — 키 ⊆ 5개념, 각 값 string·≤60자.
-        && (!('conceptNotes' in d) || (
-             d.conceptNotes is map
-             && d.conceptNotes.keys().hasOnly(['순서','조건','반복','입력','출력'])
-             && (!('순서' in d.conceptNotes) || (d.conceptNotes['순서'] is string && d.conceptNotes['순서'].size() <= 60))
-             && (!('조건' in d.conceptNotes) || (d.conceptNotes['조건'] is string && d.conceptNotes['조건'].size() <= 60))
-             && (!('반복' in d.conceptNotes) || (d.conceptNotes['반복'] is string && d.conceptNotes['반복'].size() <= 60))
-             && (!('입력' in d.conceptNotes) || (d.conceptNotes['입력'] is string && d.conceptNotes['입력'].size() <= 60))
-             && (!('출력' in d.conceptNotes) || (d.conceptNotes['출력'] is string && d.conceptNotes['출력'].size() <= 60))
-           ));
-    }
-
     // 신고의 postOwnerUid가 실제 글 주인과 일치하는지(위조 차단). 글이 없으면 거부.
     function postOwnerMatches(postId, ownerUid) {
       return exists(/databases/$(database)/documents/posts/$(postId))
         && get(/databases/$(database)/documents/posts/$(postId)).data.ownerUid == ownerUid;
-    }
-
-    // 이 카테고리에 글을 쓸 수 있는지: 존재 + (공개보드 | 그 교사 | 그 교사 학생).
-    function categoryAllowed(catId, uid) {
-      return exists(/databases/$(database)/documents/categories/$(catId))
-        && allowedForCat(get(/databases/$(database)/documents/categories/$(catId)).data, uid);
-    }
-    // [정책 — 리뷰 주의] 공개보드는 학생 포함 로그인 누구나 게시 가능(아이의 공개 작품 공유 의도).
-    // 사진은 교실한정으로 차단되고, 부적절 글 모더레이션은 신고함(postOwnerUid∈내학생) + admin 전체삭제로 대처.
-    // (교사 보드삭제 API가 학생 공개글을 못 지우는 건 그 API가 '우리 반 보드'로 스코프된 설계 — 사각지대 아님.)
-    function allowedForCat(cat, uid) {
-      return !('teacherUid' in cat)
-        || cat.teacherUid == null            // 공개보드(teacherUid 없음/null) — 누구나
-        || cat.teacherUid == uid             // 그 교사 본인
-        || isStudentOf(uid, cat.teacherUid); // 그 교사의 학생
-    }
-    // 카테고리의 보드 소유자(teacherUid 없으면 null) — boardTeacherUid 위조 차단용.
-    function catBoardOwner(catId) {
-      let c = get(/databases/$(database)/documents/categories/$(catId)).data;
-      return 'teacherUid' in c ? c.teacherUid : null;
-    }
-    function isStudentOf(uid, teacherUid) {
-      return exists(/databases/$(database)/documents/students/$(uid))
-        && get(/databases/$(database)/documents/students/$(uid)).data.teacherUid == teacherUid;
     }
 
     // 카테고리(게시판): 누구나 읽기, 관리자만 생성/수정/삭제
@@ -146,8 +52,7 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
-    // 게시물: 누구나 읽기 / 로그인 사용자가 본인 소유로 생성(형태 검증) /
-    // 수정은 제목만 가능(소유권·코드 변조 차단), 본인 또는 관리자만 / 삭제는 본인 또는 관리자
+    // 게시물: 보드 범위에 따라 읽기 / 쓰기는 서버 API만.
     match /posts/{postId} {
       // 공개 보드(boardTeacherUid=null/없음)는 누구나. 교실 보드는 그 교사·그 반 학생·관리자만.
       // .get(...,null)로 구버전(필드 없는) 글은 공개로 취급(마이그레이션 전/중 안전망).
@@ -157,31 +62,11 @@ service cloud.firestore {
              || resource.data.get('boardTeacherUid', null) == request.auth.uid
              || resource.data.get('boardTeacherUid', null) == request.auth.token.get('classTeacherUid', false)
            ));
-      allow create: if isSignedIn()
-        && (isAdmin() || isVerified() || isRoleAccount())
-        && request.resource.data.ownerUid == request.auth.uid
-        && validPost(request.resource.data)
-        && (isAdmin() || categoryAllowed(request.resource.data.categoryId, request.auth.uid))
-        && (isAdmin() || request.resource.data.boardTeacherUid == catBoardOwner(request.resource.data.categoryId));
-      // 수정: 본인/관리자만. 변경 가능 필드는 제목·작성자명·계획서·코드·수정시각으로 제한
-      // (ownerUid·categoryId·createdAt 변조 차단). 변경되는 값은 형태·크기 재검증.
-      // 본인/관리자 콘텐츠 편집만. 카운터(좋아요·조회·포크)는 서버 API(Admin SDK) 전용 — 클라 직접 쓰기 차단.
-      allow update: if (isAdmin() || (isOwner(resource.data.ownerUid) && (isVerified() || isRoleAccount())))
-        && request.resource.data.diff(resource.data).affectedKeys()
-             .hasOnly(['title', 'authorName', 'plan', 'code', 'prompt', 'updatedAt'])
-        && request.resource.data.title is string
-        && request.resource.data.title.size() > 0 && request.resource.data.title.size() <= 100
-        && request.resource.data.authorName is string
-        && request.resource.data.authorName.size() > 0 && request.resource.data.authorName.size() <= 20
-        && notImpersonating(request.resource.data.authorName)
-        && request.resource.data.prompt is string && request.resource.data.prompt.size() <= 50000
-        && validCode(request.resource.data.code)
-        && (!('plan' in request.resource.data) || validPlan(request.resource.data.plan))
-        // updatedAt도 숫자+미래상한(정렬키는 아니나 위조 방지). createdAt은 affectedKeys에서 빠져 변경 불가.
-        && (!('updatedAt' in request.resource.data) || (request.resource.data.updatedAt is number && request.resource.data.updatedAt <= request.time.toMillis() + 3600000));
+      allow create: if false;
+      allow update: if false;
       // 삭제는 서버 라우트(DELETE /api/posts/[id], Admin SDK)로 일원화 — 글과 신고를 함께 지운다.
-      // 클라 직접삭제는 reports(admin 전용 삭제)를 못 지워 고아가 생기므로 본인 직접삭제를 막고 admin만 허용.
-      allow delete: if isAdmin();
+      // 관리자도 서버 삭제 API를 거쳐 신고·카운터 서브문서를 함께 정리한다.
+      allow delete: if false;
 
       // likes/views 서브문서는 서버(Admin SDK)만 쓴다. 클라는 '내가 좋아요 했나' 읽기만.
       match /likes/{uid} {
@@ -193,29 +78,11 @@ service cloud.firestore {
       }
     }
 
-    function validNick(n) {
-      return n is string && n.size() > 0 && n.size() <= 20 && notImpersonating(n);
-    }
-
-    // 사용자 프로필: 닉네임 + 마지막 변경시각(서버 타임스탬프). 본인만.
-    // 변경 쿨다운 15일을 request.time + duration 으로 강제(구버전 number 문서는 1회 마이그레이션 허용).
+    // 사용자 프로필: 읽기는 공개, 닉네임 설정·변경은 서버 API만.
     match /users/{uid} {
       allow read: if true;
-      allow create: if isOwner(uid)
-        && request.resource.data.keys().hasOnly(['nickname', 'nicknameUpdatedAt'])
-        && validNick(request.resource.data.nickname)
-        && request.resource.data.nicknameUpdatedAt == request.time;
-      allow update: if isOwner(uid)
-        && request.resource.data.keys().hasOnly(['nickname', 'nicknameUpdatedAt'])
-        && validNick(request.resource.data.nickname)
-        && request.resource.data.nicknameUpdatedAt == request.time
-        && (
-          !('nicknameUpdatedAt' in resource.data)
-          || !(resource.data.nicknameUpdatedAt is timestamp)
-          || request.resource.data.nickname == resource.data.nickname
-          || request.time > resource.data.nicknameUpdatedAt + duration.value(15, 'd')
-        );
-      allow delete: if isAdmin();
+      allow create, update: if false;
+      allow delete: if false;
     }
 
     // 선생님 메타(표시명·총 한도 풀). 서버 Admin SDK가 발급/수정. 본인·관리자 읽기.
@@ -230,17 +97,22 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // 서버가 계정 정지·삭제 시 먼저 기록하는 차단 상태. 기존 ID 토큰도 즉시 거부한다.
+    match /accountStatus/{uid} {
+      allow read, write: if false;
+    }
+
+    match /photoConsents/{uid} {
+      allow read, write: if false;
+    }
+
     // 닉네임 점유 — 문서ID=소문자별명, 값={uid}. 한 번 점유하면 그 계정 영구 소유(재활용 없음).
-    // [알려진 한계 — 리뷰 주의] users.nickname 쓰기는 이 점유를 교차검증하지 않아 SDK 직접쓰기로 '표시
-    // 닉네임' 중복(사용자 사칭)이 가능. 규칙엔 소문자 변환이 없어 nicknames 키를 유도해 getAfter로 강제하는
-    // 표준 픽스가 불가하므로 미강제 — 예약어 사칭은 notImpersonating으로 차단, 사용자간 사칭은 신고로 대처.
+    // 프로필과 같은 서버 트랜잭션에서만 생성한다.
     match /nicknames/{key} {
       allow read: if true;
-      allow create: if isSignedIn()
-        && request.resource.data.keys().hasOnly(['uid'])
-        && request.resource.data.uid == request.auth.uid;
+      allow create: if false;
       allow update: if false;
-      allow delete: if isAdmin();
+      allow delete: if false;
     }
 
     match /reports/{reportId} {
