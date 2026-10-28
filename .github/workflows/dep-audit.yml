@@ -1,9 +1,7 @@
 # 로컬 Claude 루틴(lun-dep-audit)을 대체한다. npm audit는 저장소가 있어야 해서
 # 로컬에서 돌렸지만, GitHub Actions가 원래 이 용도에 맞다(앱 실행 여부와 무관).
 #
-# 정책: High/Critical이 하나라도 발견되면 실패시킨다. 단, Firebase Web SDK가 고정한
-# grpc-js 1.9.16의 GHSA-m9gg-hp2v-232j만 2026-11-17까지 한시적으로 추적 예외 처리한다.
-# 예외는 advisory, 의존성 전파 경로, 잠금 버전이 모두 정확히 일치할 때만 적용된다.
+# 정책: High/Critical이 하나라도 발견되면 실패시킨다.
 
 name: 의존성 보안 감사
 
@@ -37,45 +35,13 @@ jobs:
           node <<'EOF' >> "$GITHUB_STEP_SUMMARY"
           const fs = require('fs');
           const a = JSON.parse(fs.readFileSync('audit.json', 'utf8'));
-          const lock = JSON.parse(fs.readFileSync('package-lock.json', 'utf8'));
+          if (a.error || !a.vulnerabilities) {
+            console.error('::error::npm audit 결과를 확인할 수 없습니다.');
+            process.exit(1);
+          }
 
           const hi = Object.entries(a.vulnerabilities || {})
             .filter(([, v]) => ['high', 'critical'].includes(v.severity));
-
-          const grpcExceptionPackages = new Set([
-            '@grpc/grpc-js',
-            '@firebase/firestore',
-            '@firebase/firestore-compat',
-            'firebase',
-          ]);
-          const grpcExceptionExpiresAt = Date.parse('2026-11-17T23:59:59+09:00');
-          const grpc = a.vulnerabilities?.['@grpc/grpc-js'];
-          const grpcHighAdvisories = (grpc?.via || []).filter(
-            x => typeof x !== 'string' && x.severity === 'high',
-          );
-          const grpcNodeVersions = (grpc?.nodes || []).map(
-            node => lock.packages?.[node]?.version,
-          );
-          const hasOnlyExpectedVia = (name, expected) => {
-            const vulnerability = a.vulnerabilities?.[name];
-            if (!vulnerability || vulnerability.severity !== 'high') return false;
-            const via = vulnerability.via || [];
-            return via.length === expected.length
-              && via.every(item => typeof item === 'string' && expected.includes(item));
-          };
-          const grpcExceptionActive = Date.now() <= grpcExceptionExpiresAt
-            && grpc?.severity === 'high'
-            && grpcHighAdvisories.length === 1
-            && grpcHighAdvisories[0].url?.endsWith('GHSA-m9gg-hp2v-232j')
-            && grpcNodeVersions.length > 0
-            && grpcNodeVersions.every(version => version === '1.9.16')
-            && hasOnlyExpectedVia('@firebase/firestore', ['@grpc/grpc-js'])
-            && hasOnlyExpectedVia('@firebase/firestore-compat', ['@firebase/firestore'])
-            && hasOnlyExpectedVia('firebase', ['@firebase/firestore', '@firebase/firestore-compat']);
-          const accepted = grpcExceptionActive
-            ? hi.filter(([name]) => grpcExceptionPackages.has(name))
-            : [];
-          const blocked = hi.filter(([name]) => !accepted.some(([acceptedName]) => acceptedName === name));
 
           const line = ([n, v]) => {
             const via = (v.via || []).map(x => (typeof x === 'string' ? x : x.title)).filter(Boolean);
@@ -83,28 +49,18 @@ jobs:
             return `- **${n}** (${v.severity}) — ${head}${via.length > 1 ? ` 외 ${via.length - 1}건` : ''}`;
           };
 
-          if (blocked.length) {
-            console.log(`### ⚠️ 차단된 High/Critical 취약점 **${blocked.length}건**`);
+          if (hi.length) {
+            console.log(`### ⚠️ High/Critical 취약점 **${hi.length}건**`);
             console.log('');
-            blocked.forEach(v => console.log(line(v)));
+            hi.forEach(v => console.log(line(v)));
             console.log('');
           } else {
-            console.log('### 의존성 감사: 새 High/Critical **없음** ✅');
+            console.log('### 의존성 감사: High/Critical **없음** ✅');
             console.log('');
           }
 
-          if (accepted.length) {
-            console.log('### 한시적 추적 예외');
-            console.log('');
-            console.log('- `GHSA-m9gg-hp2v-232j`: Firebase Web SDK의 `grpc-js@1.9.16` 고정');
-            console.log('- 만료: 2026-11-17 23:59:59 KST');
-            console.log(`- 전파 패키지: ${accepted.map(([name]) => `\`${name}\``).join(', ')}`);
-            console.log('');
-            console.error('::warning::Firebase grpc-js High 취약점을 2026-11-17까지 한시적으로 추적합니다.');
-          }
-
-          if (blocked.length) {
-            console.error(`::error::High/Critical 취약점 ${blocked.length}건: ${blocked.map(([n]) => n).join(', ')}`);
+          if (hi.length) {
+            console.error(`::error::High/Critical 취약점 ${hi.length}건: ${hi.map(([n]) => n).join(', ')}`);
             process.exit(1);
           }
           EOF
