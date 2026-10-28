@@ -4,8 +4,12 @@ import type { NextConfig } from 'next';
 // 전역 X-Frame-Options: DENY를 걸면 미리보기가 깨진다 → /api/preview/* 는 경로별로 분리한다.
 // 앱(프로덕션) 오리진 — 미리보기 라우트의 frame-ancestors 허용목록에 쓰인다(미리보기는 교차오리진이라
 // 'self'로는 부족). 커스텀 도메인/도메인 변경 시 NEXT_PUBLIC_APP_ORIGIN을 설정(PREVIEW_ORIGIN과 동일 패턴) — L6.
-const APP = process.env.NEXT_PUBLIC_APP_ORIGIN || 'https://ai-program-generator-v2.vercel.app';
+const APP = process.env.NEXT_PUBLIC_APP_ORIGIN || 'https://eduai-lun.co.kr';
 const PREVIEW = process.env.NEXT_PUBLIC_PREVIEW_ORIGIN || 'https://ai-program-generator-v2-preview.vercel.app';
+const SELF_DEPLOY = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : '';
+if (process.env.NEXT_PUBLIC_PREVIEW_ORIGIN && new URL(PREVIEW).origin === new URL(APP).origin) {
+  throw new Error('NEXT_PUBLIC_PREVIEW_ORIGIN must be separate from NEXT_PUBLIC_APP_ORIGIN');
+}
 const AUTHDOMAIN = process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
   ? `https://${process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN}`
   : 'https://test-ai-builder.firebaseapp.com';
@@ -66,7 +70,19 @@ const nextConfig: NextConfig = {
         headers: [
           {
             key: 'Content-Security-Policy',
-            value: `sandbox allow-scripts; frame-ancestors 'self' ${APP} http://localhost:3000 http://127.0.0.1:3000`,
+            value: [
+              'sandbox allow-scripts',
+              `frame-ancestors 'self' ${APP} https://ai-program-generator-v2.vercel.app ${SELF_DEPLOY} http://localhost:3000 http://127.0.0.1:3000`,
+              "default-src 'none'",
+              "script-src 'unsafe-inline'",
+              "style-src 'unsafe-inline'",
+              'img-src data: blob:',
+              'media-src data: blob:',
+              'font-src data:',
+              "connect-src 'none'",
+              "form-action 'none'",
+              "base-uri 'none'",
+            ].join('; '),
           },
         ],
       },

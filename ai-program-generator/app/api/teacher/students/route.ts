@@ -76,6 +76,9 @@ export async function POST(req: NextRequest) {
   if (password.length < 6) {
     return NextResponse.json({ error: 'PIN은 6자 이상이어야 해요.' }, { status: 400 });
   }
+  if (b.guardianConsentConfirmed !== true) {
+    return NextResponse.json({ error: '보호자 동의 확인이 필요해요.' }, { status: 400 });
+  }
   if (!Number.isInteger(limitValue) || limitValue < 1) {
     return NextResponse.json({ error: '한도는 1 이상의 정수여야 해요.' }, { status: 400 });
   }
@@ -91,8 +94,10 @@ export async function POST(req: NextRequest) {
   for (let i = startNo; i < startNo + count; i++) {
     const hakbun = `${grade}${pad2(classNo)}${pad2(i)}`;
     const email = `${schoolCode}-${hakbun}@${DOMAIN}`;
+    let createdUid: string | undefined;
     try {
       const user = await adminAuth.createUser({ email, password });
+      createdUid = user.uid;
       await adminAuth.setCustomUserClaims(user.uid, { student: true, classTeacherUid: gate.uid });
       await adminDb.doc(`students/${user.uid}`).set({
         teacherUid: gate.uid,
@@ -103,9 +108,18 @@ export async function POST(req: NextRequest) {
         limitValue,
         usedTotal: 0,
         createdAt: Date.now(),
+        guardianConsentConfirmedAt: Date.now(),
+        guardianConsentConfirmedBy: gate.uid,
       });
       created.push({ email, hakbun, password });
     } catch (e) {
+      if (createdUid) {
+        try {
+          await adminAuth.deleteUser(createdUid);
+        } catch (rollbackError) {
+          console.error('학생 생성 롤백 실패:', createdUid, rollbackError);
+        }
+      }
       const code = (e as { code?: string }).code ?? '';
       skipped.push({ hakbun, reason: code === 'auth/email-already-exists' ? '이미 있는 학번' : '생성 실패' });
     }

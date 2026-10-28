@@ -148,7 +148,7 @@ function Console() {
     if (!consentChecked) return toast('보호자 동의를 받았는지 먼저 확인해 주세요.');
     setBusy(true);
     try {
-      const r = await createStudents({ grade: g, classNo: c, count: n, startNo: s, password, limitType, limitValue: v });
+      const r = await createStudents({ grade: g, classNo: c, count: n, startNo: s, password, limitType, limitValue: v, guardianConsentConfirmed: true });
       setCreated(r.created);
       setCreatedSchool(r.schoolCode);
       if (r.skipped.length) toast(`${r.skipped.length}명은 이미 있는 학번이라 건너뛰었어요.`);

@@ -7,8 +7,6 @@ import {
   startAfter,
   getDocs,
   getDoc,
-  addDoc,
-  updateDoc,
   doc,
   type QueryDocumentSnapshot,
   type DocumentData,
@@ -76,13 +74,8 @@ export async function getPost(id: string): Promise<Post | null> {
 }
 
 export async function createPost(data: NewPost): Promise<string> {
-  await assertClean(data.title, '제목');
-  await assertClean(data.authorName, '이름');
-  if (data.logicLine) await assertClean(data.logicLine, '핵심 한 줄'); // 아이가 쓴 공개 텍스트 — 제목과 동일 검열
-  await assertPlanClean(data.plan); // 계획서 본문(공개)도 동일 검열
-  assertAuthorNameAllowed(data.authorName);
-  const ref = await addDoc(collection(db, COL), data);
-  return ref.id;
+  const result = await authedJson<{ id: string }>('/api/posts', { method: 'POST', body: JSON.stringify(data) });
+  return result.id;
 }
 
 /** 작성자명이 '관리자' 등 사칭 예약어면 차단(닉네임과 동일 정책). */
@@ -92,7 +85,7 @@ function assertAuthorNameAllowed(authorName: string): void {
   }
 }
 
-/** 계획서 본문(생김새·사용법·동작·더 바라는 점)도 제목·이름과 동일 검열 — 정상 UI 경로 커버(SDK 우회는 신고로 대처). */
+/** 화면에서 먼저 알려주는 검사. 서버 API도 같은 공개 텍스트를 다시 검사한다. */
 async function assertPlanClean(plan?: PlanFields): Promise<void> {
   if (!plan) return;
   for (const [label, v] of [
@@ -107,7 +100,7 @@ async function assertPlanClean(plan?: PlanFields): Promise<void> {
 
 export async function updatePostTitle(id: string, title: string): Promise<void> {
   await assertClean(title, '제목');
-  await updateDoc(doc(db, COL, id), { title: title.trim() });
+  await authedJson(`/api/posts/${id}`, { method: 'PATCH', body: JSON.stringify({ title: title.trim() }) });
 }
 
 /** 작품 전체 편집(덮어쓰기) — 제목·작성자명·계획서·코드. ownerUid/categoryId/createdAt는 불변. */
@@ -116,7 +109,7 @@ export async function updatePostContent(id: string, edit: PostEdit): Promise<voi
   await assertClean(edit.authorName, '이름');
   await assertPlanClean(edit.plan); // 계획서 본문(공개)도 동일 검열
   assertAuthorNameAllowed(edit.authorName);
-  await updateDoc(doc(db, COL, id), { ...edit });
+  await authedJson(`/api/posts/${id}`, { method: 'PATCH', body: JSON.stringify(edit) });
 }
 
 // 삭제는 서버 경유 — 글과 그 글의 신고(reports)를 함께 지운다(클라 직접삭제는 reports 못 지워 고아 발생).

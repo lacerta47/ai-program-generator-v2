@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminAuth, adminDb } from '@/lib/firebase/admin';
+import { adminDb } from '@/lib/firebase/admin';
 import { todayKeyKST } from '@/lib/usageDay';
 import { readEffectiveLimit } from '@/lib/admin/usageConfig';
+import { verifyActiveToken } from '@/lib/server/verifyActiveToken';
 
 export const runtime = 'nodejs';
 
@@ -14,7 +15,7 @@ export async function GET(req: NextRequest) {
   let isAdmin = false;
   let isStudent = false;
   try {
-    const decoded = await adminAuth.verifyIdToken(idToken);
+    const decoded = await verifyActiveToken(idToken);
     uid = decoded.uid;
     isAdmin = decoded.admin === true;
     isStudent = decoded.student === true;

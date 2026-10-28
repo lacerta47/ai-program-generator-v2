@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { FieldValue } from 'firebase-admin/firestore';
-import { adminAuth, adminDb } from '@/lib/firebase/admin';
+import { adminDb } from '@/lib/firebase/admin';
 import { allowFixedWindow } from '@/lib/server/rateLimit';
+import { verifyActiveToken } from '@/lib/server/verifyActiveToken';
 
 // 카운터(좋아요·조회·포크)는 서버에서만 갱신한다(클라 직접 쓰기는 규칙으로 차단).
 // 서브문서로 1인1회 dedup을 서버가 권위적으로 처리 → 임의 부풀리기 불가.
@@ -22,7 +23,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   if (!idToken) return NextResponse.json({ error: '로그인이 필요해요.' }, { status: 401 });
   let uid: string;
   try {
-    uid = (await adminAuth.verifyIdToken(idToken)).uid;
+    uid = (await verifyActiveToken(idToken)).uid;
   } catch {
     return NextResponse.json({ error: '로그인이 만료됐어요. 다시 로그인해 주세요.' }, { status: 401 });
   }

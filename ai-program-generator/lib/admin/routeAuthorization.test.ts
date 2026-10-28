@@ -12,6 +12,8 @@ const mocks = vi.hoisted(() => ({
   ensureTeacherBoard: vi.fn(),
 }));
 
+vi.mock('server-only', () => ({}));
+
 vi.mock('@/lib/admin/requireAdmin', () => ({ requireAdmin: mocks.requireAdmin }));
 vi.mock('@/lib/admin/requireTeacher', () => ({ requireTeacher: mocks.requireTeacher }));
 vi.mock('@/lib/admin/usageConfig', () => ({
@@ -107,13 +109,15 @@ describe('대표 API 권한 게이트', () => {
 
     test('학생 역할이 아니면 403을 반환한다', async () => {
       mocks.verifyIdToken.mockResolvedValue({ uid: 'teacher-a', teacher: true });
+      mocks.dbDoc.mockReturnValue({ get: vi.fn().mockResolvedValue({ data: () => ({}) }) });
 
       const response = await getStudentBoard(request('/api/student/board', {
         headers: { authorization: 'Bearer teacher-token' },
       }));
 
       expect(response.status).toBe(403);
-      expect(mocks.dbDoc).not.toHaveBeenCalled();
+      expect(mocks.dbDoc).toHaveBeenCalledWith('accountStatus/teacher-a');
+      expect(mocks.dbDoc).not.toHaveBeenCalledWith('students/teacher-a');
     });
 
     test('학생은 자기 소속 교사의 게시판만 조회한다', async () => {

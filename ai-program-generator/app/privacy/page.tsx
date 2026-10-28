@@ -6,7 +6,7 @@ export const metadata = { title: '개인정보처리방침 — LUN' };
 // 수집 항목이 바뀌는 기능을 추가하면 이 문서도 함께 갱신할 것.
 export default function PrivacyPage() {
   return (
-    <LegalPage title="개인정보처리방침" updatedAt="2026년 9월 7일">
+    <LegalPage title="개인정보처리방침" updatedAt="2026년 10월 28일">
       <p>
         아름다운교육연구소(이하 &lsquo;연구소&rsquo;)는 LUN 서비스(이하 &lsquo;서비스&rsquo;)를 운영하면서 이용자의 개인정보를
         소중히 다루며, 「개인정보 보호법」 등 관련 법령을 준수합니다. 이 방침은 서비스가 어떤 정보를 어떻게 다루는지 알려
@@ -30,6 +30,7 @@ export default function PrivacyPage() {
       <ul>
         <li>학생 이름, 학번(학년·반·번호), 소속 학교 코드, 담당 교사 정보</li>
         <li>로그인용 계정 정보(학교 코드와 학번으로 만든 내부 식별용 주소, PIN — PIN은 암호화되어 저장됩니다)</li>
+        <li>담당 교사가 확인한 보호자 동의 여부·확인 시각</li>
       </ul>
 
       <h3>다. 서비스 이용 과정에서 생성·저장되는 정보</h3>
@@ -37,6 +38,7 @@ export default function PrivacyPage() {
         <li>이용자가 작성한 계획서(만들고 싶은 프로그램에 대한 설명), 작품 제목, 작성자로 표시할 이름</li>
         <li>AI가 만들어 준 프로그램 코드와 학습용 설명(사용한 컴퓨팅 개념 등)</li>
         <li>작품에 첨부한 사진(학급 게시판에 올리는 경우에 한함)</li>
+        <li>사진을 해외 AI로 전송하는 데 동의한 시각과 동의한 방침 버전</li>
         <li>이용 기록: 만들기 횟수, 좋아요·조회 수, 신고 내역</li>
       </ul>
 

@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { deleteExpiredPreviews } from '@/lib/preview-store';
 import { deleteExpiredShareAttempts } from '@/lib/server/sharePin';
+import { deleteExpiredStudentAccounts, deleteExpiredAccountTombstones } from '@/lib/server/accountRetention';
 
 // 만료된 임시 문서(previews·shareAttempts) 정리 — Vercel Cron이 매일 호출(vercel.json). CRON_SECRET으로 보호.
 // Vercel Cron은 Authorization: Bearer <CRON_SECRET> 헤더를 자동으로 붙인다.
 // (shareAttempts는 TTL이 없어 정크 누적 → 주기적 청소로 무한 증식 차단. B3)
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+export const maxDuration = 60;
 
 export async function GET(req: NextRequest) {
   const secret = process.env.CRON_SECRET;
@@ -19,9 +21,11 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   }
   try {
+    const students = await deleteExpiredStudentAccounts();
+    const accountTombstones = await deleteExpiredAccountTombstones();
     const deleted = await deleteExpiredPreviews();
     const shareAttempts = await deleteExpiredShareAttempts();
-    return NextResponse.json({ ok: true, deleted, shareAttempts });
+    return NextResponse.json({ ok: true, deleted, shareAttempts, students, accountTombstones });
   } catch (e) {
     console.error('[/api/cron/cleanup-previews] 실패:', e);
     return NextResponse.json({ error: '정리에 실패했어요.' }, { status: 500 });

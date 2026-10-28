@@ -161,24 +161,20 @@ describe('Firestore 권한 규칙', () => {
   });
 
   describe('게시물 생성', () => {
-    test('학생은 자기 소유 공개 게시물을 만들 수 있다', async () => {
+    test('학생과 일반 사용자는 SDK로 게시물을 직접 만들 수 없다', async () => {
       await seed();
-      await assertSucceeds(setDoc(doc(db(studentA()), 'posts/new-public'), post()));
+      await assertFails(setDoc(doc(db(studentA()), 'posts/new-public'), post()));
+      await assertFails(setDoc(doc(db(verifiedUser()), 'posts/new-verified'), post({ ownerUid: 'verified-user' })));
     });
 
-    test('학생은 자기 반 게시물을 만들 수 있다', async () => {
+    test('교사와 관리자도 게시물 생성은 서버 API를 거쳐야 한다', async () => {
       await seed();
-      await assertSucceeds(setDoc(doc(db(studentA()), 'posts/new-class'), post({
+      await assertFails(setDoc(doc(db(teacherA()), 'posts/new-class'), post({
+        ownerUid: 'teacher-a',
         categoryId: 'class-a',
         boardTeacherUid: 'teacher-a',
       })));
-    });
-
-    test('인증된 일반 사용자는 공개 게시물을 만들 수 있다', async () => {
-      await seed();
-      await assertSucceeds(setDoc(doc(db(verifiedUser()), 'posts/new-verified'), post({
-        ownerUid: 'verified-user',
-      })));
+      await assertFails(setDoc(doc(db(admin()), 'posts/new-admin'), post({ ownerUid: 'admin' })));
     });
 
     test('인증되지 않은 일반 사용자는 게시물을 만들 수 없다', async () => {
@@ -238,9 +234,9 @@ describe('Firestore 권한 규칙', () => {
   });
 
   describe('게시물 수정과 삭제', () => {
-    test('작성자는 허용된 콘텐츠 필드를 수정할 수 있다', async () => {
+    test('작성자도 SDK로 게시물을 직접 수정할 수 없다', async () => {
       await seed();
-      await assertSucceeds(updateDoc(doc(db(studentA()), 'posts/public-post'), {
+      await assertFails(updateDoc(doc(db(studentA()), 'posts/public-post'), {
         title: '고친 제목',
         updatedAt: NOW,
       }));
@@ -263,12 +259,12 @@ describe('Firestore 권한 규칙', () => {
       }));
     });
 
-    test('관리자는 게시물을 수정하고 직접 삭제할 수 있다', async () => {
+    test('관리자도 게시물 수정·삭제는 서버 API를 거친다', async () => {
       await seed();
-      await assertSucceeds(updateDoc(doc(db(admin()), 'posts/public-post'), {
+      await assertFails(updateDoc(doc(db(admin()), 'posts/public-post'), {
         title: '관리자 수정',
       }));
-      await assertSucceeds(deleteDoc(doc(db(admin()), 'posts/public-post')));
+      await assertFails(deleteDoc(doc(db(admin()), 'posts/public-post')));
     });
 
     test('작성자는 클라이언트에서 게시물을 직접 삭제할 수 없다', async () => {
@@ -278,8 +274,8 @@ describe('Firestore 권한 규칙', () => {
   });
 
   describe('프로필과 역할 문서', () => {
-    test('사용자는 자기 프로필만 만들 수 있다', async () => {
-      await assertSucceeds(setDoc(doc(db(studentA()), 'users/student-a'), {
+    test('프로필과 닉네임 점유는 서버 API에서만 쓸 수 있다', async () => {
+      await assertFails(setDoc(doc(db(studentA()), 'users/student-a'), {
         nickname: '새별명',
         nicknameUpdatedAt: serverTimestamp(),
       }));
@@ -287,6 +283,18 @@ describe('Firestore 권한 규칙', () => {
         nickname: '가짜별명',
         nicknameUpdatedAt: serverTimestamp(),
       }));
+      await assertFails(setDoc(doc(db(studentA()), 'nicknames/새별명'), { uid: 'student-a' }));
+      await assertFails(setDoc(doc(db(studentA()), 'photoConsents/student-a'), { policyVersion: 'fake', agreedAt: NOW }));
+    });
+
+    test('정지된 학생의 기존 토큰은 학급 작품과 개인 문서에 접근할 수 없다', async () => {
+      await seed();
+      await env.withSecurityRulesDisabled(async (context) => {
+        await setDoc(doc(db(context), 'accountStatus/student-a'), { blocked: true, blockedAt: NOW });
+      });
+      await assertFails(getDoc(doc(db(studentA()), 'posts/class-post')));
+      await assertFails(getDoc(doc(db(studentA()), 'students/student-a')));
+      await assertFails(setDoc(doc(db(studentA()), 'accountStatus/student-a'), { blocked: false }));
     });
 
     test('학생 문서는 본인과 관리자만 읽을 수 있다', async () => {

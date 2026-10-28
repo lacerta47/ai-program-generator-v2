@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth } from '@/lib/firebase/admin';
 import { deleteAccountCascade } from '@/lib/server/deleteAccount';
+import { setAccountDisabled } from '@/lib/server/accountStatus';
 import { requireAdmin } from '@/lib/admin/requireAdmin';
 import { setUserLimit, clearUserLimit } from '@/lib/admin/usageConfig';
 
@@ -32,7 +33,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ ui
     if (typeof b.disabled === 'boolean') {
       const blocked = await blockIfAdminTarget(uid);
       if (blocked) return blocked;
-      await adminAuth.updateUser(uid, { disabled: b.disabled });
+      await setAccountDisabled(uid, b.disabled);
     }
     if ('dailyLimit' in b) {
       if (b.dailyLimit === null) {

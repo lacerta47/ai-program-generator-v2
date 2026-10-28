@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminAuth } from '@/lib/firebase/admin';
+import { verifyActiveToken } from '@/lib/server/verifyActiveToken';
 
 /** Bearer ID 토큰 + admin claim 검증. 통과면 { uid }, 아니면 401/403 NextResponse.
  *  (requireTeacher와 동일 형태 — 호출부는 `if (gate instanceof NextResponse) return gate`로 판정.) */
@@ -10,7 +10,7 @@ export async function requireAdmin(req: NextRequest): Promise<{ uid: string } | 
   try {
     // 고권한 라우트라 checkRevoked=true — 비활성/권한해제된 계정의 토큰을 즉시 무효화한다
     // (미사용 시 최대 ~1h 유효). admin 라우트는 저트래픽이라 getUser 추가호출 비용 무시 가능.
-    const decoded = await adminAuth.verifyIdToken(idToken, true);
+    const decoded = await verifyActiveToken(idToken);
     if (decoded.admin !== true) {
       return NextResponse.json({ error: '관리자만 할 수 있어요.' }, { status: 403 });
     }

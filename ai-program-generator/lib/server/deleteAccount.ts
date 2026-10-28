@@ -1,4 +1,5 @@
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
+import { blockAccountForDeletion } from '@/lib/server/accountStatus';
 import { deletePostSubcollections } from './deletePost';
 
 /**
@@ -30,6 +31,7 @@ export async function deleteAccountCascade(uid: string): Promise<void> {
   const usage = await adminDb.collection('usage').where('uid', '==', uid).get();
   usage.forEach((d) => refs.push(d.ref));
   refs.push(adminDb.doc(`users/${uid}`));
+  refs.push(adminDb.doc(`photoConsents/${uid}`));
   refs.push(adminDb.doc(`limits/${uid}`));
   refs.push(adminDb.doc(`teachers/${uid}`));
   refs.push(adminDb.doc(`students/${uid}`));
@@ -37,17 +39,28 @@ export async function deleteAccountCascade(uid: string): Promise<void> {
   const teacherDoc = await adminDb.doc(`teachers/${uid}`).get();
   const schoolCode = teacherDoc.data()?.schoolCode as string | undefined;
   if (schoolCode) refs.push(adminDb.doc(`schools/${schoolCode}`));
+  await blockAccountForDeletion(uid);
   // [의도 — L10] 학급보드 categories/{boardId}는 삭제하지 않는다 — 비활성 학생의 보존된 작품이 그
   //   카테고리 아래 남아야 하므로(보드를 지우면 작품도 orphan). admin이 원하면 M5(/api/admin/categories/[id])로 정리.
   // 선생님 삭제 시 산하 학생은 작품·문서·보드를 보존하되 Auth만 비활성(로그인 차단) — 계정·작품은 지우지 않음.
   if (teacherDoc.exists) {
     const students = await adminDb.collection('students').where('teacherUid', '==', uid).get();
-    await Promise.all(students.docs.map((d) => adminAuth.updateUser(d.id, { disabled: true }).catch(() => {})));
+    for (let i = 0; i < students.docs.length; i += 10) {
+      await Promise.all(students.docs.slice(i, i + 10).map(async (student) => {
+        await blockAccountForDeletion(student.id);
+        await student.ref.set({ disabledAt: typeof student.data().disabledAt === 'number' ? student.data().disabledAt : Date.now() }, { merge: true });
+      }));
+    }
   }
   for (let i = 0; i < refs.length; i += 450) {
     const batch = adminDb.batch();
     refs.slice(i, i + 450).forEach((r) => batch.delete(r));
     await batch.commit();
   }
-  await adminAuth.deleteUser(uid);
+  try {
+    await adminAuth.deleteUser(uid);
+  } catch (error) {
+    if ((error as { code?: string }).code !== 'auth/user-not-found') throw error;
+  }
+  await adminDb.doc(`accountStatus/${uid}`).set({ deletedAt: Date.now() }, { merge: true });
 }

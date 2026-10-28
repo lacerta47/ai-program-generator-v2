@@ -14,5 +14,14 @@ export function previewOrigin(): string {
     console.error('[preview] NEXT_PUBLIC_PREVIEW_ORIGIN 미설정 — 미리보기 비활성화(프로세스 격리 불가).');
     throw new Error('PREVIEW_ORIGIN_UNSET');
   }
-  return configured;
+  try {
+    const url = new URL(configured);
+    if (url.protocol !== 'https:' || url.origin === window.location.origin || url.hostname === hostname) {
+      throw new Error('PREVIEW_ORIGIN_UNSAFE');
+    }
+    return url.origin;
+  } catch {
+    console.error('[preview] 별도 HTTPS 미리보기 도메인이 필요해요.');
+    throw new Error('PREVIEW_ORIGIN_UNSAFE');
+  }
 }

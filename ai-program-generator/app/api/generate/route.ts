@@ -6,7 +6,9 @@ import { buildExemplarBlock } from '@/lib/ai/exemplars';
 import { getTypeGuide } from '@/lib/ai/typeGuides';
 import type { GenerateMode, TokenUsage } from '@/lib/ai/types';
 import { FieldValue } from 'firebase-admin/firestore';
-import { adminAuth, adminDb } from '@/lib/firebase/admin';
+import { adminDb } from '@/lib/firebase/admin';
+import { hasPhotoConsent } from '@/lib/server/photoConsent';
+import { verifyActiveToken } from '@/lib/server/verifyActiveToken';
 import { todayKeyKST } from '@/lib/usageDay';
 import { readEffectiveLimit } from '@/lib/admin/usageConfig';
 import { reserveStudentQuota, refundStudentQuota } from '@/lib/server/studentQuota';
@@ -61,7 +63,7 @@ export async function POST(req: NextRequest) {
   try {
     // checkRevoked=true — 비활성/권한해제된(예: 삭제된 학생) 계정이 공유 Gemini 풀을 계속
     // 소모하지 못하게 즉시 무효화. Gemini 호출 대비 getUser 지연은 무시 가능.
-    const decoded = await adminAuth.verifyIdToken(idToken, true);
+    const decoded = await verifyActiveToken(idToken);
     uid = decoded.uid;
     isAdmin = decoded.admin === true;
     isTeacher = decoded.teacher === true;
@@ -118,6 +120,9 @@ export async function POST(req: NextRequest) {
   // 사진(선택) — data-URI 검증·분해. 잘못/과대 사진은 한도 차감 전에 거절(횟수 소모 방지).
   let parsedPhoto: { data: string; mimeType: string } | undefined;
   if (typeof photo === 'string' && photo) {
+    if (!isTeacher && !isStudent) {
+      return NextResponse.json({ error: '사진은 학급 계정에서만 올릴 수 있어요.' }, { status: 403 });
+    }
     // 저장 rule(validPost photo<=350000)과 동일 상한. generate만 크게 받으면 생성(쿼터 차감)은 되고
     // 저장은 규칙 위반으로 거부돼 '쿼터 증발'이 되므로 두 캡을 일치시킨다.
     if (photo.length > 350000) {
@@ -128,6 +133,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: '사진 형식이 올바르지 않아요.' }, { status: 400 });
     }
     parsedPhoto = { mimeType: m[1], data: m[2] };
+    if (!(await hasPhotoConsent(uid))) {
+      return NextResponse.json({ error: '사진 전송 동의를 먼저 확인해 주세요.' }, { status: 403 });
+    }
   }
 
   // 2.5) 생성 시작 레이트리밋(비환불) — 입력검증 후·한도선점 전에 체크.

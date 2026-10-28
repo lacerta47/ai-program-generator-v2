@@ -32,7 +32,8 @@ LUN(ai-program-generator) 프로덕션 배포 가이드. **플랫폼: Vercel(호
 | `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID` | … | |
 | `NEXT_PUBLIC_FIREBASE_APP_ID` | … | |
 | `FIREBASE_SERVICE_ACCOUNT_KEY` | 서비스계정 JSON **전체를 한 줄 문자열로** | 서버 전용. 미설정 시 `/api/generate`·preview·admin이 첫 요청에서 명확한 에러로 실패 |
-| `NEXT_PUBLIC_PREVIEW_ORIGIN` | `https://lun-preview.vercel.app` | **빌드타임에 박힘** → 값 바꾸면 재배포 필요. 3장 참고 |
+| `NEXT_PUBLIC_PREVIEW_ORIGIN` | `https://ai-program-generator-v2-preview.vercel.app` | 운영 앱 도메인과 다른 사이트. **빌드타임에 박힘** → 값 바꾸면 재배포 필요. 3장 참고 |
+| `NEXT_PUBLIC_APP_ORIGIN` | `https://eduai-lun.co.kr` | 미리보기의 `frame-ancestors` 허용 출처와 일치시킬 것 |
 | `CRON_SECRET` | 길고 랜덤한 문자열 | previews 정리 cron 보호. 미설정 시 cron 라우트가 안전하게 500 |
 | `GEN_DAILY_LIMIT` | `30` (선택) | 전역 일일 생성 한도의 **env 폴백**. 실제론 관리자 UI(`config/usage`)·학생별(`limits/{uid}`)이 우선 |
 
@@ -46,9 +47,10 @@ LUN(ai-program-generator) 프로덕션 배포 가이드. **플랫폼: Vercel(호
 - [ ] **앱 도메인** 1개 (예: `lun.vercel.app` 또는 커스텀).
 - [ ] **미리보기 도메인** 1개 더 — **같은 Vercel 프로젝트에 도메인 alias로 추가** (예: `lun-preview.vercel.app`).
   - 같은 프로젝트라 env가 공유됨 → 미리보기 GET 라우트(`/api/preview/post/[id]`)의 Admin SDK가 그대로 동작.
-- [ ] `NEXT_PUBLIC_PREVIEW_ORIGIN` = 미리보기 도메인 URL로 설정 후 재배포.
+- [ ] `NEXT_PUBLIC_PREVIEW_ORIGIN` = `https://ai-program-generator-v2-preview.vercel.app`로 설정하고 `NEXT_PUBLIC_APP_ORIGIN` = `https://eduai-lun.co.kr`인지 확인한 뒤 재배포.
+- [ ] 두 환경변수가 적용된 **새 빌드**에서 미리보기 응답의 `frame-ancestors`가 운영 앱 도메인을 포함하고, `connect-src 'none'`이 적용되는지 확인.
 
-> 미설정 시 미리보기가 같은 오리진에서 돌아 격리가 **조용히** 깨진다(콘솔 경고만). 반드시 설정.
+> 미설정·동일 출처 설정 시 미리보기를 거부한다. 잘못된 환경변수로 빌드가 성공하지 않도록 설정값을 함께 확인한다.
 
 ## 4. Firebase 콘솔 — 승인 도메인
 
@@ -69,6 +71,15 @@ LUN(ai-program-generator) 프로덕션 배포 가이드. **플랫폼: Vercel(호
 - [ ] 관리자 페이지(카테고리/신고/사용자) 동작.
 - [ ] `GET /api/cron/cleanup-previews`를 시크릿 없이 호출 → 401 확인(보호 동작).
 - [ ] 무인증 `POST /api/preview` → 401 확인.
+
+## 6-1. 보안 변경 배포 순서
+
+- [ ] 현재 Firestore 데이터의 백업·복구 방식을 확인한다. 관리형 백업/내보내기는 Blaze 요금제가 필요하므로 Spark 운영 중에는 요금제 변경 없이 임의로 활성화하지 않는다.
+- [ ] 운영 Vercel의 `NEXT_PUBLIC_APP_ORIGIN`과 `NEXT_PUBLIC_PREVIEW_ORIGIN`을 위 값으로 맞추고 새 앱을 배포한다. 잘못된 동일 출처 값이면 빌드가 실패해야 한다.
+- [ ] 새 앱에서 작품 게시·수정, 닉네임 설정, 사진 동의 기록, 교사·학생 계정 정지/해제를 확인한다. 기존 브라우저 탭도 새 앱으로 갱신한다.
+- [ ] 그다음 `firebase deploy --only firestore:rules,firestore:indexes`로 직접 게시물/닉네임 쓰기를 막는다. 규칙을 먼저 배포하면 구버전 클라이언트의 저장이 중단된다.
+- [ ] 정지된 기존 학생 계정에 `disabledAt`이 없는 경우 수동 목록 검토 후 보존 기한 기준일을 기록한다. 정리 cron의 `students`·`accountTombstones` 반환값과 실패 로그를 매일 확인한다.
+- [ ] Firebase 콘솔에서 App Check의 실제 강제 상태, Vercel 환경변수 접근권한, 서비스 계정 권한과 백업 복원 절차를 확인한다.
 
 ## 7. 확장 시 재검토 (지금은 불필요)
 
