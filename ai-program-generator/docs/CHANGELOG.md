@@ -13,6 +13,7 @@
 
 ## 진행 중 PR
 
+- **#160** [수정] fix(deps): 운영 의존성 보안 패치 — Next.js·Firebase Client·Sharp와 간접 의존성을 안전 버전으로 갱신해 운영 취약점을 15건에서 11건으로 줄였습니다. Firebase Web SDK가 고정한 `grpc-js@1.9.16`의 High 전파 4건은 advisory·잠금 버전·전파 경로가 정확히 일치할 때만 2026-11-17까지 추적 예외 처리하며, 새 High/Critical은 계속 차단합니다.
 - **#159** [테스트] test: 권한 회귀 테스트 기반 구축 — Firestore Emulator 기반 보안 규칙 회귀 테스트 31건을 추가했습니다.
 
 ## 2026-06
