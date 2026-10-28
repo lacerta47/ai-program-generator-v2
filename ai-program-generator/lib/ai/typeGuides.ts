@@ -6,6 +6,72 @@
 // 미로가 자주 나왔고, 보물·열쇠도 도달 불가 위치에 놓였다. 완전 미로(perfect maze) 알고리즘을 강제하면
 // 모든 칸이 연결되므로 구조적으로 못 깨는 미로가 나오지 않는다.
 
+const DESIGN_SELECTION_CONTRACT = `
+
+**학생 선택 디자인 연동 규칙 (디자인 프리셋보다 우선)**:
+1. 새 계획서의 끝에 \`[학생이 고른 디자인]\`이 있으면 그 안의 배경·색·모양·분위기를 그대로 구현하세요. 아래 프리셋의 기본 색이나 분위기로 바꾸지 마세요.
+2. 분위기·테마가 암시하는 색과 별도의 구체적인 색 선택이 다르면 구체적인 선택이 우선입니다. 예를 들어 '사탕 나라'와 '깊은 파란 배경'을 함께 골랐다면 배경은 깊은 파란색으로 만들고, 사탕 나라 느낌은 소품·무늬·형태로 표현하세요.
+3. 배경 선택은 페이지·놀이 무대의 바탕에, 버튼 색 선택은 버튼에, 캐릭터·물고기·블록 색 선택은 그 대상에만 적용하세요. 한 대상의 색을 화면 전체 대표색으로 무리하게 확대하지 마세요.
+4. 선택한 색을 기준으로 CSS 변수 \`--canvas\`, \`--surface\`, \`--ink\`, \`--primary\`, \`--accent\`를 정하세요. 배경과 글자는 4.5:1 이상 대비시키고, 선택한 색이 연하면 글자를 짙게, 어두우면 글자를 밝게 하세요.
+5. 무지개·알록달록·네온처럼 여러 색을 고른 경우 그 색은 선택한 대상에 집중하고, 나머지 카드·설명·조작부는 흰색·짙은 남색 같은 중립색으로 정리하세요. 명시된 여러 색 외에 강한 색을 더 늘리지 마세요.
+6. 색 선택이 없거나 AI에게 맡긴 경우에만 아래 유형 프리셋의 기본 팔레트를 고르세요.`;
+
+const PLAYFUL_TOOL_DESIGN = `
+
+**도구·학습 놀이 디자인 프리셋**:
+1. 화면 순서는 짧은 제목 → 가장 중요한 문제·결과 카드 → 주요 조작 → 상태·도움말로 구성하고, 한 화면에서 가장 중요한 행동 하나만 진한 버튼으로 강조하세요.
+2. 바깥 컨테이너는 \`width: min(100%, 720px)\`, 모바일 좌우 padding 16px 이상으로 중앙 배치하세요. 카드 간격은 16px, 카드 안쪽 여백은 20~24px로 통일하세요.
+3. 카드 모서리는 16~20px, 버튼·입력은 12~16px로 통일하고, 기본 카드에는 얇은 테두리 또는 아주 약한 그림자 중 하나만 사용하세요.
+4. 선택지·숫자 버튼은 데스크톱 2~4열에서 모바일 1~2열로 줄이고, 좁게 찌그러뜨리거나 가로 스크롤시키지 마세요. 선택·정답·오답은 색뿐 아니라 글자나 테두리 변화로도 구분하세요.
+5. 별도 색 선택이 없으면 밝은 바탕, 흰 카드, 짙은 남색 글자에 민트·노랑·코랄 중 최대 2개를 포인트로 쓰세요.`;
+
+const CREATIVE_STUDIO_DESIGN = `
+
+**창작 놀이터 디자인 프리셋**:
+1. 그림·캐릭터·수족관·악기 같은 창작 무대가 화면에서 가장 크고 먼저 보이게 하세요. 도구와 설명 패널이 무대보다 넓거나 화려하면 안 됩니다.
+2. 데스크톱은 무대와 조작부를 나란히 둘 수 있지만, 모바일은 무대 다음에 조작부를 한 열로 배치하세요. 조작부는 기능별 작은 묶음으로 나누고 한 줄에 버튼을 3개 넘게 빽빽하게 넣지 마세요.
+3. 같은 작품의 SVG·Canvas 그래픽은 윤곽선 굵기, 둥근 선 끝, 명암 단계와 하이라이트 방식을 통일하세요. 서로 다른 화풍의 이모지·문자 그림을 핵심 그래픽에 섞지 마세요.
+4. 무대 주변 카드와 도구는 차분한 중립색으로 두어 학생이 고른 작품 색이 주인공이 되게 하세요. 장식 그라데이션·반짝임·그림자는 한 화면에 각각 한 종류만 사용하세요.
+5. 별도 색 선택이 없으면 따뜻한 흰 바탕과 파스텔 민트·라일락·코랄 중 어울리는 2색을 사용하세요.`;
+
+const FRIENDLY_ARCADE_DESIGN = `
+
+**친근한 게임 디자인 프리셋**:
+1. 제목 → 점수·시간·목숨을 담은 짧은 HUD → 가장 큰 게임 무대 → 조작 버튼 → 결과·다시하기 순서로 구성하세요. 긴 설명 카드나 게임과 무관한 장식 패널은 만들지 마세요.
+2. 미로·룰렛은 정사각형 무대를, 움직이는 아케이드 게임은 4:3 또는 16:9 무대를 사용하고, 무대가 모바일 화면 너비를 넘지 않게 하세요. HUD는 가능하면 한 줄, 모바일에서는 두 줄 이내로 유지하세요.
+3. 시작·다시하기 같은 대표 행동 하나만 진한 버튼으로 강조하고, 화면 조작 버튼은 48×48px 이상으로 게임 무대 아래 엄지손가락이 닿기 쉬운 곳에 배치하세요.
+4. 게임 오브젝트와 배경은 명확히 구분하고, 충돌 대상·목표·플레이어는 색뿐 아니라 모양이나 테두리로도 구별하세요. 장식보다 현재 상태와 다음 행동이 먼저 보여야 합니다.
+5. 별도 색 선택이 없으면 밝은 바탕 또는 짙은 남색 바탕 하나를 고르고, 대표색 1개와 강조색 1개만 선명하게 사용하세요.`;
+
+type DesignPreset = 'playful-tool' | 'creative-studio' | 'friendly-arcade';
+
+const DESIGN_PRESET_BY_TYPE: Record<string, DesignPreset> = {
+  quiz: 'playful-tool',
+  card: 'playful-tool',
+  calc: 'playful-tool',
+  fortune: 'playful-tool',
+  clock: 'playful-tool',
+  paint: 'creative-studio',
+  sound: 'creative-studio',
+  aquarium: 'creative-studio',
+  dressup: 'creative-studio',
+  game: 'friendly-arcade',
+  maze: 'friendly-arcade',
+  roulette: 'friendly-arcade',
+};
+
+const DESIGN_PRESETS: Record<DesignPreset, string> = {
+  'playful-tool': PLAYFUL_TOOL_DESIGN,
+  'creative-studio': CREATIVE_STUDIO_DESIGN,
+  'friendly-arcade': FRIENDLY_ARCADE_DESIGN,
+};
+
+export function getDesignPreset(programType?: string): string {
+  if (!programType) return '';
+  const preset = DESIGN_PRESET_BY_TYPE[programType];
+  return preset ? DESIGN_SELECTION_CONTRACT + DESIGN_PRESETS[preset] : '';
+}
+
 const MAZE_GUIDE = `
 
 **미로 제작 규칙 (반드시 지킬 것 — 이 규칙을 어기면 풀 수 없는 미로가 나옵니다)**:
@@ -162,11 +228,12 @@ function gameGuide(prompt: string): string {
 }
 
 export function getTypeGuide(programType?: string, prompt = '', hasPhoto = false): string {
+  const designGuide = getDesignPreset(programType);
   const typeGuide = programType === 'dressup' && hasPhoto
     ? PHOTO_DRESSUP_GUIDE
     : programType === 'game'
     ? gameGuide(prompt)
     : (programType && SURVEY_TYPE_GUIDES[programType]) || '';
   const audioGuide = programType === 'sound' || requestsAudio(prompt) ? USER_GESTURE_AUDIO_GUIDE : '';
-  return typeGuide + audioGuide;
+  return designGuide + typeGuide + audioGuide;
 }
