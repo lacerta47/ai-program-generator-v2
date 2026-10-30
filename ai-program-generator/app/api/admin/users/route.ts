@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { requireAdmin } from '@/lib/admin/requireAdmin';
 import { todayKeyKST, lastDayKeysKST } from '@/lib/usageDay';
-import { readDailyLimit } from '@/lib/admin/usageConfig';
+import { readTotalLimit, configuredTotalLimit, ROLE_DAILY_LIMIT } from '@/lib/admin/usageConfig';
 
 export const runtime = 'nodejs';
 
@@ -29,6 +29,14 @@ export async function GET(req: NextRequest) {
   // 페이지 uid에 한정한 조인(전체 컬렉션 스캔 제거)
   const userDocs = uids.length ? await adminDb.getAll(...uids.map((u) => adminDb.doc(`users/${u}`))) : [];
   const limitDocs = uids.length ? await adminDb.getAll(...uids.map((u) => adminDb.doc(`limits/${u}`))) : [];
+  const studentUids = users.filter((u) => u.customClaims?.student === true).map((u) => u.uid);
+  const studentDocs = studentUids.length
+    ? await adminDb.getAll(...studentUids.map((uid) => adminDb.doc(`students/${uid}`)))
+    : [];
+  const studentsById = new Map(studentDocs.map((d) => [d.id, d.data()]));
+  const memberUids = users.filter((u) => !u.customClaims?.student && !u.customClaims?.teacher && !u.customClaims?.admin).map((u) => u.uid);
+  const totalDocs = memberUids.length ? await adminDb.getAll(...memberUids.map((uid) => adminDb.doc(`memberUsage/${uid}`))) : [];
+  const totalsById = new Map(totalDocs.map((d) => [d.id, d.data()?.count ?? 0]));
   const usageRefs = uids.flatMap((u) => days.map((d) => adminDb.doc(`usage/${u}_${d}`)));
   const usageDocs = usageRefs.length ? await adminDb.getAll(...usageRefs) : [];
   const postCounts = await Promise.all(
@@ -49,8 +57,8 @@ export async function GET(req: NextRequest) {
   });
   const overrideById = new Map<string, number>();
   limitDocs.forEach((d) => {
-    const v = (d.data() as { dailyLimit?: number } | undefined)?.dailyLimit;
-    if (typeof v === 'number' && v >= 0) overrideById.set(d.id, v);
+    const v = configuredTotalLimit(d.data());
+    if (v !== null) overrideById.set(d.id, v);
   });
   // usage 문서를 id(`${uid}_${day}`)로 키잉 — getAll 반환 순서에 의존하지 않음.
   const usageById = new Map(usageDocs.map((d) => [d.id, d]));
@@ -61,20 +69,34 @@ export async function GET(req: NextRequest) {
   const postCountByUid = new Map<string, number>();
   uids.forEach((u, i) => postCountByUid.set(u, postCounts[i]));
 
-  const members = users.map((u) => ({
-    uid: u.uid,
-    email: u.email ?? null,
-    nickname: nickById.get(u.uid) ?? null,
-    createdAt: toMs(u.metadata.creationTime) ?? 0,
-    lastSignInAt: toMs(u.metadata.lastSignInTime),
-    isAdmin: u.customClaims?.admin === true,
-    disabled: u.disabled === true,
-    postCount: postCountByUid.get(u.uid) ?? 0,
-    usageToday: usageCount(u.uid, today),
-    usage7d: days.map((d) => usageCount(u.uid, d)),
-    limitOverride: overrideById.get(u.uid) ?? null,
-  }));
+  const members = users.map((u) => {
+    const student = u.customClaims?.student === true ? studentsById.get(u.uid) : undefined;
+    return {
+      uid: u.uid,
+      email: u.email ?? null,
+      nickname: nickById.get(u.uid) ?? null,
+      createdAt: toMs(u.metadata.creationTime) ?? 0,
+      lastSignInAt: toMs(u.metadata.lastSignInTime),
+      isAdmin: u.customClaims?.admin === true,
+      isTeacher: u.customClaims?.teacher === true,
+      roleDailyLimit: ROLE_DAILY_LIMIT,
+      totalUsed: totalsById.get(u.uid) ?? 0,
+      isStudent: u.customClaims?.student === true,
+      studentQuota: student
+        ? {
+            limitType: student.limitType === 'total' ? 'total' : 'daily',
+            limitValue: student.limitValue ?? 0,
+            used: student.limitType === 'total' ? student.usedTotal ?? 0 : usageCount(u.uid, today),
+          }
+        : null,
+      disabled: u.disabled === true,
+      postCount: postCountByUid.get(u.uid) ?? 0,
+      usageToday: usageCount(u.uid, today),
+      usage7d: days.map((d) => usageCount(u.uid, d)),
+      limitOverride: overrideById.get(u.uid) ?? null,
+    };
+  });
 
-  const usageLimit = await readDailyLimit();
+  const usageLimit = await readTotalLimit();
   return NextResponse.json({ members, usageLimit, days, nextPageToken: page.pageToken ?? null });
 }

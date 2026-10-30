@@ -25,12 +25,13 @@ import LoadingDots from '@/components/ui/LoadingDots';
 import Button from '@/components/ui/Button';
 import { useToast } from '@/components/ui/Toast';
 import { useConfirm } from '@/components/ui/ConfirmProvider';
+import { accessNotice } from '@/lib/client/accessNotice';
 
 /** 찾는 중 자동으로 더 불러올 글 수 단위 — 여기까지 훑고 멈춘 뒤 '더 찾아보기'로 한 단계씩 넓힌다. */
 const SCAN_STEP = 100;
 
 export default function BoardView() {
-  const { user, isAdmin, isTeacher } = useAuth();
+  const { user, isAdmin, isTeacher, loading: authLoading } = useAuth();
   const { toast } = useToast();
   const confirm = useConfirm();
   const router = useRouter();
@@ -53,7 +54,9 @@ export default function BoardView() {
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
-  const [loadError, setLoadError] = useState(false);
+  const [loadError, setLoadError] = useState<unknown>(null);
+  const [deepLinkFailure, setDeepLinkFailure] = useState<unknown>(null);
+  const loadRequestRef = useRef({ id: 0 });
   const [loginOpen, setLoginOpen] = useState(false);
   // 데스크탑에서 좌측 목록 패널을 접어 미리보기를 넓히는 상태(세션 로컬)
   const [collapsed, setCollapsed] = useState(false);
@@ -76,7 +79,7 @@ export default function BoardView() {
     () =>
       subscribeCategories(setCategories, (e) => {
         console.error('카테고리 구독 실패:', e);
-        setLoadError(true);
+        setLoadError(e);
       }),
     [],
   );
@@ -178,16 +181,23 @@ export default function BoardView() {
   // params에 반응한다 — 정적 프리렌더 페이지에서 useSearchParams가 마운트 직후에야 채워질 수 있어
   // []-deps로 한 번만 돌면 postId를 놓친다. 같은 id 재요청은 ref로 막는다.
   useEffect(() => {
+    if (authLoading) return;
     const postId = params.get('post');
     if (!postId) {
       setDeepLinkResolving(false);
       return;
     }
-    if (resolvedDeepLink.current === postId) return;
-    resolvedDeepLink.current = postId;
+    const requestKey = `${user?.uid ?? 'anonymous'}:${postId}`;
+    if (resolvedDeepLink.current === requestKey) return;
+    resolvedDeepLink.current = requestKey;
+    let cancelled = false;
     setDeepLinkResolving(true);
+    setSelectedPost(null);
+    setDeepLinkError(null);
+    setDeepLinkFailure(null);
     getPost(postId)
       .then((p) => {
+        if (cancelled) return;
         if (p) {
           setDeepLinkError(null);
           setSelectedPost(p);
@@ -197,17 +207,25 @@ export default function BoardView() {
         }
       })
       .catch((e) => {
+        if (cancelled) return;
         console.error('공유 글 불러오기 실패:', e);
-        setDeepLinkError('작품을 불러오지 못했어요. 잠시 후 다시 해주세요.');
+        setSelectedPost(null);
+        setDeepLinkFailure(e);
       })
-      .finally(() => setDeepLinkResolving(false));
-  }, [params, toast]);
+      .finally(() => { if (!cancelled) setDeepLinkResolving(false); });
+    return () => {
+      cancelled = true;
+      if (resolvedDeepLink.current === requestKey) resolvedDeepLink.current = null;
+    };
+  }, [params, authLoading, user?.uid]);
 
   const loadFirst = useCallback(async (categoryId: string) => {
+    const requestId = ++loadRequestRef.current.id;
     setLoading(true);
-    setLoadError(false);
+    setLoadError(null);
     try {
       const page = await fetchPosts(categoryId, boardTeacherUidOf(categoryId));
+      if (requestId !== loadRequestRef.current.id) return;
       // 공유링크로 연 글이 이 카테고리에 속하는데 첫 페이지에 없으면, 목록 맨 위에 끼워 선택 표시되게 한다.
       const sel = selectedPostRef.current;
       const list =
@@ -218,10 +236,13 @@ export default function BoardView() {
       cursorRef.current = page.cursor;
       setHasMore(page.hasMore);
     } catch (e) {
+      if (requestId !== loadRequestRef.current.id) return;
       console.error('게시물 로드 실패:', e);
-      setLoadError(true);
+      setPosts([]);
+      setSelectedPost(null);
+      setLoadError(e);
     } finally {
-      setLoading(false);
+      if (requestId === loadRequestRef.current.id) setLoading(false);
     }
   }, []);
 
@@ -232,11 +253,14 @@ export default function BoardView() {
 
   // 카테고리 변경 시(또는 교사uid가 뒤늦게 확정될 때) 첫 페이지 로드
   useEffect(() => {
-    if (selectedCategoryId) loadFirst(selectedCategoryId);
-  }, [selectedCategoryId, selectedTeacherUid, loadFirst]);
+    const requests = loadRequestRef.current;
+    if (!authLoading && selectedCategoryId) loadFirst(selectedCategoryId);
+    return () => { ++requests.id; };
+  }, [selectedCategoryId, selectedTeacherUid, loadFirst, authLoading, user?.uid]);
 
   const loadMore = useCallback(async () => {
     if (!selectedCategoryId || !hasMore || loadingMore) return;
+    const requestId = loadRequestRef.current.id;
     setLoadingMore(true);
     try {
       const page = await fetchPosts(
@@ -244,6 +268,7 @@ export default function BoardView() {
         boardTeacherUidOf(selectedCategoryId),
         cursorRef.current,
       );
+      if (requestId !== loadRequestRef.current.id) return;
       // 딥링크로 위에 끼워 둔 글이 다음 페이지에 또 나올 수 있어 중복 제거
       setPosts((prev) => {
         const seen = new Set(prev.map((p) => p.id));
@@ -252,9 +277,10 @@ export default function BoardView() {
       cursorRef.current = page.cursor;
       setHasMore(page.hasMore);
     } catch (e) {
+      if (requestId !== loadRequestRef.current.id) return;
       console.error('추가 로드 실패:', e);
       setHasMore(false); // 무한 재시도 방지
-      setLoadError(true);
+      setLoadError(e);
     } finally {
       setLoadingMore(false);
     }
@@ -276,12 +302,13 @@ export default function BoardView() {
     setSelectedCategoryId(id);
     setSelectedPost(null);
     setDeepLinkError(null);
+    setDeepLinkFailure(null);
     setTreeOpen(false);
     router.replace(`/board?category=${id}`, { scroll: false });
   }
 
   function selectPost(post: Post) {
-    resolvedDeepLink.current = post.id; // 이미 가진 객체라 딥링크 효과가 재요청하지 않게 표시
+    resolvedDeepLink.current = `${user?.uid ?? 'anonymous'}:${post.id}`; // 이미 가진 객체라 재조회하지 않음
     setSelectedPost(post);
     router.replace(`/board?category=${post.categoryId}&post=${post.id}`, { scroll: false });
   }
@@ -336,6 +363,8 @@ export default function BoardView() {
   const scanCapped = filtering && hasMore && posts.length >= scanLimit;
   // 찾는 중엔 스크롤 자동 로드를 끈다 — 위 효과가 로드를 전담하므로 두 경로가 겹쳐 이중 호출되지 않게.
   const listHasMore = filtering ? false : hasMore;
+  const loadNotice = loadError ? accessNotice(loadError, !!user) : null;
+  const deepLinkNotice = deepLinkFailure ? accessNotice(deepLinkFailure, !!user) : null;
 
   return (
     <div
@@ -394,22 +423,20 @@ export default function BoardView() {
             <div className="py-8">
               <LoadingDots label="작품을 불러오는 중…" />
             </div>
-          ) : loadError ? (
+          ) : loadNotice ? (
             <div className="anim-pop-in flex flex-col items-center gap-3 py-10 text-center">
               <span className="grid h-14 w-14 place-items-center rounded-full bg-coral-soft text-coral-ink">
                 <CloudOff size={26} aria-hidden />
               </span>
-              <p className="text-[15px] text-muted">
-                작품을 불러오지 못했어요.
-                <br />
-                인터넷 연결을 확인하고 다시 해볼까요?
-              </p>
-              <Button
+              <p role="alert" className="text-[17px] text-muted">{loadNotice.message}</p>
+              {loadNotice.action && <Button
                 variant="soft"
-                onClick={() => selectedCategoryId && loadFirst(selectedCategoryId)}
+                onClick={() => loadNotice.action === 'login'
+                  ? setLoginOpen(true)
+                  : selectedCategoryId && loadFirst(selectedCategoryId)}
               >
-                <RotateCcw size={16} aria-hidden /> 다시 시도
-              </Button>
+                {loadNotice.action === 'login' ? '로그인하기' : <><RotateCcw size={16} aria-hidden /> 다시 시도</>}
+              </Button>}
             </div>
           ) : (
             <>
@@ -469,12 +496,14 @@ export default function BoardView() {
         className="anim-pop-in flex min-h-[72vh] flex-col rounded-[var(--r-lg)] border-2 border-line bg-surface p-5"
         style={{ animationDelay: '60ms' }}
       >
-        {deepLinkError && !selectedPost ? (
+        {(deepLinkError || deepLinkNotice) && !selectedPost ? (
           <div className="flex flex-1 flex-col items-center justify-center gap-3 py-10 text-center">
             <span className="grid h-14 w-14 place-items-center rounded-full bg-coral-soft text-coral-ink">
               <CloudOff size={26} aria-hidden />
             </span>
-            <p className="text-[15px] text-muted">{deepLinkError}</p>
+            <p role="alert" className="text-[17px] text-muted">{deepLinkNotice?.message ?? deepLinkError}</p>
+            {deepLinkNotice?.action === 'login' && <Button variant="soft" onClick={() => setLoginOpen(true)}>로그인하기</Button>}
+            {deepLinkNotice?.action === 'retry' && <Button variant="soft" onClick={() => window.location.reload()}>다시 시도</Button>}
           </div>
         ) : (
           <PostPreview

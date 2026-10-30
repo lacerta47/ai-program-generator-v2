@@ -33,7 +33,7 @@ function GlobalLimit() {
   useEffect(() => {
     let alive = true;
     getConfig()
-      .then((c) => { if (alive) setLimit(String(c.dailyLimit)); })
+      .then((c) => { if (alive) setLimit(String(c.totalLimit)); })
       .catch((e) => console.error('한도 불러오기 실패:', e))
       .finally(() => { if (alive) setLoading(false); });
     return () => { alive = false; };
@@ -60,16 +60,17 @@ function GlobalLimit() {
   return (
     <section className="rounded-[var(--r-lg)] border-2 border-line bg-surface p-5">
       <h2 className="mb-1 flex items-center gap-2 text-[18px]">
-        <Settings2 size={18} aria-hidden /> 전역 일일 한도
+        <Settings2 size={18} aria-hidden /> 일반 회원 기본 총 한도
       </h2>
-      <p className="mb-3 text-[13px] text-muted">
-        모든 학생이 하루에 만들 수 있는 기본 횟수예요. (학생별 조절은 가입자 목록에서)
+      <p className="mb-3 text-[17px] text-muted">
+        구글·이메일로 가입한 일반 회원에게 제공하는 총 생성 횟수예요. 매일 충전되지 않아요.
+        회원별 조절은 가입자 목록에서 할 수 있어요. 학생의 학급 한도와 선생님·관리자의 일일 한도는 별도로 적용돼요.
       </p>
       {loading ? (
         <LoadingDots label="불러오는 중…" />
       ) : (
         <div className="flex items-end gap-2">
-          <Label text="하루 횟수">
+          <Label text="총 횟수">
             <TextInput type="number" min={0} value={limit} onChange={(e) => setLimit(e.target.value)} className="w-28" />
           </Label>
           <Button variant="primary" onClick={save} disabled={busy}>{busy ? '저장 중…' : '저장'}</Button>

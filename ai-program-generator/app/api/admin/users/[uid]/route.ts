@@ -27,19 +27,41 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ ui
   } catch {
     return NextResponse.json({ error: '요청 본문이 올바르지 않아요.' }, { status: 400 });
   }
-  const b = (body ?? {}) as { disabled?: unknown; dailyLimit?: unknown; password?: unknown };
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    return NextResponse.json({ error: '요청 본문이 올바르지 않아요.' }, { status: 400 });
+  }
+  const b = body as { disabled?: unknown; totalLimit?: unknown; password?: unknown; dailyLimit?: unknown };
+  if ('dailyLimit' in b) {
+    return NextResponse.json({ error: '한도 설정 방식이 바뀌었어요. 새로고침 후 다시 해주세요.' }, { status: 400 });
+  }
+  if ('totalLimit' in b && b.totalLimit !== null &&
+      (typeof b.totalLimit !== 'number' || !Number.isInteger(b.totalLimit) || b.totalLimit < 0)) {
+    return NextResponse.json({ error: '한도는 0 이상의 정수 또는 null이어야 해요.' }, { status: 400 });
+  }
 
   try {
+    if ('totalLimit' in b) {
+      const target = await adminAuth.getUser(uid);
+      if (target.customClaims?.student === true) {
+        return NextResponse.json(
+          { error: '학생 한도는 담당 선생님의 학생 관리에서 바꿔 주세요.' },
+          { status: 400 },
+        );
+      }
+      if (target.customClaims?.teacher === true || target.customClaims?.admin === true) {
+        return NextResponse.json({ error: '일반 회원의 총 한도만 바꿀 수 있어요.' }, { status: 400 });
+      }
+    }
     if (typeof b.disabled === 'boolean') {
       const blocked = await blockIfAdminTarget(uid);
       if (blocked) return blocked;
       await setAccountDisabled(uid, b.disabled);
     }
-    if ('dailyLimit' in b) {
-      if (b.dailyLimit === null) {
+    if ('totalLimit' in b) {
+      if (b.totalLimit === null) {
         await clearUserLimit(uid);
-      } else if (typeof b.dailyLimit === 'number' && Number.isInteger(b.dailyLimit) && b.dailyLimit >= 0) {
-        await setUserLimit(uid, b.dailyLimit);
+      } else if (typeof b.totalLimit === 'number' && Number.isInteger(b.totalLimit) && b.totalLimit >= 0) {
+        await setUserLimit(uid, b.totalLimit);
       } else {
         return NextResponse.json({ error: '한도는 0 이상의 정수 또는 null이어야 해요.' }, { status: 400 });
       }

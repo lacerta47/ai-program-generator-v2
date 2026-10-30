@@ -46,7 +46,7 @@ function sortValue(m: Member, key: SortKey): string | number {
     case 'posts':
       return m.postCount;
     case 'usageToday':
-      return m.usageToday;
+      return m.studentQuota?.used ?? (m.isAdmin || m.isTeacher ? m.usageToday : m.totalUsed);
     case 'week':
       return m.usage7d.reduce((a, b) => a + b, 0);
   }
@@ -84,7 +84,7 @@ export default function AdminUsersPage() {
 
 function UsersContent() {
   const [members, setMembers] = useState<Member[] | null>(null);
-  const [usageLimit, setUsageLimit] = useState(30);
+  const [usageLimit, setUsageLimit] = useState(5);
   const [error, setError] = useState(false);
   const [q, setQ] = useState('');
   const [sortKey, setSortKey] = useState<SortKey>('usageToday');
@@ -229,7 +229,7 @@ function UsersContent() {
                 {sortHead('가입일', 'created')}
                 {sortHead('마지막 접속', 'lastSignIn')}
                 {sortHead('작품', 'posts')}
-                {sortHead('오늘 사용', 'usageToday')}
+                {sortHead('사용 / 한도', 'usageToday')}
                 {sortHead('최근 7일', 'week')}
                 <th className="p-3 font-medium">관리</th>
               </tr>
@@ -259,11 +259,17 @@ function UsersContent() {
                   </td>
                   <td className="p-3">{m.postCount}</td>
                   <td className="p-3">
-                    {m.isAdmin ? (
-                      '무제한'
+                    {m.isAdmin || m.isTeacher ? (
+                      `일일 ${m.usageToday}/${m.roleDailyLimit}회`
+                    ) : m.isStudent ? (
+                      <span>
+                        {m.studentQuota
+                          ? `${m.studentQuota.limitType === 'total' ? '총' : '일일'} ${m.studentQuota.used}/${m.studentQuota.limitValue}회`
+                          : '학생 한도 확인 필요'}
+                      </span>
                     ) : (
                       <span className="inline-flex items-center gap-1">
-                        {m.usageToday}/{m.limitOverride ?? usageLimit}
+                        총 {m.totalUsed}/{m.limitOverride ?? usageLimit}회
                         {m.limitOverride !== null && (
                           <span className="rounded-full bg-brand-soft px-1.5 py-0.5 text-[11px] text-brand-ink">맞춤</span>
                         )}
@@ -376,8 +382,20 @@ function UserActionModal({
           </Button>
         </div>
 
-        <div>
-          <p className="mb-1 text-[14px]">하루 한도</p>
+        {member.isStudent ? (
+          <div className="text-[17px]">
+            <p>학생 한도</p>
+            <p className="text-muted">
+              {member.studentQuota
+                ? `${member.studentQuota.limitType === 'total' ? '총' : '일일'} ${member.studentQuota.used}/${member.studentQuota.limitValue}회 사용`
+                : '학생 한도 정보를 확인하지 못했어요.'}
+            </p>
+            <p className="mt-2 text-muted">한도는 담당 선생님의 학생 관리에서 바꿔 주세요. 우리 반의 남은 한도도 함께 적용돼요.</p>
+          </div>
+        ) : member.isTeacher ? (
+          <p className="text-[17px] text-muted">선생님 계정에는 보호용 일일 한도 {member.roleDailyLimit}회가 적용돼요. 학급 총 한도는 선생님 관리에서 조절해 주세요.</p>
+        ) : <div>
+          <p className="mb-1 text-[17px]">총 생성 한도</p>
           <p className="mb-2 text-[12px] text-muted">
             지금: {member.limitOverride !== null ? `맞춤 ${member.limitOverride}회` : `기본 ${globalLimit}회`}
           </p>
@@ -403,7 +421,7 @@ function UserActionModal({
                   toast('한도는 0 이상의 정수여야 해요.');
                   return;
                 }
-                act(() => patchUser(member.uid, { dailyLimit: n }), '한도를 바꿨어요.');
+                act(() => patchUser(member.uid, { totalLimit: n }), '총 한도를 바꿨어요.');
               }}
             >
               적용
@@ -412,13 +430,14 @@ function UserActionModal({
               <Button
                 variant="ghost"
                 disabled={busy}
-                onClick={() => act(() => patchUser(member.uid, { dailyLimit: null }), '기본 한도로 되돌렸어요.')}
+                onClick={() => act(() => patchUser(member.uid, { totalLimit: null }), '기본 총 한도로 되돌렸어요.')}
               >
                 기본값으로
               </Button>
             )}
           </div>
-        </div>
+          <p className="mt-2 text-[17px] text-muted">지금까지 {member.totalUsed}회 사용했어요. 한도를 바꿔도 사용 횟수는 초기화되지 않아요.</p>
+        </div>}
 
         <div>
           <p className="mb-1 text-[14px]">비밀번호</p>

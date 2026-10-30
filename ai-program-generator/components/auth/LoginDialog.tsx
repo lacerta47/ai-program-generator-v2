@@ -15,6 +15,7 @@ import Button from '@/components/ui/Button';
 import Modal from '@/components/ui/Modal';
 import { TextInput, Select, Label } from '@/components/ui/Field';
 import { listSchools, type School } from '@/lib/firebase/schools';
+import { ACCOUNT_DISABLED_MESSAGE } from '@/lib/client/accessNotice';
 
 // App Check 강제 상태에서 reCAPTCHA 토큰을 못 얻으면(학교·회사 방화벽이 Google/reCAPTCHA 차단,
 // 광고차단 확장, 네트워크 불안정) 로그인이 막힌다. 이때 '비밀번호 오류'로 오인하지 않게 원인 안내를 준다.
@@ -31,6 +32,7 @@ function isBlockedError(e: unknown): boolean {
 function toMessage(e: unknown): string {
   const code = (e as { code?: string })?.code ?? '';
   const map: Record<string, string> = {
+    'auth/user-disabled': ACCOUNT_DISABLED_MESSAGE,
     'auth/invalid-email': '이메일 모양이 이상해요. 다시 확인해 주세요.',
     'auth/invalid-credential': '이메일이나 비밀번호가 맞지 않아요.',
     'auth/wrong-password': '비밀번호가 맞지 않아요.',
@@ -158,7 +160,9 @@ export default function LoginDialog({ open, onClose }: { open: boolean; onClose:
       onClose();
     } catch (err) {
       // App Check/네트워크 차단이면 '학번·비번 확인' 대신 원인 안내(학교 방화벽 등). 그 외엔 자격 재확인.
-      setError(isBlockedError(err) ? BLOCKED_MSG : '학교·학번·비밀번호를 다시 확인해 주세요.');
+      setError((err as { code?: string })?.code === 'auth/user-disabled'
+        ? ACCOUNT_DISABLED_MESSAGE
+        : isBlockedError(err) ? BLOCKED_MSG : '학교·학번·비밀번호를 다시 확인해 주세요.');
     } finally {
       setBusy(false);
     }
