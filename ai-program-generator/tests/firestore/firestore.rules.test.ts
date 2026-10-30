@@ -377,6 +377,18 @@ describe('Firestore 권한 규칙', () => {
       await assertSucceeds(deleteDoc(doc(db(admin()), 'reports/report-1')));
     });
 
+    test('일반 회원 총 사용량은 본인·다른 사용자·관리자 모두 클라이언트에서 접근할 수 없다', async () => {
+      await env.withSecurityRulesDisabled(async (context) => {
+        await setDoc(doc(context.firestore(), 'memberUsage/verified-user'), { uid: 'verified-user', count: 3 });
+      });
+      for (const context of [anonymous(), verifiedUser(), studentA(), admin()]) {
+        const ref = doc(db(context), 'memberUsage/verified-user');
+        await assertFails(getDoc(ref));
+        await assertFails(setDoc(ref, { uid: 'verified-user', count: 0 }));
+        await assertFails(deleteDoc(ref));
+      }
+    });
+
     test('usage와 exemplars는 관리자도 클라이언트에서 접근할 수 없다', async () => {
       await assertFails(getDoc(doc(db(admin()), 'usage/admin_2026-09-30')));
       await assertFails(setDoc(doc(db(admin()), 'usage/admin_2026-09-30'), { count: 1 }));

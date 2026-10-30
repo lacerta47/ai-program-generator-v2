@@ -47,7 +47,7 @@ function HubContent() {
           href="/admin/accounts"
           icon={<Settings2 size={22} aria-hidden />}
           title="전역 설정"
-          desc="전역 일일 한도"
+          desc="일반 회원 기본 총 한도"
         />
         <HubCard
           href="/admin/teachers"

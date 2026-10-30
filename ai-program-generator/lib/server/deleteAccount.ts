@@ -33,6 +33,7 @@ export async function deleteAccountCascade(uid: string): Promise<void> {
   refs.push(adminDb.doc(`users/${uid}`));
   refs.push(adminDb.doc(`photoConsents/${uid}`));
   refs.push(adminDb.doc(`limits/${uid}`));
+  refs.push(adminDb.doc(`memberUsage/${uid}`));
   refs.push(adminDb.doc(`teachers/${uid}`));
   refs.push(adminDb.doc(`students/${uid}`));
   // 선생님 계정이면 그 학교(schools/{schoolCode}) 문서도 정리 — 삭제된 교사가 학생 로그인 드롭다운에 남지 않게.

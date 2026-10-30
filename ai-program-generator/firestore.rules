@@ -160,6 +160,11 @@ service cloud.firestore {
         && request.resource.data.updatedAt == request.time;
     }
 
+    // 일반 회원 전환 이후 총 생성 사용량 — 서버 트랜잭션만 읽기/쓰기 가능.
+    match /memberUsage/{uid} {
+      allow read, write: if false;
+    }
+
     // few-shot 참고 예시(생성 품질용) — 서버 Admin SDK 전용. 클라이언트 접근 전면 차단(usage와 동일 정책).
     match /exemplars/{docId} {
       allow read, write: if false;

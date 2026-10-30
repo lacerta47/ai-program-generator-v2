@@ -10,7 +10,8 @@ import { adminDb } from '@/lib/firebase/admin';
 import { hasPhotoConsent } from '@/lib/server/photoConsent';
 import { verifyActiveToken } from '@/lib/server/verifyActiveToken';
 import { todayKeyKST } from '@/lib/usageDay';
-import { readEffectiveLimit } from '@/lib/admin/usageConfig';
+import { readEffectiveTotalLimit, ROLE_DAILY_LIMIT } from '@/lib/admin/usageConfig';
+import { reserveMemberQuota, refundMemberQuota } from '@/lib/server/memberQuota';
 import { reserveStudentQuota, refundStudentQuota } from '@/lib/server/studentQuota';
 import { allowGenerate } from '@/lib/server/genRate';
 import { UserFacingError, GateError } from '@/lib/ai/errors';
@@ -19,9 +20,6 @@ import { recordGateFail } from '@/lib/server/gateStats';
 
 // AI 호출은 반드시 서버에서만 실행한다(키 노출 방지).
 export const runtime = 'nodejs';
-
-// 교사·admin 일일 생성 상한 — 무제한 방지(한 계정이 공유 Gemini 키를 소진하는 비용·DoS 차단). env로 조정.
-const ROLE_DAILY_LIMIT = Number(process.env.ROLE_GEN_DAILY_LIMIT) || 100;
 
 function isMode(v: unknown): v is GenerateMode {
   return v === 'generate' || v === 'modify';
@@ -166,12 +164,24 @@ export async function POST(req: NextRequest) {
               : '한도를 확인하지 못했어요. 잠시 후 다시 해주세요.';
       return NextResponse.json({ error: msg }, { status: r.reason === 'misconfig' ? 500 : 429 });
     }
+  } else if (!isAdmin && !isTeacher) {
+    try {
+      const totalLimit = await readEffectiveTotalLimit(uid);
+      if (!(await reserveMemberQuota(uid, totalLimit, cost, day))) {
+        return NextResponse.json(
+          { error: `제공된 생성 횟수(총 ${totalLimit}번)를 모두 썼어요. 추가 이용은 관리자에게 문의해 주세요.` },
+          { status: 429 },
+        );
+      }
+    } catch (e) {
+      console.error('[/api/generate] 총 한도 확인 실패:', e);
+      return NextResponse.json({ error: '사용량을 확인하지 못했어요. 잠시 후 다시 해주세요.' }, { status: 500 });
+    }
   } else {
-    // 교사·admin도 무제한이 아니라 넉넉한 일일 상한(키 남용 방어용) 경유. 일반 사용자는 설정 한도.
+    // 교사·admin은 기존 보호용 일일 상한을 유지한다.
     // 참고(리뷰 오해 방지): '교사별' 한도는 이 일일캡이 아니라 공유 풀(teachers.totalQuota,
-    // admin이 PATCH로 보충)로 따로 존재한다. 요금제별 개별 한도는 출시 전 YAGNI라 단순 분기로 두며,
-    // 확장 시엔 readEffectiveLimit(config·per-user override) 쪽 국소 변경으로 흡수된다(스파게티 아님).
-    const dailyLimit = isAdmin || isTeacher ? ROLE_DAILY_LIMIT : await readEffectiveLimit(uid);
+    // admin이 PATCH로 보충)로 따로 존재한다.
+    const dailyLimit = ROLE_DAILY_LIMIT;
     try {
       const allowed = await adminDb.runTransaction(async (tx) => {
         const snap = await tx.get(usageRef);
@@ -196,38 +206,48 @@ export async function POST(req: NextRequest) {
   }
 
   // 4) 생성(스트리밍) — NDJSON. 실패/취소 시 선점한 한도를 1회 환불.
-  const provider = getAIProvider();
+  let refunded = false;
+  const refundOnce = async () => {
+    if (refunded) return;
+    refunded = true;
+    if (isStudent) await refundStudentQuota(uid, cost, day);
+    else if (!isAdmin && !isTeacher) {
+      try { await refundMemberQuota(uid, cost, day); }
+      catch (e) { console.error('[/api/generate] 총 한도 환불 실패:', e); }
+    } else await refundQuota(usageRef, cost);
+  };
+
+  let provider: ReturnType<typeof getAIProvider>;
   let system = SYSTEM_PROMPTS[promptVariant];
   let finalPrompt = prompt;
-  if (mode === 'modify') {
-    // 수정 모드: 요청한 부분만 바꾸고 나머지 코드·제약을 보존하라는 지시를 덧붙인다.
-    system = SYSTEM_PROMPTS[promptVariant] + MODIFY_SYSTEM_SUFFIX;
-  } else {
-    // 생성 모드: 승인된 참고 예시(선택지는 유형별 슬롯 우선, 없으면 공통)를 프롬프트 앞에 붙여 완성도 floor를 올린다.
-    const exemplar = await getExemplar(promptVariant, exemplarType);
-    if (exemplar) finalPrompt = buildExemplarBlock(exemplar) + prompt;
+  try {
+    provider = getAIProvider();
+    if (mode === 'modify') {
+      // 수정 모드: 요청한 부분만 바꾸고 나머지 코드·제약을 보존하라는 지시를 덧붙인다.
+      system = SYSTEM_PROMPTS[promptVariant] + MODIFY_SYSTEM_SUFFIX;
+    } else {
+      // 생성 모드: 승인된 참고 예시(선택지는 유형별 슬롯 우선, 없으면 공통)를 프롬프트 앞에 붙여 완성도 floor를 올린다.
+      const exemplar = await getExemplar(promptVariant, exemplarType);
+      if (exemplar) finalPrompt = buildExemplarBlock(exemplar) + prompt;
+    }
+    // 선택지 유형별 제작 규칙(미로 알고리즘 등) — 아이의 선택은 그대로, 깨지지 않게 만드는 방법만 덧붙인다.
+    // 참고 예시의 오디오 코드가 새 계획의 소리 요구로 오인되지 않도록 원본 요청만 판별한다.
+    system = system + getTypeGuide(exemplarType, prompt, Boolean(parsedPhoto));
+    // 사진이 첨부됐으면 그 사진을 활용하라는 지시를 시스템 프롬프트에 덧붙인다.
+    if (parsedPhoto) system = system + PHOTO_INSTRUCTION;
+    // 교육 메타(Phase 0) — logicSummary·conceptTags 필드 채우기 지시(생성·수정 공통).
+    system = system + LOGIC_META_INSTRUCTION;
+  } catch (e) {
+    await refundOnce();
+    console.error('[/api/generate] 생성 준비 실패:', e);
+    return NextResponse.json({ error: '만들기를 준비하지 못했어요. 잠시 후 다시 해주세요.' }, { status: 500 });
   }
-  // 선택지 유형별 제작 규칙(미로 알고리즘 등) — 아이의 선택은 그대로, 깨지지 않게 만드는 방법만 덧붙인다.
-  // 참고 예시의 오디오 코드가 새 계획의 소리 요구로 오인되지 않도록 원본 요청만 판별한다.
-  system = system + getTypeGuide(exemplarType, prompt, Boolean(parsedPhoto));
-  // 사진이 첨부됐으면 그 사진을 활용하라는 지시를 시스템 프롬프트에 덧붙인다.
-  if (parsedPhoto) system = system + PHOTO_INSTRUCTION;
-  // 교육 메타(Phase 0) — logicSummary·conceptTags 필드 채우기 지시(생성·수정 공통).
-  system = system + LOGIC_META_INSTRUCTION;
 
   const encoder = new TextEncoder();
   // [의도된 trade-off — 리뷰 오해 방지] 실패뿐 아니라 '취소(abort)'에도 환불한다: 네트워크 끊김 등으로
   // 결과를 못 받은 정당 사용자가 한도를 까이지 않게 하려는 것. 부분 스트리밍분만 받고 고의로 abort하는
   // 어뷰징이 이론상 가능하나, 이 쿼터의 목적은 매출 보호가 아니라 Gemini 키 남용(DoS) 방지(무료 티어)라
   // 수용한 것. 정책을 바꾸려면 'done 도달분만 과금' 또는 '상당량 전송 시 환불 생략'을 검토.
-  let refunded = false;
-  const refundOnce = async () => {
-    if (refunded) return;
-    refunded = true;
-    if (isStudent) await refundStudentQuota(uid, cost, day); // 예약과 같은 day로 환불(L8)
-    else await refundQuota(usageRef, cost);
-  };
-
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
       const send = (obj: unknown) =>

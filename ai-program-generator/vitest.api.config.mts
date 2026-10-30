@@ -9,6 +9,8 @@ export default defineConfig({
     include: [
       'lib/admin/requireRoles.test.ts',
       'lib/admin/routeAuthorization.test.ts',
+      'lib/admin/memberAccounts.test.ts',
+      'lib/server/generationQuota.test.ts',
     ],
     environment: 'node',
   },

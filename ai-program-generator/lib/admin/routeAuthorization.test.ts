@@ -4,8 +4,8 @@ import { beforeEach, describe, expect, test, vi } from 'vitest';
 const mocks = vi.hoisted(() => ({
   requireAdmin: vi.fn(),
   requireTeacher: vi.fn(),
-  readDailyLimit: vi.fn(),
-  writeDailyLimit: vi.fn(),
+  readTotalLimit: vi.fn(),
+  writeTotalLimit: vi.fn(),
   verifyIdToken: vi.fn(),
   dbCollection: vi.fn(),
   dbDoc: vi.fn(),
@@ -17,8 +17,8 @@ vi.mock('server-only', () => ({}));
 vi.mock('@/lib/admin/requireAdmin', () => ({ requireAdmin: mocks.requireAdmin }));
 vi.mock('@/lib/admin/requireTeacher', () => ({ requireTeacher: mocks.requireTeacher }));
 vi.mock('@/lib/admin/usageConfig', () => ({
-  readDailyLimit: mocks.readDailyLimit,
-  writeDailyLimit: mocks.writeDailyLimit,
+  readTotalLimit: mocks.readTotalLimit,
+  writeTotalLimit: mocks.writeTotalLimit,
 }));
 vi.mock('@/lib/firebase/admin', () => ({
   adminAuth: { verifyIdToken: mocks.verifyIdToken },
@@ -50,17 +50,17 @@ describe('대표 API 권한 게이트', () => {
       const response = await getAdminConfig(request('/api/admin/config'));
 
       expect(response.status).toBe(403);
-      expect(mocks.readDailyLimit).not.toHaveBeenCalled();
+      expect(mocks.readTotalLimit).not.toHaveBeenCalled();
     });
 
     test('관리자는 설정을 조회할 수 있다', async () => {
       mocks.requireAdmin.mockResolvedValue({ uid: 'admin-a' });
-      mocks.readDailyLimit.mockResolvedValue(15);
+      mocks.readTotalLimit.mockResolvedValue(15);
 
       const response = await getAdminConfig(request('/api/admin/config'));
 
       expect(response.status).toBe(200);
-      expect(await response.json()).toEqual({ dailyLimit: 15 });
+      expect(await response.json()).toEqual({ totalLimit: 15 });
     });
 
     test('관리자만 유효한 설정값을 저장할 수 있다', async () => {
@@ -69,11 +69,11 @@ describe('대표 API 권한 게이트', () => {
       const response = await patchAdminConfig(request('/api/admin/config', {
         method: 'PATCH',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ dailyLimit: 20 }),
+        body: JSON.stringify({ totalLimit: 20 }),
       }));
 
       expect(response.status).toBe(200);
-      expect(mocks.writeDailyLimit).toHaveBeenCalledWith(20);
+      expect(mocks.writeTotalLimit).toHaveBeenCalledWith(20);
     });
 
     test('잘못된 설정값은 저장하지 않는다', async () => {
@@ -82,11 +82,11 @@ describe('대표 API 권한 게이트', () => {
       const response = await patchAdminConfig(request('/api/admin/config', {
         method: 'PATCH',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ dailyLimit: -1 }),
+        body: JSON.stringify({ totalLimit: -1 }),
       }));
 
       expect(response.status).toBe(400);
-      expect(mocks.writeDailyLimit).not.toHaveBeenCalled();
+      expect(mocks.writeTotalLimit).not.toHaveBeenCalled();
     });
   });
 

@@ -1,51 +1,41 @@
 import { adminDb } from '@/lib/firebase/admin';
 
-const parsedLimit = Number(process.env.GEN_DAILY_LIMIT);
-/** env 기본 일일 한도(설정·오버라이드 없을 때 폴백). 0 허용. */
-export const ENV_DAILY_LIMIT =
-  Number.isFinite(parsedLimit) && parsedLimit >= 0 ? parsedLimit : 30;
+const parsedLimit = Number(process.env.GEN_TOTAL_LIMIT || 5);
+export const ENV_TOTAL_LIMIT = Number.isInteger(parsedLimit) && parsedLimit >= 0 ? parsedLimit : 5;
+// 교사·관리자 보호용 일일 한도는 기존 정책 유지.
+export const ROLE_DAILY_LIMIT = Number(process.env.ROLE_GEN_DAILY_LIMIT) || 100;
 
-/** 전역 일일 한도: config/usage.dailyLimit ?? env. 읽기 실패 시 env 폴백. */
-export async function readDailyLimit(): Promise<number> {
-  try {
-    const snap = await adminDb.doc('config/usage').get();
-    const v = snap.exists ? (snap.data()?.dailyLimit as number | undefined) : undefined;
-    return typeof v === 'number' && v >= 0 ? v : ENV_DAILY_LIMIT;
-  } catch (e) {
-    console.error('config/usage 읽기 실패:', e);
-    return ENV_DAILY_LIMIT;
-  }
+/** 회원별 맞춤 한도는 기존 숫자를 계승. 새 저장값은 totalLimit을 우선한다. */
+export function configuredTotalLimit(data: { totalLimit?: unknown; dailyLimit?: unknown } | undefined): number | null {
+  const value = data?.totalLimit ?? data?.dailyLimit;
+  return typeof value === 'number' && Number.isInteger(value) && value >= 0 ? value : null;
 }
 
-/** 전역 일일 한도 저장(admin 전용). */
-export async function writeDailyLimit(dailyLimit: number): Promise<void> {
-  await adminDb.doc('config/usage').set({ dailyLimit, updatedAt: Date.now() }, { merge: true });
+/** 문서가 없으면 기본값. DB 장애는 전파하여 임의 한도로 생성을 허용하지 않는다. */
+export async function readTotalLimit(): Promise<number> {
+  const snap = await adminDb.doc('config/usage').get();
+  // 이전 전역 일일 한도는 계승하지 않는다. 일반 회원 기본 총 한도는 5회로 전환.
+  return configuredTotalLimit({ totalLimit: snap.data()?.totalLimit }) ?? ENV_TOTAL_LIMIT;
 }
 
-/** 학생별 한도 오버라이드(limits/{uid}.dailyLimit). 없으면 null. */
+export async function writeTotalLimit(totalLimit: number): Promise<void> {
+  await adminDb.doc('config/usage').set({ totalLimit, updatedAt: Date.now() }, { merge: true });
+}
+
 export async function readUserOverride(uid: string): Promise<number | null> {
-  try {
-    const snap = await adminDb.doc(`limits/${uid}`).get();
-    const v = snap.exists ? (snap.data()?.dailyLimit as number | undefined) : undefined;
-    return typeof v === 'number' && v >= 0 ? v : null;
-  } catch (e) {
-    console.error('limits 읽기 실패:', e);
-    return null;
-  }
+  const snap = await adminDb.doc(`limits/${uid}`).get();
+  return configuredTotalLimit(snap.data());
 }
 
-/** 사용자의 실효 일일 한도: 오버라이드 ?? 전역(config ?? env). */
-export async function readEffectiveLimit(uid: string): Promise<number> {
-  const override = await readUserOverride(uid);
-  return override !== null ? override : await readDailyLimit();
+export async function readEffectiveTotalLimit(uid: string): Promise<number> {
+  return (await readUserOverride(uid)) ?? await readTotalLimit();
 }
 
-/** 학생별 한도 오버라이드 저장. */
-export async function setUserLimit(uid: string, dailyLimit: number): Promise<void> {
-  await adminDb.doc(`limits/${uid}`).set({ dailyLimit, updatedAt: Date.now() }, { merge: true });
+export async function setUserLimit(uid: string, totalLimit: number): Promise<void> {
+  await adminDb.doc(`limits/${uid}`).set({ totalLimit, updatedAt: Date.now() }, { merge: true });
 }
 
-/** 학생별 한도 오버라이드 해제(전역으로 복귀). */
+/** 일반 회원 맞춤 한도 해제. 누적 사용량은 초기화하지 않는다. */
 export async function clearUserLimit(uid: string): Promise<void> {
   await adminDb.doc(`limits/${uid}`).delete();
 }
