@@ -17,6 +17,8 @@ import FullscreenFrame from '@/components/ui/FullscreenFrame';
 import LogicCard from '@/components/common/LogicCard';
 import EmptyParticles from '@/components/fx/EmptyParticles';
 import { useToast } from '@/components/ui/Toast';
+import { planDisplayFields } from '@/lib/creator/planDisplay';
+import PlanContent from './PlanContent';
 
 export default function PostPreview({
   post,
@@ -140,6 +142,8 @@ export default function PostPreview({
     );
   }
 
+  const planFields = planDisplayFields(post.plan);
+
   return (
     <div className="anim-pop-in flex h-full flex-col gap-3" key={post.id}>
       <div className="flex items-center justify-between gap-2">
@@ -172,7 +176,7 @@ export default function PostPreview({
               <Flag size={18} aria-hidden />
             </Button>
           )}
-          {post.prompt && (
+          {(planFields.length > 0 || post.prompt) && (
             <Button variant="ghost" size="icon" onClick={() => setPlanOpen(true)} aria-label="계획서 보기" title="계획서 보기" className="rounded-full">
               <FileText size={18} aria-hidden />
             </Button>
@@ -259,9 +263,7 @@ export default function PostPreview({
             <X size={20} />
           </Button>
         </div>
-        <pre className="whitespace-pre-wrap rounded-[var(--r-md)] bg-surface-2 p-4 font-body text-[14.5px] leading-relaxed text-ink">
-          {post.prompt}
-        </pre>
+        <PlanContent plan={post.plan} prompt={post.prompt} />
       </Modal>
 
       {currentUserUid && (
