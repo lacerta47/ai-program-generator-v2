@@ -15,10 +15,10 @@ import { BizRouterProvider } from '@/lib/ai/bizrouter';
 
 beforeAll(async () => {
   vi.stubEnv('GEN_GEMINI_CONCURRENCY', '2');
-  await Promise.all(['gemini', 'bizrouter'].flatMap(route => [0, 1].map(i => adminDb.doc(`generationSlots/${route}-${i}`).delete())));
+  await Promise.all(['gemini', 'bizrouter'].flatMap(route => [0, 1, 2, 3].map(i => adminDb.doc(`generationSlots/${route}-${i}`).delete())));
 });
 afterAll(async () => {
-  await Promise.all(['gemini', 'bizrouter'].flatMap(route => [0, 1].map(i => adminDb.doc(`generationSlots/${route}-${i}`).delete())));
+  await Promise.all(['gemini', 'bizrouter'].flatMap(route => [0, 1, 2, 3].map(i => adminDb.doc(`generationSlots/${route}-${i}`).delete())));
   vi.restoreAllMocks();
   vi.unstubAllEnvs();
   await adminDb.terminate();
@@ -35,6 +35,40 @@ test('real emulator transactions admit at most two parallel owners and reuse rel
     const replacement = await acquireGenerationSlot('gemini', signal);
     await replacement.release();
   } finally { await Promise.all(leases.map(x => x.release())); }
+}, 30_000);
+
+test('two BizRouter keys share four real slots with two requests per key and unchanged Gemini overflow', async () => {
+  vi.restoreAllMocks();
+  vi.stubEnv('AI_PROVIDER', 'bizrouter-first');
+  vi.stubEnv('GEN_BIZROUTER_CONCURRENCY', '4');
+  vi.stubEnv('GEMINI_API_KEY', 'fixture-only');
+  vi.stubEnv('BIZROUTER_API_KEY', 'fixture-primary');
+  vi.stubEnv('BIZROUTER_API_KEY_2', 'fixture-secondary');
+  vi.stubEnv('BIZROUTER_MODEL', 'google/gemini-3.8-flash');
+  vi.stubEnv('BIZROUTER_HIGH_MODEL', 'google/gemini-4-argon');
+  const payload = { html: '<main>fixture</main>', css: '', javascript: '' };
+  const fetchMock = vi.fn().mockImplementation(async () => new Response(
+    `data: ${JSON.stringify({ choices: [{ delta: { content: JSON.stringify(payload) }, finish_reason: 'stop' }] })}\n\ndata: [DONE]\n\n`, { status: 200 },
+  ));
+  vi.stubGlobal('fetch', fetchMock);
+  const leases: Awaited<ReturnType<typeof prepareUserGeneration>>[] = [];
+  try {
+    for (let i = 0; i < 4; i++) {
+      const lease = await prepareUserGeneration(`pool-${i}`, new AbortController().signal);
+      leases.push(lease);
+      await lease.provider.generate({ prompt: 'fixture', system: 'fixture', mode: 'generate', quality: 'high', tier: 'paid' });
+    }
+    const headers = fetchMock.mock.calls.map(x => x[1].headers.Authorization);
+    expect(headers.filter(x => x === 'Bearer fixture-primary')).toHaveLength(2);
+    expect(headers.filter(x => x === 'Bearer fixture-secondary')).toHaveLength(2);
+    const overflow = await prepareUserGeneration('pool-overflow', new AbortController().signal);
+    leases.push(overflow);
+    expect(overflow.provider).toBeInstanceOf(GeminiProvider);
+    expect(fetchMock).toHaveBeenCalledTimes(4);
+  } finally {
+    await Promise.all(leases.map(x => x.release()));
+    vi.unstubAllGlobals();
+  }
 }, 30_000);
 
 test('BizRouter-first uses primary slots, spills overflow, refuses full capacity and returns to primary after release', async () => {

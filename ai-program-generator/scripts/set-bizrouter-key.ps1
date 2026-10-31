@@ -1,6 +1,10 @@
-param([ValidateSet('bizrouter', 'gemini')][string]$Provider = 'bizrouter')
+param([ValidateSet('bizrouter', 'bizrouter2', 'gemini')][string]$Provider = 'bizrouter')
 $ErrorActionPreference = 'Stop'
-$keyName = if ($Provider -eq 'gemini') { 'GEMINI_API_KEY' } else { 'BIZROUTER_API_KEY' }
+$keyName = switch ($Provider) {
+  'gemini' { 'GEMINI_API_KEY' }
+  'bizrouter2' { 'BIZROUTER_API_KEY_2' }
+  default { 'BIZROUTER_API_KEY' }
+}
 $projectDir = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 Push-Location -LiteralPath $projectDir
 try {
@@ -15,7 +19,7 @@ try {
     # Append only. Existing settings are never read or rewritten.
     $entry = "`r`n" + $keyName + '=' + $keyText + "`r`n"
     [System.IO.File]::AppendAllText((Join-Path $projectDir '.env.local'), $entry, [System.Text.UTF8Encoding]::new($false))
-    Write-Host 'Saved. Future local tests can load the key automatically. No API request was sent.'
+    Write-Host "Saved $keyName to local configuration. No API request was sent."
   } finally {
     $entry = $null
     $keyText = $null
