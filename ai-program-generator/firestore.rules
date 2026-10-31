@@ -160,6 +160,11 @@ service cloud.firestore {
         && request.resource.data.updatedAt == request.time;
     }
 
+    // 공유 생성 슬롯 — 서버 Admin SDK만 접근. 만료 판단은 서버 트랜잭션에서 수행.
+    match /generationSlots/{slotId} {
+      allow read, write: if false;
+    }
+
     // 일반 회원 전환 이후 총 생성 사용량 — 서버 트랜잭션만 읽기/쓰기 가능.
     match /memberUsage/{uid} {
       allow read, write: if false;
