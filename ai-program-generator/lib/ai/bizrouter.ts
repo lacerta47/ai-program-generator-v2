@@ -74,8 +74,10 @@ function finish(raw: string): { code: GeneratedCode; meta: NonNullable<Extract<G
 }
 
 export class BizRouterProvider implements AIProvider {
+  constructor(private readonly keyEnv: 'BIZROUTER_API_KEY' | 'BIZROUTER_API_KEY_2' = 'BIZROUTER_API_KEY') {}
+
   async *generateStream(input: GenerateInput, signal?: AbortSignal): AsyncGenerator<GenerationChunk> {
-    const key = process.env.BIZROUTER_API_KEY;
+    const key = process.env[this.keyEnv];
     const model = (input.quality === 'high' && process.env.BIZROUTER_HIGH_MODEL) || process.env.BIZROUTER_MODEL;
     if (!key || !model) throw new Error('BizRouter 키 또는 모델 설정이 없습니다.');
     const content = input.photo

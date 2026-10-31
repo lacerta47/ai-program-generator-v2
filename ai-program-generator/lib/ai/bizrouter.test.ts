@@ -26,12 +26,32 @@ async function collect(provider: BizRouterProvider, value = input) {
 }
 beforeEach(() => {
   vi.stubEnv('BIZROUTER_API_KEY', 'test-key');
+  vi.stubEnv('BIZROUTER_API_KEY_2', '');
   vi.stubEnv('BIZROUTER_MODEL', 'test/standard');
   vi.stubEnv('BIZROUTER_HIGH_MODEL', 'test/high');
 });
 afterEach(() => { vi.unstubAllGlobals(); vi.unstubAllEnvs(); });
 
 describe('BizRouter provider', () => {
+  it('uses the selected secondary credential without changing the model', async () => {
+    vi.stubEnv('BIZROUTER_API_KEY_2', 'test-secondary');
+    const fetchMock = vi.fn().mockResolvedValue(response());
+    vi.stubGlobal('fetch', fetchMock);
+    await collect(new BizRouterProvider('BIZROUTER_API_KEY_2'));
+    expect(fetchMock.mock.calls[0][1].headers.Authorization).toBe('Bearer test-secondary');
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body).model).toBe('test/standard');
+  });
+
+  it('does not silently retry another key if the selected key is missing or rejected', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    await expect(collect(new BizRouterProvider('BIZROUTER_API_KEY_2'))).rejects.toThrow('설정이 없습니다');
+    expect(fetchMock).not.toHaveBeenCalled();
+    vi.stubEnv('BIZROUTER_API_KEY_2', 'test-secondary');
+    fetchMock.mockResolvedValue(new Response('private detail', { status: 403 }));
+    await expect(collect(new BizRouterProvider('BIZROUTER_API_KEY_2'))).rejects.toThrow('BizRouter HTTP 403');
+    expect(fetchMock).toHaveBeenCalledOnce();
+  });
   it.each([
     ['standard', 'google/gemini-3.8-flash'],
     ['high', 'google/gemini-4-argon'],

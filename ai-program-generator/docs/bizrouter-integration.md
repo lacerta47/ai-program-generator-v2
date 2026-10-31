@@ -23,6 +23,14 @@
 
 ## 분산 모드 준비
 
+### BizRouter 키 2개 사용
+
+`BIZROUTER_API_KEY_2`를 추가하면 같은 모델을 두 BizRouter 키로 호출한다. 서버 공통 슬롯의 짝수 번호는 기본 키, 홀수 번호는 두 번째 키를 사용한다. 운영 설정은 `GEN_BIZROUTER_CONCURRENCY=10`으로 키마다 동시 5건이며, 이후 초과 요청은 Gemini 직접 호출 최대 4건에 배정한다. 키 2개를 등록하는 것만으로 총 슬롯 수가 늘지는 않으며 운영 상한을 명시적으로 설정한다. 환경변수가 없으면 라이브러리 기본값은 4개다.
+
+직접 제공자 호출처럼 슬롯을 사용하지 않는 내부 실행에서는 서버 요청 ID로 키를 안정적으로 배정한다. 두 번째 키가 없으면 기존 기본 키만 사용한다. 특정 키의 인증·권한·응답 오류는 다른 키로 자동 재호출하지 않는다. 선택된 요청은 처음 정한 키로 끝까지 실행한다. 두 번째 키도 같은 모델 접근 권한이 있어야 한다.
+
+운영에서는 두 번째 키를 Vercel Production의 Secret 환경변수로 별도 등록하고 새 코드를 배포해야 한다. 로컬 파일의 키를 운영으로 자동 복사하지 않는다. 키 원문은 프롬프트·로그·Firestore 슬롯 문서에 기록하지 않는다.
+
 운영 요청에 따른 최신 정책은 [BizRouter 우선 배포 안내](bizrouter-first-deployment.md)의 `AI_PROVIDER=bizrouter-first`다. BizRouter 슬롯이 찼을 때만 Gemini로 초과분을 보낸다. 아래 `split` 설정은 비교 시험용 50:50 배정 설명이다.
 
 `AI_PROVIDER=split`은 사용자 요청을 서버 요청 ID 기준으로 약 50:50 배정한다. `BIZROUTER_MODEL=google/gemini-3.8-flash`, `BIZROUTER_HIGH_MODEL=google/gemini-4-argon`과 두 제공자 키가 필수다. 무료 자동 예시는 Gemini 경로를 유지한다.

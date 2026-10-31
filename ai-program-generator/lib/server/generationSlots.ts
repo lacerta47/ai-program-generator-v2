@@ -17,7 +17,7 @@ export async function acquireGenerationSlot(route: 'gemini' | 'bizrouter', paren
   const owner = randomUUID();
   const count = capacity(route);
   const offset = randomInt(count);
-  let acquired: { ref: ReturnType<typeof adminDb.doc>; expiresAt: number } | null = null;
+  let acquired: { ref: ReturnType<typeof adminDb.doc>; expiresAt: number; index: number } | null = null;
   for (let i = 0; i < count; i++) {
     const ref = adminDb.doc(`generationSlots/${route}-${(offset + i) % count}`);
     const expiresAt = await adminDb.runTransaction(async (tx) => {
@@ -29,7 +29,7 @@ export async function acquireGenerationSlot(route: 'gemini' | 'bizrouter', paren
       tx.set(ref, { owner, expiresAt });
       return expiresAt;
     });
-    if (expiresAt !== null) { acquired = { ref, expiresAt }; break; }
+    if (expiresAt !== null) { acquired = { ref, expiresAt, index: (offset + i) % count }; break; }
   }
   if (!acquired) throw new GenerationBusyError();
   const slot = acquired.ref;
@@ -85,5 +85,5 @@ export async function acquireGenerationSlot(route: 'gemini' | 'bizrouter', paren
     } catch { /* The lease expires if cleanup fails. */ }
   };
   if (signal.aborted) { await release(); signal.throwIfAborted(); }
-  return { signal, release };
+  return { slotIndex: acquired.index, signal, release };
 }

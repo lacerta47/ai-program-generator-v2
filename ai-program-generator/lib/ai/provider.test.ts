@@ -9,7 +9,7 @@ import { GenerationBusyError } from './errors';
 
 const code = { html: '<p>ok</p>', css: '', javascript: '' };
 const input: GenerateInput = { prompt: '테스트', system: '규칙', mode: 'generate' };
-afterEach(() => { vi.restoreAllMocks(); vi.unstubAllEnvs(); vi.mocked(acquireGenerationSlot).mockReset(); });
+afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); vi.unstubAllEnvs(); vi.mocked(acquireGenerationSlot).mockReset(); });
 
 it('defaults to Gemini even when a BizRouter key exists', () => {
   vi.stubEnv('AI_PROVIDER', '');
@@ -51,6 +51,7 @@ function splitConfig() {
   vi.stubEnv('AI_PROVIDER', 'split');
   vi.stubEnv('GEMINI_API_KEY', 'test-google');
   vi.stubEnv('BIZROUTER_API_KEY', 'test-router');
+  vi.stubEnv('BIZROUTER_API_KEY_2', '');
   vi.stubEnv('BIZROUTER_MODEL', 'google/gemini-3.8-flash');
   vi.stubEnv('BIZROUTER_HIGH_MODEL', 'google/gemini-4-argon');
 }
@@ -104,7 +105,7 @@ it('admission uses the same route as generation and returns its lease', async ()
   splitConfig();
   const signal = new AbortController().signal;
   const release = vi.fn().mockResolvedValue(undefined);
-  vi.mocked(acquireGenerationSlot).mockResolvedValue({ signal, release });
+  vi.mocked(acquireGenerationSlot).mockResolvedValue({ slotIndex: 0, signal, release });
   const result = await prepareUserGeneration('admission-test', signal);
   expect(acquireGenerationSlot).toHaveBeenCalledExactlyOnceWith(selectSplitProvider('admission-test'), signal);
   expect(result.signal).toBe(signal);
@@ -118,7 +119,7 @@ it('admission uses the same route as generation and returns its lease', async ()
 it('BizRouter-first keeps normal traffic on BizRouter without probing Gemini capacity', async () => {
   splitConfig(); vi.stubEnv('AI_PROVIDER', 'bizrouter-first');
   const signal = new AbortController().signal;
-  vi.mocked(acquireGenerationSlot).mockResolvedValue({ signal, release: async () => {} });
+  vi.mocked(acquireGenerationSlot).mockResolvedValue({ slotIndex: 0, signal, release: async () => {} });
   const bizrouter = vi.spyOn(BizRouterProvider.prototype, 'generate').mockResolvedValue(code);
   const gemini = vi.spyOn(GeminiProvider.prototype, 'generate').mockResolvedValue(code);
   const admitted = await prepareUserGeneration('normal', signal);
@@ -132,7 +133,7 @@ it('spills to Gemini only when BizRouter slots are occupied, preserving quality'
   splitConfig(); vi.stubEnv('AI_PROVIDER', 'bizrouter-first');
   const signal = new AbortController().signal;
   const release = vi.fn().mockResolvedValue(undefined);
-  vi.mocked(acquireGenerationSlot).mockRejectedValueOnce(new GenerationBusyError()).mockResolvedValueOnce({ signal, release });
+  vi.mocked(acquireGenerationSlot).mockRejectedValueOnce(new GenerationBusyError()).mockResolvedValueOnce({ slotIndex: 0, signal, release });
   const gemini = vi.spyOn(GeminiProvider.prototype, 'generate').mockResolvedValue(code);
   const bizrouter = vi.spyOn(BizRouterProvider.prototype, 'generate').mockResolvedValue(code);
   const admitted = await prepareUserGeneration('overflow', signal);
@@ -159,7 +160,7 @@ it('fails before generation when both paths are full or capacity storage fails',
 it('does not move a running BizRouter stream to Gemini after an upstream failure', async () => {
   splitConfig(); vi.stubEnv('AI_PROVIDER', 'bizrouter-first');
   const signal = new AbortController().signal;
-  vi.mocked(acquireGenerationSlot).mockResolvedValue({ signal, release: async () => {} });
+  vi.mocked(acquireGenerationSlot).mockResolvedValue({ slotIndex: 0, signal, release: async () => {} });
   const gemini = vi.spyOn(GeminiProvider.prototype, 'generateStream');
   vi.spyOn(BizRouterProvider.prototype, 'generateStream').mockImplementation(async function* () {
     yield { type: 'delta', partial: { html: '<main>' } };
@@ -169,4 +170,37 @@ it('does not move a running BizRouter stream to Gemini after an upstream failure
   await expect((async () => { for await (const c of admitted.provider.generateStream(input, signal)) expect(c.type).toBe('delta'); })()).rejects.toThrow('HTTP 503');
   expect(gemini).not.toHaveBeenCalled();
   expect(acquireGenerationSlot).toHaveBeenCalledOnce();
+});
+
+it('maps shared BizRouter slots across two keys without changing the route or quality', async () => {
+  splitConfig(); vi.stubEnv('AI_PROVIDER', 'bizrouter-first');
+  vi.stubEnv('BIZROUTER_API_KEY_2', 'test-secondary');
+  const signal = new AbortController().signal;
+  const fetchMock = vi.fn().mockImplementation(async () => new Response(
+    `data: ${JSON.stringify({ choices: [{ delta: { content: JSON.stringify(code) }, finish_reason: 'stop' }] })}\n\ndata: [DONE]\n\n`, { status: 200 },
+  ));
+  vi.stubGlobal('fetch', fetchMock);
+  for (const slotIndex of [0, 1, 2, 3]) {
+    vi.mocked(acquireGenerationSlot).mockResolvedValueOnce({ slotIndex, signal, release: async () => {} });
+    const lease = await prepareUserGeneration('same-request', signal);
+    await lease.provider.generate({ ...input, quality: 'high', tier: 'paid' });
+    await lease.release();
+  }
+  expect(fetchMock.mock.calls.map(x => x[1].headers.Authorization)).toEqual([
+    'Bearer test-router', 'Bearer test-secondary', 'Bearer test-router', 'Bearer test-secondary',
+  ]);
+  expect(fetchMock.mock.calls.every(x => JSON.parse(x[1].body).model === 'google/gemini-4-argon')).toBe(true);
+  expect(vi.mocked(acquireGenerationSlot).mock.calls.every(x => x[0] === 'bizrouter')).toBe(true);
+});
+
+it('keeps odd slots on the primary key when no secondary key is configured', async () => {
+  splitConfig(); vi.stubEnv('AI_PROVIDER', 'bizrouter-first');
+  const signal = new AbortController().signal;
+  vi.mocked(acquireGenerationSlot).mockResolvedValue({ slotIndex: 1, signal, release: async () => {} });
+  const fetchMock = vi.fn().mockResolvedValue(new Response('blocked', { status: 403 }));
+  vi.stubGlobal('fetch', fetchMock);
+  const lease = await prepareUserGeneration('legacy-key', signal);
+  await expect(lease.provider.generate(input)).rejects.toThrow('HTTP 403');
+  expect(fetchMock.mock.calls[0][1].headers.Authorization).toBe('Bearer test-router');
+  await lease.release();
 });

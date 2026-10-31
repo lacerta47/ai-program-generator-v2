@@ -16,15 +16,21 @@ function requireSplitConfig() {
   }
 }
 
+function selectBizRouterKey(requestId: string, slotIndex?: number): 'BIZROUTER_API_KEY' | 'BIZROUTER_API_KEY_2' {
+  if (!process.env.BIZROUTER_API_KEY_2) return 'BIZROUTER_API_KEY';
+  const index = slotIndex ?? createHash('sha256').update(`bizrouter-key:${requestId}`).digest().readUInt32BE(0);
+  return index % 2 === 0 ? 'BIZROUTER_API_KEY' : 'BIZROUTER_API_KEY_2';
+}
+
 // AI 제공자 교체 지점(single swap point).
 // 나중에 OpenAI/Claude 등으로 바꾸려면 여기서 반환하는 구현만 교체한다.
-export function getAIProvider(requestId: string = randomUUID()): AIProvider {
+export function getAIProvider(requestId: string = randomUUID(), bizrouterSlotIndex?: number): AIProvider {
   const provider = process.env.AI_PROVIDER || 'gemini';
   if (provider === 'gemini') return new GeminiProvider();
   if (provider === 'bizrouter' || provider === 'split' || provider === 'bizrouter-first') {
     if (provider !== 'bizrouter') requireSplitConfig();
     const gemini = new GeminiProvider();
-    const bizrouter = new BizRouterProvider();
+    const bizrouter = new BizRouterProvider(selectBizRouterKey(requestId, bizrouterSlotIndex));
     const paid = provider === 'split' && selectSplitProvider(requestId) === 'gemini' ? gemini : bizrouter;
     return {
       generateStream: (input, signal) => input.tier === 'free'
@@ -45,7 +51,7 @@ export async function prepareUserGeneration(requestId: string, signal: AbortSign
   if (mode === 'bizrouter-first') {
     try {
       const lease = await acquireGenerationSlot('bizrouter', signal);
-      return { provider, ...lease };
+      return { provider: getAIProvider(requestId, lease.slotIndex), ...lease };
     } catch (e) {
       // Only capacity exhaustion spills over. Authentication/DB/upstream errors do not.
       if (!(e instanceof GenerationBusyError)) throw e;
@@ -55,5 +61,5 @@ export async function prepareUserGeneration(requestId: string, signal: AbortSign
   }
   const route = selectSplitProvider(requestId);
   const lease = await acquireGenerationSlot(route, signal);
-  return { provider, ...lease };
+  return { provider: route === 'bizrouter' ? getAIProvider(requestId, lease.slotIndex) : provider, ...lease };
 }
