@@ -16,6 +16,10 @@ export class UserFacingError extends Error {
 /** 무료 할당량 소진(양 모델 모두 429) — UserFacingError의 특수형. 소진을 코드로 구별하기 위함(cron 등). */
 export class QuotaExhaustedError extends UserFacingError {}
 
+export class GenerationBusyError extends UserFacingError {
+  constructor() { super('지금 여러 친구가 만들고 있어요. 잠깐 기다린 뒤 다시 눌러 주세요.'); }
+}
+
 /**
  * 생성 코드 게이트(validateCode) 탈락 — UserFacingError의 특수형.
  * reason은 집계용 짧은 키(swallowed·syntax·missingId·undefinedRef·missingClass), detail은 로그용 원문.

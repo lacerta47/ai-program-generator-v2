@@ -389,6 +389,15 @@ describe('Firestore 권한 규칙', () => {
       }
     });
 
+    test('생성 슬롯은 모든 클라이언트 역할에서 읽기·쓰기를 차단한다', async () => {
+      for (const context of [anonymous(), verifiedUser(), studentA(), admin()]) {
+        const ref = doc(db(context), 'generationSlots/gemini-0');
+        await assertFails(getDoc(ref));
+        await assertFails(setDoc(ref, { owner: 'client', expiresAt: NOW + 120000 }));
+        await assertFails(deleteDoc(ref));
+      }
+    });
+
     test('usage와 exemplars는 관리자도 클라이언트에서 접근할 수 없다', async () => {
       await assertFails(getDoc(doc(db(admin()), 'usage/admin_2026-09-30')));
       await assertFails(setDoc(doc(db(admin()), 'usage/admin_2026-09-30'), { count: 1 }));

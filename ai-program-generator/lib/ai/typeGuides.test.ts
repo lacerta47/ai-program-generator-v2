@@ -44,6 +44,8 @@ describe('getTypeGuide', () => {
     expect(getTypeGuide('roulette')).toMatch(/당첨 결과: 항목명/);
     expect(getTypeGuide('game', '위에서 장애물이 떨어지는 피하기 게임.')).toMatch(/게임 공통 안정성 규칙/);
     expect(getTypeGuide('quiz')).toMatch(/도구·학습 놀이 디자인 프리셋/);
+    expect(getTypeGuide('quiz')).toMatch(/type="button"/);
+    expect(getTypeGuide('quiz')).toMatch(/form의 `submit` 이벤트를 사용하지 마세요/);
     expect(getTypeGuide('quiz')).not.toMatch(/게임 공통 안정성 규칙/);
     expect(getTypeGuide('unknown')).toBe('');
     expect(getTypeGuide(undefined)).toBe('');

@@ -151,6 +151,13 @@ const PAINT_GUIDE = `
 4. Canvas의 색 속성과 \`addColorStop\`에는 유효한 색상 리터럴을 넣으세요. \`'var(--색상)'\` 문자열을 직접 넣지 마세요.
 5. SVG 아이콘 버튼은 글자를 별도 \`<span class="button-label">\`에 넣고 그 span만 바꾸세요. 버튼 전체의 \`textContent\`를 바꾸지 마세요.`;
 
+const QUIZ_GUIDE = `
+
+**퀴즈 확인 버튼 규칙 (반드시 지킬 것)**:
+1. 퀴즈는 격리된 미리보기에서 실행되므로 HTML form 제출에 의존하지 마세요. 확인 버튼은 \`type="button"\`으로 만들고 \`click\` 이벤트에서 직접 답을 채점하세요. \`type="submit"\`과 form의 \`submit\` 이벤트를 사용하지 마세요.
+2. 직접 입력형이면 답이 비어 있을 때 확인 버튼을 눌러도 화면에 \`답을 먼저 써 주세요.\`를 표시하세요. 답이 있으면 채점 결과와 다음 문제로 넘어가는 버튼을 표시하세요. 입력칸의 Enter 키도 같은 채점 함수를 호출하세요.
+3. 보기 선택형이면 선택지를 고르지 않은 확인 클릭에는 선택 안내를 표시하고, 고른 뒤에는 같은 채점 함수로 정오답을 판정하세요.`;
+
 // 소리 규칙도 반복 재생에서 실제로 필요한 수명주기만 남긴다.
 const USER_GESTURE_AUDIO_GUIDE = `
 
@@ -207,6 +214,7 @@ const BLOCKSTACK_GAME_GUIDE = `
 
 /** 유형 id → 제작 규칙. 없는 유형은 빈 문자열(아무것도 덧붙이지 않음). */
 const SURVEY_TYPE_GUIDES: Record<string, string> = {
+  quiz: QUIZ_GUIDE,
   maze: MAZE_GUIDE,
   dressup: DRESSUP_GUIDE,
   paint: PAINT_GUIDE,

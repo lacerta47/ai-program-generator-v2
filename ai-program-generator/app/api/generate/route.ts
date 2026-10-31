@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAIProvider } from '@/lib/ai/provider';
+import { prepareUserGeneration } from '@/lib/ai/provider';
+import { randomUUID } from 'node:crypto';
 import { SYSTEM_PROMPTS, MODIFY_SYSTEM_SUFFIX, PHOTO_INSTRUCTION, LOGIC_META_INSTRUCTION, type SystemPromptVariant } from '@/lib/ai/prompts';
 import { getExemplar, isProgramTypeId } from '@/lib/admin/exemplars';
 import { buildExemplarBlock } from '@/lib/ai/exemplars';
@@ -14,7 +15,7 @@ import { readEffectiveTotalLimit, ROLE_DAILY_LIMIT } from '@/lib/admin/usageConf
 import { reserveMemberQuota, refundMemberQuota } from '@/lib/server/memberQuota';
 import { reserveStudentQuota, refundStudentQuota } from '@/lib/server/studentQuota';
 import { allowGenerate } from '@/lib/server/genRate';
-import { UserFacingError, GateError } from '@/lib/ai/errors';
+import { UserFacingError, GateError, GenerationBusyError } from '@/lib/ai/errors';
 import { getGenerationQuality } from '@/lib/ai/modelPolicy';
 import { recordGateFail } from '@/lib/server/gateStats';
 
@@ -146,163 +147,183 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // 3) 한도 선점 (트랜잭션). 생성이 실패하면 4)에서 환불한다.
-  // 사진 생성은 멀티모달이라 비용이 더 들어 2칸을 차감한다(일반 생성은 1칸).
-  const cost = parsedPhoto ? 2 : 1;
-  const day = todayKeyKST();
-  const usageRef = adminDb.collection('usage').doc(`${uid}_${day}`);
-  if (isStudent) {
-    const r = await reserveStudentQuota(uid, cost, day); // day를 고정 전달 → 환불도 같은 날 문서(L8)
-    if (!r.ok) {
-      const msg =
-        r.reason === 'pool'
-          ? '선생님이 정한 우리 반 한도를 다 썼어요.'
-          : r.reason === 'cap-daily'
-            ? '오늘 만들 수 있는 횟수를 다 썼어요. 내일 다시 만들어 보세요!'
-            : r.reason === 'cap-total'
-              ? '만들 수 있는 횟수를 다 썼어요.'
-              : '한도를 확인하지 못했어요. 잠시 후 다시 해주세요.';
-      return NextResponse.json({ error: msg }, { status: r.reason === 'misconfig' ? 500 : 429 });
-    }
-  } else if (!isAdmin && !isTeacher) {
-    try {
-      const totalLimit = await readEffectiveTotalLimit(uid);
-      if (!(await reserveMemberQuota(uid, totalLimit, cost, day))) {
-        return NextResponse.json(
-          { error: `제공된 생성 횟수(총 ${totalLimit}번)를 모두 썼어요. 추가 이용은 관리자에게 문의해 주세요.` },
-          { status: 429 },
-        );
-      }
-    } catch (e) {
-      console.error('[/api/generate] 총 한도 확인 실패:', e);
-      return NextResponse.json({ error: '사용량을 확인하지 못했어요. 잠시 후 다시 해주세요.' }, { status: 500 });
-    }
-  } else {
-    // 교사·admin은 기존 보호용 일일 상한을 유지한다.
-    // 참고(리뷰 오해 방지): '교사별' 한도는 이 일일캡이 아니라 공유 풀(teachers.totalQuota,
-    // admin이 PATCH로 보충)로 따로 존재한다.
-    const dailyLimit = ROLE_DAILY_LIMIT;
-    try {
-      const allowed = await adminDb.runTransaction(async (tx) => {
-        const snap = await tx.get(usageRef);
-        const count = (snap.data()?.count as number | undefined) ?? 0;
-        if (count + cost > dailyLimit) return false;
-        tx.set(usageRef, { uid, day, count: count + cost, updatedAt: Date.now() }, { merge: true });
-        return true;
-      });
-      if (!allowed) {
-        return NextResponse.json(
-          { error: `오늘 만들 수 있는 횟수(${dailyLimit}번)를 모두 썼어요. 내일 다시 만들어 보세요!` },
-          { status: 429 },
-        );
-      }
-    } catch (e) {
-      console.error('[/api/generate] 사용량 확인 실패:', e);
-      return NextResponse.json(
-        { error: '사용량을 확인하지 못했어요. 잠시 후 다시 해주세요.' },
-        { status: 500 },
-      );
-    }
-  }
-
-  // 4) 생성(스트리밍) — NDJSON. 실패/취소 시 선점한 한도를 1회 환불.
-  let refunded = false;
-  const refundOnce = async () => {
-    if (refunded) return;
-    refunded = true;
-    if (isStudent) await refundStudentQuota(uid, cost, day);
-    else if (!isAdmin && !isTeacher) {
-      try { await refundMemberQuota(uid, cost, day); }
-      catch (e) { console.error('[/api/generate] 총 한도 환불 실패:', e); }
-    } else await refundQuota(usageRef, cost);
-  };
-
-  let provider: ReturnType<typeof getAIProvider>;
-  let system = SYSTEM_PROMPTS[promptVariant];
-  let finalPrompt = prompt;
+  // Shared admission precedes quota reservation. No busy request consumes quota.
+  const upstream = new AbortController();
+  let generation: Awaited<ReturnType<typeof prepareUserGeneration>>;
   try {
-    provider = getAIProvider();
-    if (mode === 'modify') {
-      // 수정 모드: 요청한 부분만 바꾸고 나머지 코드·제약을 보존하라는 지시를 덧붙인다.
-      system = SYSTEM_PROMPTS[promptVariant] + MODIFY_SYSTEM_SUFFIX;
-    } else {
-      // 생성 모드: 승인된 참고 예시(선택지는 유형별 슬롯 우선, 없으면 공통)를 프롬프트 앞에 붙여 완성도 floor를 올린다.
-      const exemplar = await getExemplar(promptVariant, exemplarType);
-      if (exemplar) finalPrompt = buildExemplarBlock(exemplar) + prompt;
-    }
-    // 선택지 유형별 제작 규칙(미로 알고리즘 등) — 아이의 선택은 그대로, 깨지지 않게 만드는 방법만 덧붙인다.
-    // 참고 예시의 오디오 코드가 새 계획의 소리 요구로 오인되지 않도록 원본 요청만 판별한다.
-    system = system + getTypeGuide(exemplarType, prompt, Boolean(parsedPhoto));
-    // 사진이 첨부됐으면 그 사진을 활용하라는 지시를 시스템 프롬프트에 덧붙인다.
-    if (parsedPhoto) system = system + PHOTO_INSTRUCTION;
-    // 교육 메타(Phase 0) — logicSummary·conceptTags 필드 채우기 지시(생성·수정 공통).
-    system = system + LOGIC_META_INSTRUCTION;
+    generation = await prepareUserGeneration(randomUUID(), AbortSignal.any([req.signal, upstream.signal]));
   } catch (e) {
-    await refundOnce();
-    console.error('[/api/generate] 생성 준비 실패:', e);
+    if (e instanceof GenerationBusyError) {
+      return NextResponse.json({ error: e.message }, { status: 503, headers: { 'Retry-After': String(3 + Math.floor(Math.random() * 5)) } });
+    }
     return NextResponse.json({ error: '만들기를 준비하지 못했어요. 잠시 후 다시 해주세요.' }, { status: 500 });
   }
-
-  const encoder = new TextEncoder();
-  // [의도된 trade-off — 리뷰 오해 방지] 실패뿐 아니라 '취소(abort)'에도 환불한다: 네트워크 끊김 등으로
-  // 결과를 못 받은 정당 사용자가 한도를 까이지 않게 하려는 것. 부분 스트리밍분만 받고 고의로 abort하는
-  // 어뷰징이 이론상 가능하나, 이 쿼터의 목적은 매출 보호가 아니라 Gemini 키 남용(DoS) 방지(무료 티어)라
-  // 수용한 것. 정책을 바꾸려면 'done 도달분만 과금' 또는 '상당량 전송 시 환불 생략'을 검토.
-  const stream = new ReadableStream<Uint8Array>({
-    async start(controller) {
-      const send = (obj: unknown) =>
-        controller.enqueue(encoder.encode(JSON.stringify(obj) + '\n'));
-      try {
-        for await (const chunk of provider.generateStream({
-          prompt: finalPrompt,
-          system,
-          mode,
-          quality: getGenerationQuality(exemplarType, 'paid'),
-          photo: parsedPhoto,
-          tier: 'paid',
-        }, req.signal)) {
-          if (req.signal.aborted) throw new Error('ABORTED');
-          if (chunk.type === 'done') {
-            recordTokenUsage(day, chunk.usage); // 토큰 사용량 집계(비용 실측)
-            // usage는 서버 집계 전용(미전송), meta(교육)는 클라가 게시물에 저장하도록 전달.
-            send({ type: 'done', code: chunk.code, meta: chunk.meta });
-          } else {
-            send(chunk);
-          }
-        }
-        controller.close();
-      } catch (e) {
-        const aborted =
-          req.signal.aborted ||
-          (e instanceof Error && (e.message === 'ABORTED' || e.name === 'AbortError'));
-        await refundOnce();
-        if (e instanceof GateError) recordGateFail(day, e.reason, 'user'); // 게이트 탈락 집계(일일 리포트)
-        if (!aborted) {
-          console.error('[/api/generate] 스트리밍 실패:', e);
-          try {
-            // 내부 정보 누출 방지: 안전하다고 표시된(UserFacingError) 메시지만 그대로 전달하고,
-            // raw Gemini/SDK 에러 등은 일반 메시지로 치환한다(서버 로그엔 위에서 e 원본 기록). (B4)
-            const msg = e instanceof UserFacingError ? e.message : '앗, 만들다가 문제가 생겼어요. 잠깐 뒤 다시 해볼까요?';
-            send({ type: 'error', error: msg });
-          } catch {}
-        }
-        try {
-          controller.close();
-        } catch {}
+  let streamOwnsLease = false;
+  try {
+    // 3) 한도 선점 (트랜잭션). 생성이 실패하면 4)에서 환불한다.
+    // 사진 생성은 멀티모달이라 비용이 더 들어 2칸을 차감한다(일반 생성은 1칸).
+    const cost = parsedPhoto ? 2 : 1;
+    const day = todayKeyKST();
+    const usageRef = adminDb.collection('usage').doc(`${uid}_${day}`);
+    if (isStudent) {
+      const r = await reserveStudentQuota(uid, cost, day); // day를 고정 전달 → 환불도 같은 날 문서(L8)
+      if (!r.ok) {
+        const msg =
+          r.reason === 'pool'
+            ? '선생님이 정한 우리 반 한도를 다 썼어요.'
+            : r.reason === 'cap-daily'
+              ? '오늘 만들 수 있는 횟수를 다 썼어요. 내일 다시 만들어 보세요!'
+              : r.reason === 'cap-total'
+                ? '만들 수 있는 횟수를 다 썼어요.'
+                : '한도를 확인하지 못했어요. 잠시 후 다시 해주세요.';
+        return NextResponse.json({ error: msg }, { status: r.reason === 'misconfig' ? 500 : 429 });
       }
-    },
-    async cancel() {
-      // 클라이언트 연결 끊김(취소) — 한도 환불
-      await refundOnce();
-    },
-  });
+    } else if (!isAdmin && !isTeacher) {
+      try {
+        const totalLimit = await readEffectiveTotalLimit(uid);
+        if (!(await reserveMemberQuota(uid, totalLimit, cost, day))) {
+          return NextResponse.json(
+            { error: `제공된 생성 횟수(총 ${totalLimit}번)를 모두 썼어요. 추가 이용은 관리자에게 문의해 주세요.` },
+            { status: 429 },
+          );
+        }
+      } catch (e) {
+        console.error('[/api/generate] 총 한도 확인 실패:', e);
+        return NextResponse.json({ error: '사용량을 확인하지 못했어요. 잠시 후 다시 해주세요.' }, { status: 500 });
+      }
+    } else {
+      // 교사·admin은 기존 보호용 일일 상한을 유지한다.
+      // 참고(리뷰 오해 방지): '교사별' 한도는 이 일일캡이 아니라 공유 풀(teachers.totalQuota,
+      // admin이 PATCH로 보충)로 따로 존재한다.
+      const dailyLimit = ROLE_DAILY_LIMIT;
+      try {
+        const allowed = await adminDb.runTransaction(async (tx) => {
+          const snap = await tx.get(usageRef);
+          const count = (snap.data()?.count as number | undefined) ?? 0;
+          if (count + cost > dailyLimit) return false;
+          tx.set(usageRef, { uid, day, count: count + cost, updatedAt: Date.now() }, { merge: true });
+          return true;
+        });
+        if (!allowed) {
+          return NextResponse.json(
+            { error: `오늘 만들 수 있는 횟수(${dailyLimit}번)를 모두 썼어요. 내일 다시 만들어 보세요!` },
+            { status: 429 },
+          );
+        }
+      } catch (e) {
+        console.error('[/api/generate] 사용량 확인 실패:', e);
+        return NextResponse.json(
+          { error: '사용량을 확인하지 못했어요. 잠시 후 다시 해주세요.' },
+          { status: 500 },
+        );
+      }
+    }
 
-  return new Response(stream, {
-    headers: {
-      'Content-Type': 'application/x-ndjson; charset=utf-8',
-      'Cache-Control': 'no-store',
-    },
-  });
+    // 4) 생성(스트리밍) — NDJSON. 실패/취소 시 선점한 한도를 1회 환불.
+    let refunded = false;
+    const refundOnce = async () => {
+      if (refunded) return;
+      refunded = true;
+      if (isStudent) await refundStudentQuota(uid, cost, day);
+      else if (!isAdmin && !isTeacher) {
+        try { await refundMemberQuota(uid, cost, day); }
+        catch (e) { console.error('[/api/generate] 총 한도 환불 실패:', e); }
+      } else await refundQuota(usageRef, cost);
+    };
+
+    const provider = generation.provider;
+    let system = SYSTEM_PROMPTS[promptVariant];
+    let finalPrompt = prompt;
+    try {
+      generation.signal.throwIfAborted();
+      if (mode === 'modify') {
+        // 수정 모드: 요청한 부분만 바꾸고 나머지 코드·제약을 보존하라는 지시를 덧붙인다.
+        system = SYSTEM_PROMPTS[promptVariant] + MODIFY_SYSTEM_SUFFIX;
+      } else {
+        // 생성 모드: 승인된 참고 예시(선택지는 유형별 슬롯 우선, 없으면 공통)를 프롬프트 앞에 붙여 완성도 floor를 올린다.
+        const exemplar = await getExemplar(promptVariant, exemplarType);
+        if (exemplar) finalPrompt = buildExemplarBlock(exemplar) + prompt;
+      }
+      // 선택지 유형별 제작 규칙(미로 알고리즘 등) — 아이의 선택은 그대로, 깨지지 않게 만드는 방법만 덧붙인다.
+      // 참고 예시의 오디오 코드가 새 계획의 소리 요구로 오인되지 않도록 원본 요청만 판별한다.
+      system = system + getTypeGuide(exemplarType, prompt, Boolean(parsedPhoto));
+      // 사진이 첨부됐으면 그 사진을 활용하라는 지시를 시스템 프롬프트에 덧붙인다.
+      if (parsedPhoto) system = system + PHOTO_INSTRUCTION;
+      // 교육 메타(Phase 0) — logicSummary·conceptTags 필드 채우기 지시(생성·수정 공통).
+      system = system + LOGIC_META_INSTRUCTION;
+    } catch (e) {
+      await refundOnce();
+      console.error('[/api/generate] 생성 준비 실패:', e);
+      return NextResponse.json({ error: '만들기를 준비하지 못했어요. 잠시 후 다시 해주세요.' }, { status: 500 });
+    }
+
+    const encoder = new TextEncoder();
+    // [의도된 trade-off — 리뷰 오해 방지] 실패뿐 아니라 '취소(abort)'에도 환불한다: 네트워크 끊김 등으로
+    // 결과를 못 받은 정당 사용자가 한도를 까이지 않게 하려는 것. 부분 스트리밍분만 받고 고의로 abort하는
+    // 어뷰징이 이론상 가능하나, 이 쿼터의 목적은 매출 보호가 아니라 Gemini 키 남용(DoS) 방지(무료 티어)라
+    // 수용한 것. 정책을 바꾸려면 'done 도달분만 과금' 또는 '상당량 전송 시 환불 생략'을 검토.
+    const stream = new ReadableStream<Uint8Array>({
+      async start(controller) {
+        const send = (obj: unknown) =>
+          controller.enqueue(encoder.encode(JSON.stringify(obj) + '\n'));
+        try {
+          for await (const chunk of provider.generateStream({
+            prompt: finalPrompt,
+            system,
+            mode,
+            quality: getGenerationQuality(exemplarType, 'paid'),
+            photo: parsedPhoto,
+            tier: 'paid',
+          }, generation.signal)) {
+            generation.signal.throwIfAborted();
+            if (chunk.type === 'done') {
+              recordTokenUsage(day, chunk.usage); // 토큰 사용량 집계(비용 실측)
+              // usage는 서버 집계 전용(미전송), meta(교육)는 클라가 게시물에 저장하도록 전달.
+              send({ type: 'done', code: chunk.code, meta: chunk.meta });
+            } else {
+              send(chunk);
+            }
+          }
+          controller.close();
+        } catch (e) {
+          const aborted =
+            req.signal.aborted || upstream.signal.aborted;
+          await refundOnce();
+          if (e instanceof GateError) recordGateFail(day, e.reason, 'user'); // 게이트 탈락 집계(일일 리포트)
+          if (!aborted) {
+            console.error('[/api/generate] 스트리밍 실패:', e);
+            try {
+              // 내부 정보 누출 방지: 안전하다고 표시된(UserFacingError) 메시지만 그대로 전달하고,
+              // raw Gemini/SDK 에러 등은 일반 메시지로 치환한다(서버 로그엔 위에서 e 원본 기록). (B4)
+              const failure = generation.signal.aborted && generation.signal.reason instanceof UserFacingError ? generation.signal.reason : e;
+              const msg = failure instanceof UserFacingError ? failure.message : '앗, 만들다가 문제가 생겼어요. 잠깐 뒤 다시 해볼까요?';
+              send({ type: 'error', error: msg });
+            } catch {}
+          }
+          try {
+            controller.close();
+          } catch {}
+        } finally {
+          await generation.release();
+        }
+      },
+      async cancel() {
+        upstream.abort();
+        // 클라이언트 연결 끊김(취소) — 한도 환불
+        await refundOnce();
+      },
+    });
+    streamOwnsLease = true;
+
+    return new Response(stream, {
+      headers: {
+        'Content-Type': 'application/x-ndjson; charset=utf-8',
+        'Cache-Control': 'no-store',
+      },
+    });
+  } finally {
+    if (!streamOwnsLease) await generation.release();
+  }
 }
 
 /** 생성 실패 시 선점했던 한도(cost칸)를 되돌린다(0 미만으로는 안 내려감). */
