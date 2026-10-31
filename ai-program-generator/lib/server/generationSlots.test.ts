@@ -53,6 +53,19 @@ it('reclaims expired slots and old owners cannot delete the replacement', async 
   await fresh.release();
 });
 
+it('ten BizRouter slots remain a shared limit and give each key five slot positions', async () => {
+  vi.stubEnv('GEN_BIZROUTER_CONCURRENCY', '10');
+  const results = await Promise.allSettled(Array.from({ length: 16 }, () => acquireGenerationSlot('bizrouter', signal())));
+  const leases = results.flatMap(x => x.status === 'fulfilled' ? [x.value] : []);
+  try {
+    expect(leases).toHaveLength(10);
+    expect(leases.filter(x => x.slotIndex % 2 === 0)).toHaveLength(5);
+    expect(leases.filter(x => x.slotIndex % 2 === 1)).toHaveLength(5);
+    expect(results.filter(x => x.status === 'rejected' && x.reason instanceof GenerationBusyError)).toHaveLength(6);
+  } finally { await Promise.all(leases.map(x => x.release())); }
+  expect(store.docs.size).toBe(0);
+});
+
 it('renews long generations and aborts when renewal fails', async () => {
   const lease = await acquireGenerationSlot('gemini', signal());
   const before = [...store.docs.values()][0].expiresAt as number;
