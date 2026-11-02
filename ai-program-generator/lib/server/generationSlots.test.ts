@@ -1,11 +1,11 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
-const store = vi.hoisted(() => ({ docs: new Map<string, Record<string, unknown>>(), tail: Promise.resolve(), fail: false }));
+const store = vi.hoisted(() => ({ docs: new Map<string, Record<string, unknown>>(), tail: Promise.resolve(), fail: false, errorCode: undefined as number | undefined }));
 vi.mock('@/lib/firebase/admin', () => ({ adminDb: {
   doc: (path: string) => ({ path }),
   runTransaction: (fn: (tx: unknown) => Promise<unknown>) => {
     const run = store.tail.then(async () => {
-      if (store.fail) throw new Error('DB unavailable');
+      if (store.fail) throw Object.assign(new Error('DB unavailable'), { code: store.errorCode });
       return fn({
         get: async (ref: { path: string }) => ({ data: () => store.docs.get(ref.path) }),
         set: (ref: { path: string }, data: Record<string, unknown>) => store.docs.set(ref.path, { ...data }),
@@ -21,13 +21,21 @@ import { acquireGenerationSlot } from './generationSlots';
 import { GenerationBusyError } from '@/lib/ai/errors';
 
 beforeEach(() => {
-  store.docs.clear(); store.tail = Promise.resolve(); store.fail = false;
+  store.docs.clear(); store.tail = Promise.resolve(); store.fail = false; store.errorCode = undefined;
   vi.useFakeTimers(); vi.setSystemTime(1_000_000);
   vi.stubEnv('GEN_GEMINI_CONCURRENCY', '2');
   vi.stubEnv('GEN_BIZROUTER_CONCURRENCY', '2');
 });
 afterEach(() => { vi.clearAllTimers(); vi.useRealTimers(); vi.unstubAllEnvs(); });
 const signal = () => new AbortController().signal;
+
+it('슬롯 예약의 확정된 ABORTED 충돌만 미차감 입장 대기로 구분한다', async () => {
+  store.fail = true; store.errorCode = 10;
+  await expect(acquireGenerationSlot('bizrouter', signal())).rejects.toBeInstanceOf(GenerationBusyError);
+  expect(store.docs.size).toBe(0);
+  store.errorCode = 4;
+  await expect(acquireGenerationSlot('bizrouter', signal())).rejects.toMatchObject({ code: 4 });
+});
 
 it('parallel admissions respect per-route capacity and release is idempotent', async () => {
   const results = await Promise.allSettled(Array.from({ length: 8 }, () => acquireGenerationSlot('gemini', signal())));

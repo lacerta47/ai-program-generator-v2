@@ -162,6 +162,8 @@ export async function POST(req: NextRequest) {
     if (e instanceof GenerationBusyError) {
       return busyResponse();
     }
+    const failure = e as { name?: string; code?: string | number } | null;
+    console.error('[/api/generate] 입장 실패:', { name: failure?.name, code: failure?.code });
     return NextResponse.json({ error: '만들기를 준비하지 못했어요. 잠시 후 다시 해주세요.' }, { status: 500 });
   }
   let streamOwnsLease = false;

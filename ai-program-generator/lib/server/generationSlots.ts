@@ -28,6 +28,10 @@ export async function acquireGenerationSlot(route: 'gemini' | 'bizrouter', paren
       const expiresAt = now + LEASE_MS;
       tx.set(ref, { owner, expiresAt });
       return expiresAt;
+    }).catch((e: unknown) => {
+      const code = (e as { code?: unknown } | null)?.code;
+      if (code === 10 || code === 'ABORTED') throw new GenerationBusyError();
+      throw e;
     });
     if (expiresAt !== null) { acquired = { ref, expiresAt, index: (offset + i) % count }; break; }
   }
