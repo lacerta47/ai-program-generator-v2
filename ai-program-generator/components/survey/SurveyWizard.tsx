@@ -44,6 +44,7 @@ export default function SurveyWizard() {
   const [stepIdx, setStepIdx] = useState(0);
   const [editReturn, setEditReturn] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [waiting, setWaiting] = useState(false);
   const [buildMsg, setBuildMsg] = useState('AI가 준비하고 있어요…');
   const [stage, setStage] = useState<StreamStage | null>(null);
   const [code, setCode] = useState<GeneratedCode>(EMPTY_CODE);
@@ -72,6 +73,8 @@ export default function SurveyWizard() {
   const { user, loading: authLoading, isStudent, isTeacher } = useAuth();
   const { toast } = useToast();
   const router = useRouter();
+
+  useEffect(() => () => { abortRef.current?.abort(); }, [user?.uid]);
 
   // 만들기에서 더 키우기(easy→create 브릿지) — 인메모리 초안을 넘기고 /create로.
   function growInCreate() {
@@ -273,6 +276,7 @@ export default function SurveyWizard() {
   }
 
   async function generate() {
+    if (abortRef.current) return;
     if (!type) return;
     if (authLoading) return toast('잠깐만요, 준비 중이에요…');
     if (!user) {
@@ -286,17 +290,9 @@ export default function SurveyWizard() {
     }
     // 이름은 선택 입력 — 적었을 때만 검열(공개 게시 가능 텍스트라 authorName과 동일 정책) 후 프롬프트에 반영
     const name = userName.trim();
-    if (wantsName && name) {
-      if (isReservedNickname(name)) {
-        toast('그 이름은 쓸 수 없어요. 다른 이름으로 해주세요.');
-        return;
-      }
-      try {
-        await assertClean(name, '이름');
-      } catch (e) {
-        toast(e instanceof Error ? e.message : '이름을 다시 확인해 주세요.');
-        return;
-      }
+    if (wantsName && name && isReservedNickname(name)) {
+      toast('그 이름은 쓸 수 없어요. 다른 이름으로 해주세요.');
+      return;
     }
     setBusy(true);
     setStage(null);
@@ -304,12 +300,23 @@ export default function SurveyWizard() {
     const ctrl = new AbortController();
     abortRef.current = ctrl;
     try {
+      if (wantsName && name) {
+        let onAbort!: () => void;
+        try {
+          await Promise.race([assertClean(name, '이름'), new Promise<never>((_, reject) => {
+            onAbort = () => reject(ctrl.signal.reason);
+            ctrl.signal.addEventListener('abort', onAbort, { once: true });
+          })]);
+        } finally { ctrl.signal.removeEventListener('abort', onAbort); }
+      }
+      ctrl.signal.throwIfAborted();
       const prompt =
         assemblePrompt(type, answers) +
         (wantsName && name ? ` 화면에 이름이 들어가는 곳(카드 이름·점수판 등)에는 '${name}' 이름을 처음부터 넣어줘.` : '');
       setGenPrompt(prompt);
       const result = await requestGenerateStream(prompt, 'generate', 'survey', {
         signal: ctrl.signal,
+        onWaiting: setWaiting,
         onDelta: onStageDelta,
         onMeta: setMeta,
         photo: photo ?? undefined,
@@ -332,6 +339,7 @@ export default function SurveyWizard() {
 
   // 결과 화면 '고치기'(디버깅 대화) — 기대/실제를 한 요청문으로 합쳐 한 번의 modify 생성으로 반영
   async function handleSurveyModify() {
+    if (abortRef.current) return;
     if (!type || !hasCode) return;
     if (authLoading) return toast('잠깐만요, 준비 중이에요…');
     if (!user) {
@@ -354,6 +362,7 @@ export default function SurveyWizard() {
       const prompt = buildModifyPrompt(planForShare(), code, request);
       const result = await requestGenerateStream(prompt, 'modify', 'survey', {
         signal: ctrl.signal,
+        onWaiting: setWaiting,
         onDelta: onStageDelta,
         onMeta: setMeta,
         photo: photo ?? undefined,
@@ -464,13 +473,13 @@ export default function SurveyWizard() {
             <BuilderBot />
             {/* 스크린리더용 단계 안내(시각 요소는 아래 체크리스트) */}
             <p className="sr-only" role="status" aria-live="polite">
-              {stage ? `${STAGE_LABEL_EASY[stage]} 만들고 있어요` : 'AI가 준비하고 있어요'}
+              {waiting ? '여러 친구가 만들고 있어요. 잠시 뒤 다시 시도해요.' : stage ? `${STAGE_LABEL_EASY[stage]} 만들고 있어요` : 'AI가 준비하고 있어요'}
             </p>
             <p className="text-[18px] text-muted" aria-hidden="true">
-              {buildMsg}
+              {waiting ? '여러 친구가 만들고 있어요. 잠시 뒤 다시 시도해요.' : buildMsg}
             </p>
             {/* 3단계 체크리스트 — 도착한 단계만큼 체크(진짜 진행 기반). 시각용이라 SR에선 숨김 */}
-            <ul className="flex flex-col gap-2.5 text-left" aria-hidden="true">
+            {!waiting && <ul className="flex flex-col gap-2.5 text-left" aria-hidden="true">
               {STAGE_ORDER.map((s) => {
                 const cur = stage ? STAGE_ORDER.indexOf(stage) : -1;
                 const done = cur > STAGE_ORDER.indexOf(s);
@@ -501,9 +510,9 @@ export default function SurveyWizard() {
                   </li>
                 );
               })}
-            </ul>
+            </ul>}
             <Button variant="soft" onClick={cancelGenerate}>
-              <X size={17} aria-hidden /> 그만 만들기
+              <X size={17} aria-hidden /> {waiting ? '기다리기 취소' : '그만 만들기'}
             </Button>
           </div>
         </div>

@@ -24,12 +24,17 @@ export async function allowFixedWindow(
     return true;
   });
   // 기회적 청소: 만료된 카운터 몇 개 정리(비용 미미).
+  const cutoff = Date.now() - windowMs;
   adminDb
     .collection(collection)
-    .where('windowStart', '<', Date.now() - windowMs)
+    .where('windowStart', '<', cutoff)
     .limit(20)
     .get()
-    .then((snap) => Promise.all(snap.docs.map((doc) => doc.ref.delete())))
+    .then((snap) => Promise.all(snap.docs.map((doc) => adminDb.runTransaction(async (tx) => {
+      // 조회 직후 다른 요청이 새 윈도를 열었으면 그 카운터를 삭제하지 않는다.
+      const data = (await tx.get(doc.ref)).data();
+      if (typeof data?.windowStart === 'number' && data.windowStart < cutoff) tx.delete(doc.ref);
+    }))))
     .catch(() => {});
   return allowed;
 }

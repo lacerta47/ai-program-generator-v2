@@ -11,3 +11,8 @@ const MAX_STARTS = Number(process.env.GEN_RATE_MAX) || 30; // 창당 최대 시�
 export function allowGenerate(uid: string): Promise<boolean> {
   return allowFixedWindow('genRate', uid, WINDOW_MS, MAX_STARTS);
 }
+
+/** 혼잡 재시도도 슬롯 조회 전에 제한한다. 생성 시작 카운터와 분리하며 환불하지 않는다. */
+export function allowGenerateAdmission(uid: string): Promise<boolean> {
+  return allowFixedWindow('genAdmission', uid, 60_000, 30);
+}

@@ -398,6 +398,17 @@ describe('Firestore 권한 규칙', () => {
       }
     });
 
+    test('생성 입장·시작 카운터는 모든 클라이언트 역할에서 조작할 수 없다', async () => {
+      for (const collection of ['genAdmission', 'genRate']) {
+        for (const context of [anonymous(), verifiedUser(), studentA(), admin()]) {
+          const ref = doc(db(context), `${collection}/verified-user`);
+          await assertFails(getDoc(ref));
+          await assertFails(setDoc(ref, { windowStart: NOW, count: 0 }));
+          await assertFails(deleteDoc(ref));
+        }
+      }
+    });
+
     test('usage와 exemplars는 관리자도 클라이언트에서 접근할 수 없다', async () => {
       await assertFails(getDoc(doc(db(admin()), 'usage/admin_2026-09-30')));
       await assertFails(setDoc(doc(db(admin()), 'usage/admin_2026-09-30'), { count: 1 }));
