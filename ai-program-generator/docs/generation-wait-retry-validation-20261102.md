@@ -47,3 +47,5 @@ DB ABORTED(10/ABORTED) 외의 접수 여부가 불명확한 오류는 자동 재
 - 운영 동시 상한은 BizRouter 키별 5건·직접 Gemini 4건을 유지한다. 이 결과로 동시 상한을 추가 증설하지 않았다.
 
 구현 설명은 [생성 혼잡 대기·재시도](generation-wait-retry.md), 이전 중단·재개 이력은 [작업 기록](generation-wait-retry-worklog-20261031.md)을 참고한다. output의 로컬 fixture·스크린샷은 커밋 대상에서 제외한다.
+
+검토 및 CI: [PR #169](https://github.com/lacerta47/ai-program-generator-v2/pull/169). 소스는 `77f6395`로 커밋·푸시했으며, PR 검사와 운영 배포를 구분한다. 원격 검사는 PR의 최신 커밋 상태를 확인한다.
