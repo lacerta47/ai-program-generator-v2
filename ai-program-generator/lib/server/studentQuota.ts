@@ -3,7 +3,7 @@ import { todayKeyKST } from '@/lib/usageDay';
 
 export type ReserveResult =
   | { ok: true }
-  | { ok: false; reason: 'pool' | 'cap-daily' | 'cap-total' | 'misconfig' };
+  | { ok: false; reason: 'pool' | 'cap-daily' | 'cap-total' | 'busy' | 'misconfig' };
 
 /**
  * 학생 생성 한도 선점: 선생님 공유 풀 + 학생 캡을 한 트랜잭션에서 체크·차감.
@@ -60,6 +60,9 @@ export async function reserveStudentQuota(uid: string, cost = 1, day = todayKeyK
       return { ok: true };
     });
   } catch (e) {
+    // ABORTED는 커밋되지 않은 충돌이다. 접수 여부가 불명확한 다른 DB 오류와 구분한다.
+    const code = (e as { code?: unknown } | null)?.code;
+    if (code === 10 || code === 'ABORTED') return { ok: false, reason: 'busy' };
     console.error('[studentQuota] reserve 실패:', e);
     return { ok: false, reason: 'misconfig' };
   }

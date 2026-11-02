@@ -39,6 +39,7 @@ export default function Creator() {
   const [code, setCode] = useState<GeneratedCode>(EMPTY_CODE);
   const [meta, setMeta] = useState<GenerationMeta | null>(null); // 교육 메타(로직설명·개념태그) — 업로드 시 저장
   const [loading, setLoading] = useState<'idle' | 'generating' | 'modifying'>('idle');
+  const [waiting, setWaiting] = useState(false);
   const [streamingPartial, setStreamingPartial] = useState<Partial<GeneratedCode>>({});
   const [resultTab, setResultTab] = useState<ResultTab>('preview');
   // 고치기(디버깅 대화) — 기대(want, 필수) + 실제(actual, 선택)
@@ -61,6 +62,8 @@ export default function Creator() {
   const abortRef = useRef<AbortController | null>(null);
   const hasCode = Boolean(code.html || code.css || code.javascript);
   const busy = loading !== 'idle';
+
+  useEffect(() => () => { abortRef.current?.abort(); }, [user?.uid]);
 
   // ?edit= / ?fork= URL 소스 로딩은 훅으로 분리(불러온 값만 받아 생성 상태에 반영).
   const applyLoaded = (d: { plan: PlanFields; code: GeneratedCode; genPrompt: string; photo: string | null }) => {
@@ -138,8 +141,10 @@ export default function Creator() {
     }
   }
 
-  const setField = (key: keyof PlanFields, value: string) =>
+  const setField = (key: keyof PlanFields, value: string) => {
+    if (waiting) abortRef.current?.abort();
     setPlan((prev) => ({ ...prev, [key]: value }));
+  };
 
   // 동작 3칸 중 한 칸 갱신 → 3칸 상태 + plan.how(합성 결과) 동시 반영
   const setHowPart = (key: keyof HowParts, value: string) => {
@@ -153,6 +158,7 @@ export default function Creator() {
   }
 
   async function handleGenerate() {
+    if (abortRef.current) return;
     if (authLoading) {
       toast('잠깐만요, 준비 중이에요…');
       return;
@@ -178,6 +184,7 @@ export default function Creator() {
     try {
       const result = await requestGenerateStream(promptText, 'generate', 'default', {
         signal: ctrl.signal,
+        onWaiting: setWaiting,
         onDelta: setStreamingPartial,
         onMeta: setMeta,
         photo: photo ?? undefined,
@@ -201,6 +208,7 @@ export default function Creator() {
   }
 
   async function handleModify() {
+    if (abortRef.current) return;
     if (authLoading) {
       toast('잠깐만요, 준비 중이에요…');
       return;
@@ -227,6 +235,7 @@ export default function Creator() {
     try {
       const result = await requestGenerateStream(buildModifyPrompt(plan, code, request), 'modify', 'default', {
         signal: ctrl.signal,
+        onWaiting: setWaiting,
         onDelta: setStreamingPartial,
         onMeta: setMeta,
         photo: photo ?? undefined,
@@ -254,6 +263,7 @@ export default function Creator() {
 
   // 예시 이름(칩)을 누르면 바로 폼을 채운다(별도 '가져오기' 버튼 없이 1클릭).
   function applyExample(ex: ExamplePlan) {
+    if (waiting) abortRef.current?.abort();
     setPlan({ name: ex.name, look: ex.look, usage: ex.usage, how: ex.how, etc: ex.etc });
     setHow3(parseHow(ex.how)); // 예시의 동작을 3칸으로 분해해 스캐폴드 시연
   }
@@ -413,17 +423,21 @@ export default function Creator() {
           ))}
         </div>
 
-        {(isStudent || isTeacher) && <PhotoUpload value={photo} onChange={setPhoto} />}
+        {(isStudent || isTeacher) && <PhotoUpload value={photo} onChange={(next) => {
+          if (waiting) abortRef.current?.abort();
+          setPhoto(next);
+        }} />}
 
         <Button variant="primary" size="lg" onClick={handleGenerate} disabled={busy} className="w-full">
           <Wand2 size={21} aria-hidden />
-          {loading === 'generating' ? '만드는 중…' : '프로그램 만들기'}
+          {waiting ? '잠시 기다려요…' : loading === 'generating' ? '만드는 중…' : '프로그램 만들기'}
         </Button>
       </Card>
 
       {/* 오른쪽: 결과 */}
       <ResultPanel
         busy={busy}
+        waiting={waiting}
         streamingPartial={streamingPartial}
         onCancel={handleCancel}
         hasCode={hasCode}

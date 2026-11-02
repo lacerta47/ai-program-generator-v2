@@ -165,6 +165,11 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // 생성 입장 재시도 빈도 — 서버 트랜잭션만 접근한다.
+    match /genAdmission/{uid} {
+      allow read, write: if false;
+    }
+
     // 일반 회원 전환 이후 총 생성 사용량 — 서버 트랜잭션만 읽기/쓰기 가능.
     match /memberUsage/{uid} {
       allow read, write: if false;

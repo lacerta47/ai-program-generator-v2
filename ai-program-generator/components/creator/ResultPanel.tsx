@@ -22,6 +22,7 @@ type ResultTab = 'preview' | 'code';
 
 interface Props {
   busy: boolean;
+  waiting?: boolean;
   streamingPartial: Partial<GeneratedCode>;
   onCancel: () => void;
   hasCode: boolean;
@@ -58,6 +59,7 @@ interface Props {
 /** 생성기 오른쪽 '결과' 패널 — 로딩/빈상태/결과(미리보기·코드·수정요청)를 담당. */
 export default function ResultPanel({
   busy,
+  waiting = false,
   streamingPartial,
   onCancel,
   hasCode,
@@ -119,12 +121,12 @@ export default function ResultPanel({
                 className="flex items-center gap-2.5 rounded-[var(--r-md)] border-2 border-brand/30 bg-brand-soft px-4 py-3"
               >
                 <LoadingDots />
-                <span className="text-[16px] text-brand-strong dark:text-brand">
-                  {stage ? STAGE_LABEL[stage] : 'AI가 준비하고 있어요…'}
+                <span className="text-[17px] text-brand-strong dark:text-brand">
+                  {waiting ? '여러 친구가 만들고 있어요. 잠시 뒤 다시 시도해요.' : stage ? STAGE_LABEL[stage] : 'AI가 준비하고 있어요…'}
                 </span>
               </div>
               {/* 3층 개념 칩(구조·스타일·동작) */}
-              <div className="flex gap-1.5">
+              {!waiting && <div className="flex gap-1.5">
                 {STAGE_ORDER.map((s) => (
                   <span
                     key={s}
@@ -135,7 +137,7 @@ export default function ResultPanel({
                     {STAGE_CONCEPT[s]}
                   </span>
                 ))}
-              </div>
+              </div>}
               {/* 라이브 강조 코드(미완성 → 포맷 생략). 토큰마다 낭독되지 않게 SR에서 숨김(진행은 위 배너가 안내) */}
               <div
                 aria-hidden="true"
@@ -146,12 +148,12 @@ export default function ResultPanel({
                 ) : (
                   <div className="flex h-full flex-col items-center justify-center gap-5">
                     <BuilderBot />
-                    <LoadingDots label={stage ? STAGE_LABEL[stage] : 'AI가 준비하고 있어요…'} />
+                    <LoadingDots label={waiting ? '잠시 기다려요' : stage ? STAGE_LABEL[stage] : 'AI가 준비하고 있어요…'} />
                   </div>
                 )}
               </div>
               <Button variant="ghost" onClick={onCancel} className="self-center">
-                그만 만들기
+                {waiting ? '기다리기 취소' : '그만 만들기'}
               </Button>
             </div>
           );

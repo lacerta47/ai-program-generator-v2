@@ -14,7 +14,7 @@ import { todayKeyKST } from '@/lib/usageDay';
 import { readEffectiveTotalLimit, ROLE_DAILY_LIMIT } from '@/lib/admin/usageConfig';
 import { reserveMemberQuota, refundMemberQuota } from '@/lib/server/memberQuota';
 import { reserveStudentQuota, refundStudentQuota } from '@/lib/server/studentQuota';
-import { allowGenerate } from '@/lib/server/genRate';
+import { allowGenerate, allowGenerateAdmission } from '@/lib/server/genRate';
 import { UserFacingError, GateError, GenerationBusyError } from '@/lib/ai/errors';
 import { getGenerationQuality } from '@/lib/ai/modelPolicy';
 import { recordGateFail } from '@/lib/server/gateStats';
@@ -24,6 +24,13 @@ export const runtime = 'nodejs';
 
 function isMode(v: unknown): v is GenerateMode {
   return v === 'generate' || v === 'modify';
+}
+
+/** 공급사 호출 전에 확실히 거절된 입장만 클라이언트가 자동 재시도할 수 있다. */
+function busyResponse() {
+  return NextResponse.json({ error: new GenerationBusyError().message, code: 'generation_busy', retryable: true }, {
+    status: 503, headers: { 'Retry-After': String(3 + Math.floor(Math.random() * 5)), 'Cache-Control': 'no-store' },
+  });
 }
 
 /** 생성 성공 1건의 토큰 사용량을 stats/{day}에 누적(비용 실측용). fire-and-forget — 실패해도 응답 무영향. */
@@ -137,14 +144,13 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // 2.5) 생성 시작 레이트리밋(비환불) — 입력검증 후·한도선점 전에 체크.
-  // 일일 쿼터는 취소 시 환불되므로, '부분 스트리밍만 받고 abort→환불'을 반복하면 카운터가 안 쌓여
-  // 유료 Gemini 호출을 무제한 낼 수 있다(abort-파밍). 이 카운터는 환불되지 않아 빈도의 천장이 된다. (B2)
-  if (!(await allowGenerate(uid))) {
-    return NextResponse.json(
-      { error: '너무 빠르게 여러 번 만들고 있어요. 잠깐 쉬었다가 다시 해주세요.' },
-      { status: 429 },
-    );
+  // 대기 재시도는 별도 빈도 제한. 슬롯 조회 폭주를 막되 생성 시작 횟수를 소모하지 않는다.
+  try {
+    if (!(await allowGenerateAdmission(uid))) {
+      return NextResponse.json({ error: '너무 빠르게 여러 번 요청하고 있어요. 잠깐 쉬었다가 다시 해주세요.' }, { status: 429 });
+    }
+  } catch {
+    return NextResponse.json({ error: '만들기를 준비하지 못했어요. 잠시 후 다시 해주세요.' }, { status: 500 });
   }
 
   // Shared admission precedes quota reservation. No busy request consumes quota.
@@ -154,12 +160,16 @@ export async function POST(req: NextRequest) {
     generation = await prepareUserGeneration(randomUUID(), AbortSignal.any([req.signal, upstream.signal]));
   } catch (e) {
     if (e instanceof GenerationBusyError) {
-      return NextResponse.json({ error: e.message }, { status: 503, headers: { 'Retry-After': String(3 + Math.floor(Math.random() * 5)) } });
+      return busyResponse();
     }
+    const failure = e as { name?: string; code?: string | number } | null;
+    console.error('[/api/generate] 입장 실패:', { name: failure?.name, code: failure?.code });
     return NextResponse.json({ error: '만들기를 준비하지 못했어요. 잠시 후 다시 해주세요.' }, { status: 500 });
   }
   let streamOwnsLease = false;
   try {
+    // 취소된 요청은 한도 예약을 시작하지 않는다.
+    generation.signal.throwIfAborted();
     // 3) 한도 선점 (트랜잭션). 생성이 실패하면 4)에서 환불한다.
     // 사진 생성은 멀티모달이라 비용이 더 들어 2칸을 차감한다(일반 생성은 1칸).
     const cost = parsedPhoto ? 2 : 1;
@@ -168,6 +178,7 @@ export async function POST(req: NextRequest) {
     if (isStudent) {
       const r = await reserveStudentQuota(uid, cost, day); // day를 고정 전달 → 환불도 같은 날 문서(L8)
       if (!r.ok) {
+        if (r.reason === 'busy') return busyResponse();
         const msg =
           r.reason === 'pool'
             ? '선생님이 정한 우리 반 한도를 다 썼어요.'
@@ -221,8 +232,9 @@ export async function POST(req: NextRequest) {
 
     // 4) 생성(스트리밍) — NDJSON. 실패/취소 시 선점한 한도를 1회 환불.
     let refunded = false;
+    let completed = false;
     const refundOnce = async () => {
-      if (refunded) return;
+      if (refunded || completed) return;
       refunded = true;
       if (isStudent) await refundStudentQuota(uid, cost, day);
       else if (!isAdmin && !isTeacher) {
@@ -236,6 +248,11 @@ export async function POST(req: NextRequest) {
     let finalPrompt = prompt;
     try {
       generation.signal.throwIfAborted();
+      // 슬롯·한도 예약이 성공한 실행만 시작 횟수를 센다. 실패·취소 때도 이 카운터는 환불하지 않는다.
+      if (!(await allowGenerate(uid))) {
+        await refundOnce();
+        return NextResponse.json({ error: '너무 빠르게 여러 번 만들고 있어요. 잠깐 쉬었다가 다시 해주세요.' }, { status: 429 });
+      }
       if (mode === 'modify') {
         // 수정 모드: 요청한 부분만 바꾸고 나머지 코드·제약을 보존하라는 지시를 덧붙인다.
         system = SYSTEM_PROMPTS[promptVariant] + MODIFY_SYSTEM_SUFFIX;
@@ -261,7 +278,7 @@ export async function POST(req: NextRequest) {
     // [의도된 trade-off — 리뷰 오해 방지] 실패뿐 아니라 '취소(abort)'에도 환불한다: 네트워크 끊김 등으로
     // 결과를 못 받은 정당 사용자가 한도를 까이지 않게 하려는 것. 부분 스트리밍분만 받고 고의로 abort하는
     // 어뷰징이 이론상 가능하나, 이 쿼터의 목적은 매출 보호가 아니라 Gemini 키 남용(DoS) 방지(무료 티어)라
-    // 수용한 것. 정책을 바꾸려면 'done 도달분만 과금' 또는 '상당량 전송 시 환불 생략'을 검토.
+    // 수용한 것. 완료(done)를 전송한 뒤에는 성공으로 확정하며 이후 취소로 환불하지 않는다.
     const stream = new ReadableStream<Uint8Array>({
       async start(controller) {
         const send = (obj: unknown) =>
@@ -280,6 +297,7 @@ export async function POST(req: NextRequest) {
               recordTokenUsage(day, chunk.usage); // 토큰 사용량 집계(비용 실측)
               // usage는 서버 집계 전용(미전송), meta(교육)는 클라가 게시물에 저장하도록 전달.
               send({ type: 'done', code: chunk.code, meta: chunk.meta });
+              completed = true;
             } else {
               send(chunk);
             }
@@ -290,7 +308,7 @@ export async function POST(req: NextRequest) {
             req.signal.aborted || upstream.signal.aborted;
           await refundOnce();
           if (e instanceof GateError) recordGateFail(day, e.reason, 'user'); // 게이트 탈락 집계(일일 리포트)
-          if (!aborted) {
+          if (!aborted && !completed) {
             console.error('[/api/generate] 스트리밍 실패:', e);
             try {
               // 내부 정보 누출 방지: 안전하다고 표시된(UserFacingError) 메시지만 그대로 전달하고,
