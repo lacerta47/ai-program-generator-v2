@@ -5,7 +5,7 @@ export function Tip({ lead, examples }: { lead: string; examples: string[] }) {
       <p>{lead}</p>
       <ul className="mt-2 flex flex-col gap-1">
         {examples.map((ex) => (
-          <li key={ex} className="rounded-[8px] bg-surface-2 px-2.5 py-1 text-[12.5px] text-muted">
+          <li key={ex} className="rounded-[8px] bg-surface-2 px-2.5 py-1 text-[14px] text-muted">
             {ex}
           </li>
         ))}

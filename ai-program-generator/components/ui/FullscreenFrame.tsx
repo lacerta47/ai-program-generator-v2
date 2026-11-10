@@ -121,10 +121,10 @@ export default function FullscreenFrame({ code, title, postId, photo, onNeedLogi
   }
 
   return (
-    <div ref={containerRef} className={`relative overflow-hidden bg-white ${className}`}>
+    <div ref={containerRef} className={`relative overflow-hidden bg-surface ${className}`}>
       {needLogin ? (
         <div className="grid h-full place-items-center gap-3 p-6 text-center">
-          <p className="text-[15px] text-muted">로그인하면 미리보기를 볼 수 있어요.</p>
+          <p className="text-[17px] text-muted">로그인하면 미리보기를 볼 수 있어요.</p>
           {onNeedLogin && (
             <Button variant="primary" onClick={onNeedLogin}>
               로그인하기
@@ -133,7 +133,7 @@ export default function FullscreenFrame({ code, title, postId, photo, onNeedLogi
         </div>
       ) : failed ? (
         <div className="grid h-full place-items-center gap-3 p-6 text-center">
-          <p className="text-[15px] text-muted">미리보기를 불러오지 못했어요.</p>
+          <p className="text-[17px] text-muted">미리보기를 불러오지 못했어요.</p>
           <Button variant="primary" onClick={() => setRetry((r) => r + 1)}>
             다시 보기
           </Button>

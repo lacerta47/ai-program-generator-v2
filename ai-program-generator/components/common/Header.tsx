@@ -7,7 +7,7 @@ import SoundToggle from '@/components/ui/SoundToggle';
 export default function Header({ active }: { active?: 'creator' | 'board' | 'survey' }) {
   return (
     <header className="sticky top-0 z-30 border-b-2 border-line bg-bg/90 backdrop-blur-sm">
-      <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-x-3 gap-y-2 px-4 py-3 sm:px-6">
+      <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-x-2 gap-y-2 px-3 py-3 sm:px-6">
         {/* 일반 <a>로 전체 새로고침 (Link는 클라이언트 라우팅이라 새로고침이 안 됨) */}
         {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- 홈 이동 시 생성 상태를 완전히 초기화해야 한다. */}
         <a
@@ -19,7 +19,7 @@ export default function Header({ active }: { active?: 'creator' | 'board' | 'sur
           </span>
           <span className="lun-shiny font-wordmark">LUN</span>
         </a>
-        <nav className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+        <nav className="order-last flex w-full flex-wrap items-center gap-1.5 md:order-none md:ml-auto md:w-auto md:gap-2">
           <GlowNavLink href="/create" active={active === 'creator'}>
             <span className="hover-wiggle grid place-items-center" aria-hidden>
               <Wand2 size={17} />
@@ -38,10 +38,12 @@ export default function Header({ active }: { active?: 'creator' | 'board' | 'sur
             </span>
             <span className="relative top-[0.5px]">게시판</span>
           </GlowNavLink>
+        </nav>
+        <div className="flex min-w-0 flex-wrap items-center justify-end gap-1.5 sm:gap-2">
           <SoundToggle />
           <ThemeToggle />
           <AuthButton />
-        </nav>
+        </div>
       </div>
     </header>
   );

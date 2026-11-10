@@ -288,7 +288,7 @@ export default function Creator() {
   }
 
   return (
-    <div className="mx-auto grid max-w-7xl gap-5 p-4 sm:p-6 lg:grid-cols-[minmax(360px,5fr)_7fr]">
+    <div className="mx-auto grid max-w-7xl grid-cols-1 gap-5 p-4 sm:p-6 lg:grid-cols-[minmax(360px,5fr)_minmax(0,7fr)]">
       {editing && (
         <div className="anim-pop-in flex items-center gap-2 rounded-[var(--r-md)] border-2 border-brand/40 bg-brand-soft px-4 py-2.5 text-[15px] text-brand-strong lg:col-span-2 dark:text-brand">
           <Pencil size={16} aria-hidden />
@@ -312,15 +312,17 @@ export default function Creator() {
           <span className="grid h-10 w-10 place-items-center rounded-[12px] bg-brand-soft text-brand-strong dark:text-brand">
             <Lightbulb size={20} aria-hidden />
           </span>
-          <h2 className="text-[25px]">어떤 프로그램을 만들까요?</h2>
+          <h2 className="break-keep text-[25px]">어떤 프로그램을 만들까요?</h2>
         </div>
 
         <Label
+          htmlFor="creator-name"
           text="프로그램 이름"
           required
           tip={<Tip lead="무엇을 하는 프로그램인지 한눈에 보이게 짧게 지어요." examples={['구구단 퀴즈 게임', '움직이는 강아지 그림판', '나만의 비밀 일기장']} />}
         >
           <TextInput
+            id="creator-name"
             ref={nameRef}
             value={plan.name}
             onChange={(e) => setField('name', e.target.value)}
@@ -329,10 +331,12 @@ export default function Creator() {
           />
         </Label>
         <Label
+          htmlFor="creator-look"
           text="어떻게 생겼나요? (색깔, 모양)"
           tip={<Tip lead="색깔·모양·크기를 자세히 말할수록 상상한 모습과 비슷하게 나와요." examples={['배경은 하늘색, 버튼은 크고 노란색', '글자는 굵게, 옛날 픽셀 게임 느낌으로']} />}
         >
           <TextArea
+            id="creator-look"
             value={plan.look}
             onChange={(e) => setField('look', e.target.value)}
             placeholder="예: 어두운 배경에 파란 저장 버튼"
@@ -340,10 +344,12 @@ export default function Creator() {
           />
         </Label>
         <Label
+          htmlFor="creator-usage"
           text="어떻게 사용하나요?"
           tip={<Tip lead="사용하는 순서대로 차근차근 알려줘요. 누르고, 쓰고, 고르는 방법!" examples={['답을 쓰고 확인 버튼을 눌러요', '키보드 화살표로 캐릭터를 움직여요']} />}
         >
           <TextArea
+            id="creator-usage"
             value={plan.usage}
             onChange={(e) => setField('usage', e.target.value)}
             placeholder="예: 글을 쓰고 저장 버튼을 누르면 목록에 추가돼요"
@@ -363,7 +369,7 @@ export default function Creator() {
             </HelpTip>
           </div>
           <label className="flex flex-col gap-1">
-            <span className="text-[13.5px] font-medium text-ink">① 먼저 무엇이 일어나요?</span>
+            <span className="text-[17px] font-medium text-ink">① 먼저 무엇이 일어나요?</span>
             <TextArea
               value={how3.first}
               onChange={(e) => setHowPart('first', e.target.value)}
@@ -374,7 +380,7 @@ export default function Creator() {
             />
           </label>
           <label className="flex flex-col gap-1">
-            <span className="text-[13.5px] font-medium text-ink">② 그다음엔요?</span>
+            <span className="text-[17px] font-medium text-ink">② 그다음엔요?</span>
             <TextArea
               value={how3.next}
               onChange={(e) => setHowPart('next', e.target.value)}
@@ -385,8 +391,8 @@ export default function Creator() {
             />
           </label>
           <label className="flex flex-col gap-1">
-            <span className="text-[13.5px] font-medium text-ink">
-              ③ 만약 ~하면요? <span className="text-[12.5px] font-normal text-muted">(조건이 없으면 비워도 돼요)</span>
+            <span className="text-[17px] font-medium text-ink">
+              ③ 만약 ~하면요? <span className="text-[14px] font-normal text-muted">(조건이 없으면 비워도 돼요)</span>
             </span>
             <TextArea
               value={how3.ifThen}
@@ -399,10 +405,12 @@ export default function Creator() {
           </label>
         </div>
         <Label
+          htmlFor="creator-etc"
           text="더 바라는 점"
           tip={<Tip lead="소리, 점수, 축하 효과처럼 바라는 점을 자유롭게 적어요. 없으면 비워도 돼요!" examples={['정답일 때 박수 소리가 나면 좋겠어요', '휴대폰에서도 잘 보이게 해주세요']} />}
         >
           <TextArea
+            id="creator-etc"
             value={plan.etc}
             onChange={(e) => setField('etc', e.target.value)}
             placeholder="예: 휴대폰에서도 잘 보이게 해주세요"

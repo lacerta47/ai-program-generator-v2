@@ -35,7 +35,7 @@ export default function GlowNavLink({ href, active = false, children }: Props) {
     >
       <Link
         href={href}
-        className={`group inline-flex min-h-11 items-center gap-1.5 px-4 text-[18px] font-display font-medium ${
+        className={`group inline-flex min-h-11 items-center gap-1.5 px-2.5 text-[16px] font-display font-medium focus-visible:-outline-offset-4! focus-visible:outline-current! sm:px-4 sm:text-[18px] ${
           active ? 'text-brand-ink' : 'text-muted hover:text-brand-strong dark:hover:text-brand'
         }`}
       >

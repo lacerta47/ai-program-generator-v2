@@ -164,9 +164,8 @@ export default function ResultPanel({
           <FloatingShapes />
           <div className="relative">
             <h3 className="mb-1 text-[22px]">여기에 프로그램이 나타나요</h3>
-            <p className="max-w-[36ch] text-[16px] text-muted">
-              왼쪽에 만들고 싶은 프로그램을 적고
-              <br />
+            <p className="max-w-[36ch] text-[17px] text-muted">
+              만들고 싶은 프로그램을 적고{' '}
               <strong className="text-brand-strong dark:text-brand">프로그램 만들기</strong> 버튼을 눌러 보세요!
             </p>
           </div>
@@ -233,13 +232,13 @@ export default function ResultPanel({
               />
             ) : (
               <div className="flex h-full flex-col">
-                <div className="flex items-center justify-between border-b-2 border-line bg-surface-2 px-3 py-2">
-                  <div className="flex gap-1">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b-2 border-line bg-surface-2 px-3 py-2">
+                  <div className="flex flex-wrap gap-1">
                     {(['html', 'css', 'javascript'] as CodeTab[]).map((t) => (
                       <button
                         key={t}
                         onClick={() => setCodeTab(t)}
-                        className={`press min-h-11 rounded-full px-3.5 text-[13px] font-medium ${
+                        className={`press min-h-11 min-w-11 rounded-full px-3.5 text-[14px] font-medium ${
                           codeTab === t
                             ? 'bg-brand text-brand-ink'
                             : 'text-muted hover:bg-brand-soft hover:text-brand-strong'
@@ -249,7 +248,7 @@ export default function ResultPanel({
                       </button>
                     ))}
                   </div>
-                  <Button variant="ghost" onClick={handleCopy} className="min-h-9 border-0 px-3 text-[13px]">
+                  <Button variant="ghost" onClick={handleCopy} className="border-0 px-3 text-[14px]">
                     {copied ? (
                       <span className="anim-pop inline-flex items-center gap-1 text-mint-ink">
                         <Check size={15} aria-hidden /> 복사했어요!
@@ -268,7 +267,7 @@ export default function ResultPanel({
 
           {/* 수정 요청(디버깅 대화) — 기대(필수) + 실제(선택) */}
           <div className="flex flex-col gap-2.5 rounded-[var(--r-md)] bg-surface-2 p-4">
-            <div className="flex items-center gap-1.5 text-[15px] font-medium text-muted">
+            <div className="flex items-center gap-1.5 text-[17px] font-medium text-muted">
               <Sparkles size={16} className="text-grape" aria-hidden />
               고치고 싶은 게 있나요? 어떻게 되면 좋을지 말해 보세요
               <HelpTip>
@@ -279,7 +278,7 @@ export default function ResultPanel({
               </HelpTip>
             </div>
             <div className="flex flex-col gap-1">
-              <span className="text-[13.5px] font-medium text-ink">어떻게 되길 원해?</span>
+              <span className="text-[17px] font-medium text-ink">어떻게 되길 원해?</span>
               <TextArea
                 ref={modifyRef}
                 value={modifyWant}
@@ -292,7 +291,7 @@ export default function ResultPanel({
               />
             </div>
             <div className="flex flex-col gap-1">
-              <span className="text-[13.5px] font-medium text-muted">지금은 어떻게 돼? <span className="text-[12.5px] font-normal">(없으면 비워도 돼요)</span></span>
+              <span className="text-[17px] font-medium text-muted">지금은 어떻게 돼? <span className="text-[14px] font-normal">(없으면 비워도 돼요)</span></span>
               <TextArea
                 value={modifyActual}
                 onChange={(e) => setModifyActual(e.target.value)}
@@ -325,7 +324,8 @@ function TabButton({
   return (
     <button
       onClick={onClick}
-      className={`relative z-10 inline-flex min-h-10 items-center justify-center gap-1.5 rounded-full px-4 text-[15px] font-medium transition-colors duration-200 ${
+      aria-pressed={active}
+      className={`relative z-10 inline-flex min-h-11 items-center justify-center gap-1.5 rounded-full px-4 text-[15px] font-medium transition-colors duration-200 ${
         active ? 'text-brand-ink' : 'text-muted hover:text-ink'
       }`}
     >
