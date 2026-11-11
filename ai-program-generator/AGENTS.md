@@ -98,5 +98,7 @@ if (gate instanceof NextResponse) return gate;
 - Before a push or pull request, inspect the diff and run the proportionate
   checks. For meaningful application changes, run type checking and a
   production build when the dev server is stopped.
+- Before a release, follow the [release checklist](README.md#배포-전-점검)
+  and record the CI and staging results.
 - If the user says to keep something as-is, preserve all of its details rather
   than making adjacent cleanup changes.

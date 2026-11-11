@@ -27,7 +27,7 @@ export default function ConceptBadges({ tags, notes, className = '' }: { tags?: 
               onClick={() => setOpen(active ? null : c)}
               aria-expanded={active}
               aria-label={`${label} 개념 설명 ${active ? '닫기' : '보기'}`}
-              className={`press inline-flex items-center gap-1 rounded-full border bg-surface px-2 py-0.5 text-[12.5px] font-medium ${badge} ${
+              className={`press inline-flex min-h-11 min-w-11 items-center justify-center gap-1 rounded-full border bg-surface px-2 py-0.5 text-[14px] font-medium ${badge} ${
                 active ? 'ring-2 ring-current/40' : ''
               }`}
             >
