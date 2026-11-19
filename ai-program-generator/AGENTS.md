@@ -43,6 +43,10 @@ firebase deploy --only firestore:rules,firestore:indexes
 
 - Do not run `npm run build` while the dev server is running because both use
   `.next`.
+- `npm run dev` uses port 3000; if it is taken it silently moves to 3001+.
+  Kill leftover `node` processes and restart instead of guessing the port.
+- The legacy folder name `../ai-프로그램-생성기/` breaks `cd` in bash because
+  of encoding; access it from PowerShell with `-LiteralPath`.
 - Use the local `./node_modules/.bin/tsc --noEmit`; do not use `npx tsc`.
 - Unit tests use Vitest and cover pure `lib/**/*.test.ts` logic. For a change
   to pure logic, add or update a focused test.
