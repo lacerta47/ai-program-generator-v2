@@ -59,8 +59,8 @@ ${letter.text}
 === 편지 끝 ===`;
 }
 
-export function runCli(cmd, args, { input, timeoutMs }) {
-  const r = spawnSync(cmd, args, { input, cwd: ROOT, encoding: 'utf8', timeout: timeoutMs, maxBuffer: 64 * 1024 * 1024, windowsHide: true });
+export function runCli(cmd, args, { input, timeoutMs, cwd = ROOT }) {
+  const r = spawnSync(cmd, args, { input, cwd, encoding: 'utf8', timeout: timeoutMs, maxBuffer: 64 * 1024 * 1024, windowsHide: true });
   return { status: r.status, stdout: r.stdout ?? '', stderr: r.stderr ?? '', timedOut: r.error?.code === 'ETIMEDOUT' };
 }
 

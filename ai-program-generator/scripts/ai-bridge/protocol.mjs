@@ -1,12 +1,16 @@
 // 요청 설정과 CLI가 실제로 제공한 응답 메타데이터를 구분한다.
-export function settingsFor(config, target) {
-  const settings = config[target];
+export const TIERS = ['normal', 'high'];
+
+/** 편지 `tier`(기본 normal)에 맞는 요청 설정. high는 config.tiers.high[target]을 쓰며, 없으면 조용히 기본값으로 내려가지 않고 실패한다. */
+export function settingsFor(config, target, tier = 'normal') {
+  if (!TIERS.includes(tier)) throw new Error(`${target}: tier는 ${TIERS.join('|')} 중 하나여야 합니다.`);
+  const settings = tier === 'normal' ? config[target] : config.tiers?.[tier]?.[target];
   if (!settings || typeof settings.model !== 'string' || !/^[a-z0-9][a-z0-9._-]+$/i.test(settings.model)
     || ['default', 'best', 'fable', 'opus', 'sonnet', 'haiku'].includes(settings.model.toLowerCase())
     || !['low', 'medium', 'high', 'xhigh'].includes(settings.effort)) {
-    throw new Error(`${target}: 전체 모델 ID와 지원하는 effort를 config.json에 명시하세요.`);
+    throw new Error(`${target}(${tier}): 전체 모델 ID와 지원하는 effort를 config.json에 명시하세요.`);
   }
-  return { model: settings.model, effort: settings.effort };
+  return { model: settings.model, effort: settings.effort, tier };
 }
 
 export function validateLetter(letter, target) {
@@ -14,9 +18,15 @@ export function validateLetter(letter, target) {
     || letter.meta.to !== target
     || letter.meta.from !== (target === 'codex' ? 'claude' : 'codex')
     || !['question', 'review', 'proposal'].includes(letter.meta.kind)
-    || !/^[a-f0-9]{40}$/.test(letter.meta.sha ?? '')) {
-    throw new Error('편지 id/from/to/kind와 검토 기준 전체 40자 SHA를 확인하세요.');
+    || !/^[a-f0-9]{40}$/.test(letter.meta.sha ?? '')
+    || (letter.meta.tier !== undefined && !TIERS.includes(letter.meta.tier))) {
+    throw new Error('편지 id/from/to/kind와 검토 기준 전체 40자 SHA(선택: tier normal|high)를 확인하세요.');
   }
+}
+
+/** 현재 트리에서 바로 호출할지, 검토 SHA의 임시 worktree를 만들지 결정한다. 검토 SHA가 HEAD와 같고 편지 외 변경이 없을 때만 현재 트리를 쓴다. */
+export function planExecution(reviewSha, head, dirty) {
+  return reviewSha === head && !dirty ? 'current' : 'temp_worktree';
 }
 
 export function commandArgs(target, settings, root) {
