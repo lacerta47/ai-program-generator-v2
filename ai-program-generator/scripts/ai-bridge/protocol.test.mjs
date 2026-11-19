@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { settingsFor, validateLetter, validateReviewContext, commandArgs, parseResponse, replyIdentity, requireSuccess } from './protocol.mjs';
+import { readFileSync } from 'node:fs';
+import { settingsFor, validateLetter, validateReviewContext, planExecution, commandArgs, parseResponse, replyIdentity, requireSuccess } from './protocol.mjs';
 import { buildPrompt } from './lib.mjs';
 
 const sha = 'a'.repeat(40);
@@ -10,18 +11,36 @@ const header = `원문 id: ${letter.meta.id} · 확인 HEAD: ${head} · 검토 S
 const jsonl = (...events) => events.map((event) => JSON.stringify(event)).join('\n');
 
 test('requires pinned models and explicit supported effort', () => {
-  assert.deepEqual(settingsFor({ claude: { model: 'claude-fable-5-2', effort: 'medium' } }, 'claude'),
-    { model: 'claude-fable-5-2', effort: 'medium' });
+  assert.deepEqual(settingsFor({ claude: { model: 'claude-opus-5-5', effort: 'medium' } }, 'claude'),
+    { model: 'claude-opus-5-5', effort: 'medium', tier: 'normal' });
   for (const value of [{ model: 'opus', effort: 'medium' }, { model: 'OPUS', effort: 'medium' }, { model: '', effort: 'medium' },
     { model: 'claude-fable-5-2' }, { model: 'claude-fable-5-2', effort: 'automatic' }]) {
     assert.throws(() => settingsFor({ claude: value }, 'claude'));
   }
 });
 
-test('rejects short SHA and letters routed to the wrong reviewer', () => {
+test('high tier uses its own pinned settings and never falls back silently', () => {
+  const config = { claude: { model: 'claude-opus-5-5', effort: 'medium' },
+    tiers: { high: { claude: { model: 'claude-fable-5-2', effort: 'high' } } } };
+  assert.deepEqual(settingsFor(config, 'claude', 'high'), { model: 'claude-fable-5-2', effort: 'high', tier: 'high' });
+  assert.throws(() => settingsFor(config, 'codex', 'high'));
+  assert.throws(() => settingsFor(config, 'claude', 'urgent'));
+  const shipped = JSON.parse(readFileSync(new URL('./config.json', import.meta.url), 'utf8'));
+  for (const target of ['codex', 'claude']) for (const tier of ['normal', 'high']) settingsFor(shipped, target, tier);
+});
+
+test('rejects short SHA, unknown tier, and letters routed to the wrong reviewer', () => {
   validateLetter(letter, 'claude');
+  validateLetter({ meta: { ...letter.meta, tier: 'high' } }, 'claude');
   assert.throws(() => validateLetter({ meta: { ...letter.meta, sha: 'abcdef1' } }, 'claude'));
+  assert.throws(() => validateLetter({ meta: { ...letter.meta, tier: 'urgent' } }, 'claude'));
   assert.throws(() => validateLetter(letter, 'codex'));
+});
+
+test('uses the current tree only when it is exactly the reviewed commit and clean', () => {
+  assert.equal(planExecution(sha, sha, false), 'current');
+  assert.equal(planExecution(sha, head, false), 'temp_worktree');
+  assert.equal(planExecution(sha, sha, true), 'temp_worktree');
 });
 
 test('both CLIs receive explicit settings without weakening session or tool restrictions', () => {
@@ -29,7 +48,9 @@ test('both CLIs receive explicit settings without weakening session or tool rest
   assert.equal(codex[codex.indexOf('--model') + 1], 'gpt-6.1-sol');
   assert.ok(codex.includes('model_reasoning_effort="medium"'));
   assert.ok(codex.includes('read-only') && codex.includes('--ephemeral') && codex.includes('--json'));
-  assert.ok(codex.includes('--ignore-user-config'));
+  // 사용자 config가 Codex 실행 정책을 담고 있어 이 플래그를 넣으면 Codex가 파일을 읽지 못한다(protocol.mjs 주석 참조).
+  assert.ok(!codex.includes('--ignore-user-config'));
+  assert.ok(codex.includes('features.apps=false') && codex.some((arg) => /^plugins\.".+"\.enabled=false$/.test(arg)));
   const claude = commandArgs('claude', { model: 'claude-fable-5-2', effort: 'medium' }, '/repo');
   assert.equal(claude[claude.indexOf('--model') + 1], 'claude-fable-5-2');
   assert.equal(claude[claude.indexOf('--effort') + 1], 'medium');

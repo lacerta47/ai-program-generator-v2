@@ -4,20 +4,24 @@
 
 양쪽은 [AGENTS.md](../../AGENTS.md)를 공통 규칙 원본으로 사용한다. 루트 `AGENTS.md`와 `CLAUDE.md`도 이 원본을 가리킨다. 브리지는 동일한 원본 내용을 두 방향의 프롬프트에 직접 전달하고 해시를 기록한다. 기존에 열려 있던 상대 세션의 기억이나 지침을 자동 갱신하지 않는다.
 
-공통이라는 뜻은 프로젝트 규칙의 원본과 전달 내용이 같다는 뜻이다. 각 서비스의 시스템 지침·관리자 정책까지 동일하게 만든다는 뜻은 아니다. Claude는 safe/restricted mode·빈 MCP 설정·MCP 도구 차단으로 사용자 훅/플러그인/메모리의 추가 주입을 제한하고, Codex는 `--ignore-user-config`로 사용자 설정의 MCP 등을 로드하지 않는다. 필요한 공통 지침은 호출 측이 명시적으로 전달한다. 관리자 강제 정책은 여전히 적용될 수 있다.
+공통이라는 뜻은 프로젝트 규칙의 원본과 전달 내용이 같다는 뜻이다. 각 서비스의 시스템 지침·관리자 정책까지 동일하게 만든다는 뜻은 아니다. Claude는 safe/restricted mode·빈 MCP 설정·MCP 도구 차단으로 사용자 훅/플러그인/메모리의 추가 주입을 제한한다. Codex는 read-only 샌드박스·`--ephemeral`로 격리하되 **사용자 config는 읽게 둔다** — 이 환경에서는 그 config가 Codex의 명령 실행 정책(PowerShell 허용)을 담고 있어, `--ignore-user-config`를 주면 Codex가 파일 하나도 읽지 못한다(2026-11-20 실측, #183의 첫 Codex 호출들이 "실행 정책 차단"으로 코드를 못 본 원인). 필요한 공통 지침은 호출 측이 명시적으로 전달한다. 관리자 강제 정책은 여전히 적용될 수 있다.
 
 ## 고정된 요청 설정
 
 `scripts/ai-bridge/config.json`이 양쪽 호출 설정의 원본이다.
 
-| 호출 대상 | 요청 모델 ID | 요청 추론 수준 |
-|---|---|---|
-| Codex | `gpt-6.1-sol` | `medium` |
-| Claude | `claude-fable-5-2` | `medium` |
+| 등급(편지 `tier`) | 호출 대상 | 요청 모델 ID | 요청 추론 수준 |
+|---|---|---|---|
+| `normal`(기본) | Codex | `gpt-6.1-sol` | `medium` |
+| `normal`(기본) | Claude | `claude-opus-5-5` | `medium` |
+| `high` | Codex | `gpt-6.1-sol` | `high` |
+| `high` | Claude | `claude-fable-5-2` | `high` |
+
+`tier: high`는 [협업 규칙의 "높은 영향" 등급](../COLLABORATION.md#리뷰-등급)(인증·권한·쿼터·결제·생성 경로·미리보기 격리·규칙/스키마·운영 설정)에만 쓴다. 일반 리뷰·질문은 생략(=normal). high 설정이 config에 없으면 기본값으로 조용히 내려가지 않고 실패한다.
 
 각 CLI에 `--model`과 추론 설정(Codex `model_reasoning_effort`, Claude `--effort`)을 명시한다. `default`·`opus` 등 가변 별칭은 사용하지 않는다. 데스크톱 대화의 모델 선택이나 로컬 기본값을 그대로 따르는 방식이 아니다. 설정을 바꾸려면 이 파일을 수정하고 상대 리뷰·실제 호출 결과로 확인한다.
 
-Claude와의 합의 및 실제 호출 근거는 [결정 기록](../decisions/2026-11-19-bridge-model-evidence.md)과 [검증 보고서](model-settings-validation-20261119.md)에 있다.
+초기 합의(양쪽 fable-5-2·medium)와 실제 호출 근거는 [결정 기록](../decisions/2026-11-19-bridge-model-evidence.md)과 [검증 보고서](model-settings-validation-20261119.md)에 있다. 2026-11-19 저녁 사용자 지시로 Claude 기본을 Opus 5.5로 내리고 high 등급을 분리했다 — 토큰 소비는 모델이 아니라 입력 길이가 결정하므로, 판단 난도가 높은 검토에만 상위 모델을 쓴다.
 
 ## 어디에 무엇이
 
@@ -49,7 +53,7 @@ sha: dac127b8ead99f9f6fce8b1d7ccfa0e285ddf0d6
 
 답은 스크립트가 `## 답변 (Codex, 시각)` 절로 덧붙인다(호출된 쪽은 파일을 만들지 않고 본문만 반환). 첫 줄은 `원문 id: <id> · 확인 HEAD: <전체 SHA 또는 미확인> · 검토 SHA: <요청한 전체 SHA>`이며 끝에 미확인 사항을 적는다. id/HEAD/검토 SHA가 요청과 다르거나 최종 성공 응답이 없으면 정상 답신으로 저장하지 않는다. 모든 새 질문의 sha는 저장소에 존재하는 40자 커밋이어야 하며 이전 7자 편지는 재호출 전에 수정해야 한다.
 
-**호출 HEAD와 검토 SHA가 같고 현재 편지 외 변경이 없어야 시작한다.** 다른 커밋은 해당 커밋의 별도 worktree에서 검토한다. 코드·지침·이전 답신을 먼저 커밋하고 편지를 작성한다. 재질문 때도 현재 검토 기준으로 sha를 갱신한다. 편지 자체만 dirty 판정에서 제외하며 성공 응답은 검토 커밋과 다른 미커밋 코드를 읽었다고 오해되지 않도록 한다.
+**호출된 AI는 항상 검토 SHA의 트리를 읽는다.** 호출 측 HEAD가 검토 SHA와 같고 편지 외 변경이 없으면 현재 트리에서 바로 호출한다(`execution: current`). 그렇지 않으면 스크립트가 검토 SHA의 **임시 worktree를 만들고 편지만 복사해 그 안에서 호출한 뒤 지운다**(`execution: temp_worktree`). 위치는 `~/.ai-bridge/review-*`(환경변수 `BRIDGE_WORKTREE_DIR`) — Temp 아래에 두면 Codex가 작업 폴더로 받지 않는다. 삭제에 실패하면 경로를 stderr에 알린다(`git worktree list`로 잔존 확인). 미추적 파일이 늘 깔린 기본 폴더에서도 호출할 수 있고, 호출 측의 미커밋 코드는 상대에게 보이지 않는다. 검토할 코드·지침·이전 답신은 어떤 경우든 **먼저 커밋돼 있어야** 한다 — 커밋되지 않은 변경은 검토 대상이 아니다. 재질문 때도 현재 검토 기준으로 sha를 갱신한다.
 
 이어 물으려면 `## 재질문` 절을 쓰고 다시 실행한다. **왕복 1회 = 제안(재질문) 1건 + 답신 1건, 한 편지는 최대 3왕복** — 남은 쟁점은 Issue에 정리하고 사용자 판단이 필요한 것만 올린다.
 
@@ -61,8 +65,9 @@ sha: dac127b8ead99f9f6fce8b1d7ccfa0e285ddf0d6
 - `response_models`, `response_model_source`, `model_match`: Claude는 stream-json의 `assistant.message.model`을 수집한다. 여러 모델이 관찰되면 모두 남긴다. 요청과 정확히 다르면 기록은 보존하고 종료 코드 1로 알린다. 날짜 접미사 차이도 자동으로 같다고 추정하지 않으며 실제 모델 변경인지 수동 확인한다. 초기화 시 선택 모델, 보조 모델 사용량, AI 자기보고로 실제 응답 모델을 대신하지 않는다.
 - **현재 Codex exec JSONL에는 응답 모델이 없다.** `response_models: []`, 출처 `not_exposed_by_cli`, `model_match: null`로 기록한다. 이는 요청 모델과 동일하다는 확인이 아니다. 양쪽의 실제 적용 추론 수준도 현재 CLI가 반환하지 않아 `response_effort: null`로 기록한다.
 - `status: success`는 CLI가 끝나고 본문·SHA 검사를 통과했다는 뜻이다. `model_match: null`이면 실제 응답 모델은 여전히 미확인이다.
-- `review_sha`: 호출 측 Git이 확인한 검토 커밋. `head_before`/`head_after`는 실행 worktree의 HEAD, `reported_head`/`reported_review_sha`는 답신 첫 줄에서 확인한 AI의 보고값이다. 이들은 서로 다른 근거이며 자기보고가 실제 코드 검토를 완전히 증명하지 않는다.
-- `worktree_dirty`: 현재 편지를 제외한 저장소 전체의 미커밋·미추적 변경 유무. true이면 호출 전에 중단한다.
+- `tier`: 편지의 등급(normal|high). 요청 설정은 이 등급으로 고른다.
+- `review_sha`: 호출 측 Git이 확인한 검토 커밋. `head_before`/`head_after`는 **실제로 읽힌 트리**(현재 또는 임시 worktree)의 HEAD, `reported_head`/`reported_review_sha`는 답신 첫 줄에서 확인한 AI의 보고값이다. 이들은 서로 다른 근거이며 자기보고가 실제 코드 검토를 완전히 증명하지 않는다.
+- `caller_head`, `caller_dirty`, `execution`: 호출 측 폴더의 HEAD와 편지 외 변경 유무, 그리고 그에 따라 현재 트리(`current`)와 임시 worktree(`temp_worktree`) 중 어디서 호출했는지.
 - `instructions_sha256`, `context_mode`, `cli_version`, `started_at`, `elapsed_ms`, `cli_elapsed_ms`, `usage`: 전달한 지침과 추가 설정 제한 모드, 실행 버전·전체/CLI 호출 소요·제공 토큰 사용량. 제공하지 않는 사용량을 추정하지 않는다.
 
 호출 중 HEAD·작업 트리·공통 지침·편지가 바뀌면 정상 답신을 저장하지 않는다. 시간 초과·비정상 종료·깨진 JSON·실패 결과·불완전한 결과도 정상 답신으로 저장하지 않는다. 편지를 읽은 뒤의 실패는 별도 `## 호출 실패` 절에 설정·단계·시간·얻을 수 있었던 사용량/모델 증거를 남긴다. 원시 stderr·불완전한 본문은 Git 기록에 저장하지 않으며 실패는 성공 왕복으로 세지 않는다. 두 방향에서 같은 구현을 사용한다.
@@ -75,7 +80,10 @@ sha: dac127b8ead99f9f6fce8b1d7ccfa0e285ddf0d6
 node scripts/ai-bridge/ask-codex.mjs            # codex 편지함의 미답 편지 중 가장 오래된 것
 node scripts/ai-bridge/ask-codex.mjs docs/ai-bridge/inbox/codex/2026-11-19-foo.md
 node scripts/ai-bridge/ask-claude.mjs           # Codex가 쓰는 대칭 명령
+node scripts/ai-bridge/archive.mjs docs/ai-bridge/inbox/claude/2026-11-19-foo.md   # 결론 난 편지 보관(+ docs 안 링크 갱신)
 ```
+
+**보관 규칙**: 편지의 쟁점이 Issue/PR/decisions로 옮겨져 더 이을 질문이 없으면 `archive.mjs`로 `archive/<to>/`에 옮긴다. 보관은 답신이 1개 이상인 편지만 대상이고, 그 편지를 가리키는 `docs/**` 링크는 스크립트가 함께 고친다. inbox에는 **진행 중인 편지만** 남긴다.
 
 환경: `CODEX_BIN`, `CLAUDE_BIN`, `BRIDGE_TIMEOUT_MS`(기본 10분).
 

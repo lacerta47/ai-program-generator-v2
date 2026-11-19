@@ -1,12 +1,18 @@
 // 요청 설정과 CLI가 실제로 제공한 응답 메타데이터를 구분한다.
-export function settingsFor(config, target) {
-  const settings = config[target];
+export const TIERS = ['normal', 'high'];
+/** 브리지 호출에서 끄는 Codex 플러그인 id(`~/.codex/config.toml`의 [plugins."<id>"]). 환경에 플러그인이 늘면 여기에 추가. */
+export const CODEX_DISABLED_PLUGINS = ['codex-app-tools@openai-bundled'];
+
+/** 편지 `tier`(기본 normal)에 맞는 요청 설정. high는 config.tiers.high[target]을 쓰며, 없으면 조용히 기본값으로 내려가지 않고 실패한다. */
+export function settingsFor(config, target, tier = 'normal') {
+  if (!TIERS.includes(tier)) throw new Error(`${target}: tier는 ${TIERS.join('|')} 중 하나여야 합니다.`);
+  const settings = tier === 'normal' ? config[target] : config.tiers?.[tier]?.[target];
   if (!settings || typeof settings.model !== 'string' || !/^[a-z0-9][a-z0-9._-]+$/i.test(settings.model)
     || ['default', 'best', 'fable', 'opus', 'sonnet', 'haiku'].includes(settings.model.toLowerCase())
     || !['low', 'medium', 'high', 'xhigh'].includes(settings.effort)) {
-    throw new Error(`${target}: 전체 모델 ID와 지원하는 effort를 config.json에 명시하세요.`);
+    throw new Error(`${target}(${tier}): 전체 모델 ID와 지원하는 effort를 config.json에 명시하세요.`);
   }
-  return { model: settings.model, effort: settings.effort };
+  return { model: settings.model, effort: settings.effort, tier };
 }
 
 export function validateLetter(letter, target) {
@@ -14,15 +20,27 @@ export function validateLetter(letter, target) {
     || letter.meta.to !== target
     || letter.meta.from !== (target === 'codex' ? 'claude' : 'codex')
     || !['question', 'review', 'proposal'].includes(letter.meta.kind)
-    || !/^[a-f0-9]{40}$/.test(letter.meta.sha ?? '')) {
-    throw new Error('편지 id/from/to/kind와 검토 기준 전체 40자 SHA를 확인하세요.');
+    || !/^[a-f0-9]{40}$/.test(letter.meta.sha ?? '')
+    || (letter.meta.tier !== undefined && !TIERS.includes(letter.meta.tier))) {
+    throw new Error('편지 id/from/to/kind와 검토 기준 전체 40자 SHA(선택: tier normal|high)를 확인하세요.');
   }
+}
+
+/** 현재 트리에서 바로 호출할지, 검토 SHA의 임시 worktree를 만들지 결정한다. 검토 SHA가 HEAD와 같고 편지 외 변경이 없을 때만 현재 트리를 쓴다. */
+export function planExecution(reviewSha, head, dirty) {
+  return reviewSha === head && !dirty ? 'current' : 'temp_worktree';
 }
 
 export function commandArgs(target, settings, root) {
   if (target === 'codex') {
-    return ['exec', '--sandbox', 'read-only', '--ephemeral', '--ignore-user-config', '--model', settings.model,
-      '-c', `model_reasoning_effort="${settings.effort}"`, '-C', root, '--json', '-'];
+    // `--ignore-user-config`는 쓰지 않는다: 이 환경에서는 사용자 config가 Codex의 명령 실행 정책(PowerShell 허용)을 담고 있어,
+    // 빼면 Codex가 파일 하나도 못 읽는다(2026-11-20 실측: "blocked by policy"). 격리는 read-only 샌드박스·ephemeral로 유지한다.
+    // 대신 사용자 config를 유지한 채 앱(MCP) 기능과 설치 플러그인만 끈다(Codex 제안, 2026-11-20 설치 CLI에서 수용 확인).
+    return ['exec', '--sandbox', 'read-only', '--ephemeral', '--model', settings.model,
+      '-c', `model_reasoning_effort="${settings.effort}"`,
+      '-c', 'features.apps=false',
+      ...CODEX_DISABLED_PLUGINS.flatMap((id) => ['-c', `plugins."${id}".enabled=false`]),
+      '-C', root, '--json', '-'];
   }
   return ['-p', '--model', settings.model, '--effort', settings.effort,
     '--output-format', 'stream-json', '--verbose', '--add-dir', root,
