@@ -37,6 +37,8 @@ test('both CLIs receive explicit settings without weakening session or tool rest
   assert.equal(claude[claude.indexOf('--permission-mode') + 1], 'dontAsk');
   assert.ok(!claude.includes('Edit') && !claude.includes('Write'));
   assert.ok(claude.includes('--safe-mode') && claude.includes('--strict-mcp-config') && claude.includes('mcp__*'));
+  assert.ok(claude.includes('--restricted') && claude.includes('Read(**/.env.local)') && claude.includes('Read(**/serviceAccountKey.json)'));
+  assert.equal(claude[claude.indexOf('--tools') + 1], 'Read,Glob,Grep');
   assert.ok(claude.includes('{"mcpServers":{}}'));
   assert.ok(!claude.some((arg) => arg.startsWith('Bash(') && arg.includes('*')));
 });
@@ -102,6 +104,18 @@ test('preserves available usage and model evidence from a failed Claude result',
   )), (error) => {
     assert.deepEqual(error.evidence.response_models, ['observed-model']);
     assert.equal(error.evidence.usage.output_tokens, 17);
+    return true;
+  });
+});
+
+test('keeps valid prefix evidence when output is truncated, without accepting a reply', () => {
+  const partial = jsonl(
+    { type: 'assistant', message: { model: 'observed-model' } },
+    { type: 'result', subtype: 'success', result: 'partial reply', usage: { output_tokens: 7 } },
+  ) + '\n{"unfinished';
+  assert.throws(() => parseResponse('claude', partial), (error) => {
+    assert.deepEqual(error.evidence.response_models, ['observed-model']);
+    assert.equal(error.evidence.usage.output_tokens, 7);
     return true;
   });
 });
