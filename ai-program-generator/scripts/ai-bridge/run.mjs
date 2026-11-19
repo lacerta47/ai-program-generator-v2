@@ -1,5 +1,5 @@
 import { readFileSync, mkdirSync, copyFileSync, mkdtempSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { homedir } from 'node:os';
 import { join, resolve, relative, isAbsolute, dirname } from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
@@ -13,16 +13,23 @@ const gitIn = (cwd) => (...args) => execFileSync('git', args, { cwd, encoding: '
  * 호출된 AI는 이 트리를 읽으므로 "검토 SHA = 실제로 읽은 코드"가 보장되고, 호출 측의 미커밋 파일은 보이지 않는다.
  */
 function createReviewWorktree(topLevel, reviewSha, letterPath) {
-  const dir = mkdtempSync(join(tmpdir(), 'ai-bridge-review-'));
+  // 홈 아래에 만든다(기본 ~/.ai-bridge/). Codex는 Temp 아래 경로를 작업 폴더로 받지 않고 C:\로 떨어진다(2026-11-20 실측).
+  const base = process.env.BRIDGE_WORKTREE_DIR || join(homedir(), '.ai-bridge');
+  mkdirSync(base, { recursive: true });
+  const dir = mkdtempSync(join(base, 'review-'));
   gitIn(topLevel)('worktree', 'add', '--detach', '--quiet', dir, reviewSha);
   const rel = relative(topLevel, letterPath);
   mkdirSync(dirname(join(dir, rel)), { recursive: true });
   copyFileSync(letterPath, join(dir, rel));
+  if (readFileSync(join(dir, rel), 'utf8') !== readFileSync(letterPath, 'utf8')) throw new Error('편지 복사본이 원본과 다릅니다.');
   return {
     topLevel: dir,
     root: join(dir, relative(topLevel, ROOT)),
     letterPath: join(dir, rel),
-    remove() { try { gitIn(topLevel)('worktree', 'remove', '--force', dir); } catch { rmSync(dir, { recursive: true, force: true }); } },
+    remove() {
+      try { gitIn(topLevel)('worktree', 'remove', '--force', dir); }
+      catch { try { rmSync(dir, { recursive: true, force: true }); gitIn(topLevel)('worktree', 'prune'); } catch { console.error(`임시 worktree를 지우지 못했습니다. 직접 삭제하세요: ${dir}`); } }
+    },
   };
 }
 
@@ -41,7 +48,7 @@ export function runBridge(target) {
     requested_review_sha: letter.meta.sha ?? null, review_sha: null, caller_head: null, head_before: null, head_after: null,
     reported_head: null, reported_review_sha: null, caller_dirty: null, execution: null,
     instructions_file: 'AGENTS.md', instructions_sha256: null,
-    context_mode: target === 'claude' ? 'safe-mode-no-mcp' : 'ignore-user-config',
+    context_mode: target === 'claude' ? 'safe-mode-no-mcp' : 'read-only-ephemeral-user-config',
     cli_version: null, started_at: new Date(started).toISOString(), elapsed_ms: 0, usage: {},
   };
   let review = null;

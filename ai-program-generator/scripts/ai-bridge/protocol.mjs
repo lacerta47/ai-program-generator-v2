@@ -31,7 +31,9 @@ export function planExecution(reviewSha, head, dirty) {
 
 export function commandArgs(target, settings, root) {
   if (target === 'codex') {
-    return ['exec', '--sandbox', 'read-only', '--ephemeral', '--ignore-user-config', '--model', settings.model,
+    // `--ignore-user-config`는 쓰지 않는다: 이 환경에서는 사용자 config가 Codex의 명령 실행 정책(PowerShell 허용)을 담고 있어,
+    // 빼면 Codex가 파일 하나도 못 읽는다(2026-11-20 실측: "blocked by policy"). 격리는 read-only 샌드박스·ephemeral로 유지한다.
+    return ['exec', '--sandbox', 'read-only', '--ephemeral', '--model', settings.model,
       '-c', `model_reasoning_effort="${settings.effort}"`, '-C', root, '--json', '-'];
   }
   return ['-p', '--model', settings.model, '--effort', settings.effort,

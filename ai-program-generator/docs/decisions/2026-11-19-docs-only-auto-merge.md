@@ -9,13 +9,9 @@
 
 ## 결정
 
-변경 파일이 **전부** 다음 안에 있고 CI(build·firestore-rules)가 통과한 PR은 사용자 승인 없이 squash 병합할 수 있다.
+변경 파일이 **전부** `ai-program-generator/docs/**` 안에 있고(단 `docs/decisions/**`와 `docs/COLLABORATION.md` 제외) CI(build·firestore-rules)가 통과한 PR은 사용자 승인 없이 squash 병합할 수 있다. CHANGELOG의 월별 문구는 `docs/CHANGELOG.flow.json`(데이터 파일)에 두어 이 범위에 들어온다.
 
-- `docs/**` (단 `docs/decisions/**` 제외)
-- 저장소 어디든 `*.md` (단 `AGENTS.md`·`COLLABORATION.md`·루트 `CLAUDE.md` 제외)
-- `scripts/changelog.mjs`의 `FLOW` 문구
-
-다음이 하나라도 섞이면 예외가 아니다: `app/ lib/ components/ scripts/`(위 FLOW 제외) `tests/ public/ firestore.* .github/ package*.json`, 그리고 규칙·결정 문서(`AGENTS.md`, `COLLABORATION.md`, `CLAUDE.md`, `docs/decisions/**`). 규칙 문서는 "문서"지만 정책이므로 승인 대상이다.
+경로 하나로 기계적으로 판정한다. 그 밖의 파일이 하나라도 섞이면 예외가 아니다 — 코드(`app/ lib/ components/ scripts/ tests/ public/`), 설정(`firestore.* .github/ package*.json`), 그리고 **규칙·지침 문서**(`AGENTS.md`, `CLAUDE.md`, `docs/COLLABORATION.md`, `docs/decisions/**`, `.claude/**`, `PRODUCT.md`·`DESIGN.md`). 저장소 전체 `*.md`를 허용하지 않는 이유: 에이전트 지침·스킬·프롬프트도 Markdown이라 확장자로는 안전성을 판정할 수 없다(Codex 리뷰 2026-11-20 지적 반영).
 
 자동 병합한 PR은 본문에 "문서 전용 자동 병합"을 적는다. main 직접 push는 계속 금지(CHANGELOG도 PR 경유).
 

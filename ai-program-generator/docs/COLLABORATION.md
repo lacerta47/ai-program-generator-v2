@@ -42,7 +42,7 @@
 ## 사용자 승인 경계
 
 - **main 병합은 기본적으로 사용자 승인 뒤에만 한다.** 리뷰·CI 통과만으로 병합할 수 없다. main은 운영 자동 배포와 연결된다.
-- **유일한 예외 — 문서 전용 PR 자동 병합**([결정 2026-11-19](decisions/2026-11-19-docs-only-auto-merge.md)): 변경 파일이 전부 `docs/**`·`*.md`(저장소 어디든)·`scripts/changelog.mjs`의 `FLOW` 문구 안에 있고, CI가 통과했으면 **승인 없이 squash 병합**할 수 있다. 다음 중 하나라도 건드리면 예외가 아니다: `app/ lib/ components/ scripts/`(changelog FLOW 제외) `tests/ public/ firestore.* .github/ package*.json` 및 **규칙 문서 `AGENTS.md`·`COLLABORATION.md`·`docs/decisions/**`**. 규칙·결정 문서는 문서라도 정책이므로 승인 대상이다. 자동 병합한 PR은 본문에 "문서 전용 자동 병합"이라고 적어 추적한다.
+- **유일한 예외 — 문서 전용 PR 자동 병합**([결정 2026-11-19](decisions/2026-11-19-docs-only-auto-merge.md)): 변경 파일이 **전부 `docs/**` 안**(단 `docs/decisions/**`·`docs/COLLABORATION.md` 제외)에 있고 CI가 통과했으면 **승인 없이 squash 병합**할 수 있다. CHANGELOG 월별 문구는 `docs/CHANGELOG.flow.json`에 있어 이 범위에 든다. 그 밖의 파일이 하나라도 섞이면 예외가 아니다 — 코드·설정은 물론 `AGENTS.md`·`CLAUDE.md`·`.claude/**`·`PRODUCT.md`·`DESIGN.md` 같은 지침 문서도 Markdown이지만 정책이므로 승인 대상이다. 자동 병합한 PR은 본문에 "문서 전용 자동 병합"이라고 적어 추적한다.
 - main 직접 push는 어떤 경우에도 하지 않는다. 기존 CLAUDE.md의 CHANGELOG 직접 push 예외는 폐지됐다. CHANGELOG 재생성은 브랜치·PR로 올리고 위 문서 전용 예외로 병합한다.
 - 코드가 섞인 저위험 변경의 자동 배포 사전 승인은 여전히 미수립이다. 리뷰 등급과 배포 승인은 별개의 기준이다.
 - 이 정리 작업에서 승인된 것은 브리지 질문·리뷰, 원본을 유지하는 로컬 백업, 목적별 브랜치 커밋·push·초안 PR, 협업 문서 작성이다. PR은 CI·Vercel Preview를 유발할 수 있으며 운영 배포 승인은 아니다.

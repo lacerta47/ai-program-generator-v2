@@ -48,7 +48,8 @@ test('both CLIs receive explicit settings without weakening session or tool rest
   assert.equal(codex[codex.indexOf('--model') + 1], 'gpt-6.1-sol');
   assert.ok(codex.includes('model_reasoning_effort="medium"'));
   assert.ok(codex.includes('read-only') && codex.includes('--ephemeral') && codex.includes('--json'));
-  assert.ok(codex.includes('--ignore-user-config'));
+  // 사용자 config가 Codex 실행 정책을 담고 있어 이 플래그를 넣으면 Codex가 파일을 읽지 못한다(protocol.mjs 주석 참조).
+  assert.ok(!codex.includes('--ignore-user-config'));
   const claude = commandArgs('claude', { model: 'claude-fable-5-2', effort: 'medium' }, '/repo');
   assert.equal(claude[claude.indexOf('--model') + 1], 'claude-fable-5-2');
   assert.equal(claude[claude.indexOf('--effort') + 1], 'medium');

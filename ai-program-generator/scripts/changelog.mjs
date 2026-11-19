@@ -1,19 +1,13 @@
 // docs/CHANGELOG.md 생성 — 머지된 PR을 gh CLI로 가져와 머지 날짜(KST) 순으로 정리한다.
 // 사용: npm run changelog  (gh 로그인 필요, 저장소는 git remote 기준)
-// 월별 "주요 흐름" 문구는 아래 FLOW에 손으로 적는다(없는 달은 빈칸).
+// 월별 "주요 흐름" 문구는 docs/CHANGELOG.flow.json에 손으로 적는다(없는 달은 빈칸).
+// 데이터를 코드와 분리한 이유: 문구 수정이 "문서 전용 PR"로 자동 병합되려면 스크립트(실행 코드)를 건드리지 않아야 한다.
 import { execSync } from 'node:child_process';
-import { writeFileSync, mkdirSync } from 'node:fs';
+import { writeFileSync, mkdirSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const FLOW = {
-  '2026-06': '재구축 초안 → 감사·보안 보강 → 역할 체계(교사·학생) → 배포 준비',
-  '2026-07': '교육 기능(로직 카드·개념 배지·도감) → 코드 게이트 → 법적 문서 → 자동예시',
-  '2026-08': '브랜드·SEO·공유 QR·학생 관리·운영 안정화',
-  '2026-09': '법률 피드백 반영 → 게시판 개선 → 테스트 도입 → 품질 점검·게이트 확장 → 유형별 예시·제작 규칙',
-  '2026-10': '의존성 보안 패치 → 디자인 프리셋 → 계정·게시·미리보기 경계 강화(게시 서버경유) → 회원 총 한도 5회 → BizRouter 우선·키 2개 풀',
-  '2026-11': '혼잡 재시도·쿼터 경계 검증 → 모바일 레이아웃 → 설문 연결 → Claude↔Codex 브리지·협업 규칙·AGENTS.md 공통 지침',
-};
+const FLOW = JSON.parse(readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'docs', 'CHANGELOG.flow.json'), 'utf8'));
 
 const CATEGORY = { feat: '기능', fix: '수정', docs: '문서', chore: '운영', test: '테스트', refactor: '구조', perf: '성능', ci: 'CI', draft: '초안', security: '보안', privacy: '법률' };
 
