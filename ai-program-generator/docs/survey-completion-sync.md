@@ -1,5 +1,7 @@
 # 내 정보 설문과 Google 제출 확인
 
+[PR #175](https://github.com/lacerta47/ai-program-generator-v2/pull/175), 작업 브랜치 `codex/survey-profile-access`.
+
 ## 동작
 
 - 내 정보의 두 설문 버튼과 생성 완료 알림은 `/survey/create`, `/survey/easy`를 연다.
