@@ -1,0 +1,4 @@
+{
+  "codex": { "model": "gpt-6.1-sol", "effort": "medium" },
+  "claude": { "model": "claude-fable-5-2", "effort": "medium" }
+}
