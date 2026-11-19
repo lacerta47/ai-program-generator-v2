@@ -28,6 +28,7 @@ import { TextInput, Label } from '@/components/ui/Field';
 import Modal from '@/components/ui/Modal';
 import ShareDialog from '@/components/ui/ShareDialog';
 import LoadingDots from '@/components/ui/LoadingDots';
+import GenerationFeedbackCard from '@/components/common/GenerationFeedbackCard';
 
 interface Usage {
   used: number;
@@ -61,6 +62,7 @@ export default function MyPage() {
       ) : (
         <div className="mx-auto flex max-w-3xl flex-col gap-6 p-4 sm:p-6">
           <AccountCard uid={user.uid} email={user.email} createdAt={user.metadata?.creationTime} isAdmin={isAdmin} isTeacher={isTeacher} isStudent={isStudent} />
+          <GenerationFeedbackCard key={user.uid} uid={user.uid} />
           <ConceptDex uid={user.uid} />
           <MyWorks uid={user.uid} />
         </div>

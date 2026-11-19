@@ -6,6 +6,8 @@ import { POST } from '@/app/api/me/generation-feedback/route';
 
 const UID = 'feedback-transaction-test';
 
+vi.mock('server-only', () => ({}));
+
 vi.mock('@/lib/server/verifyActiveToken', () => ({
   verifyActiveToken: async () => ({ uid: 'feedback-transaction-test' }),
 }));

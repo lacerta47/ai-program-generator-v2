@@ -6,7 +6,7 @@ import { useAuth } from '@/components/auth/AuthProvider';
 import { useToast } from '@/components/ui/Toast';
 import { authedJson } from '@/lib/client/authedFetch';
 import { auth } from '@/lib/firebase/client';
-import { GENERATION_FEEDBACK_LINKS, type GenerationFeedbackMode } from '@/lib/feedback/generation';
+import type { GenerationFeedbackMode } from '@/lib/feedback/generation';
 
 const PATH = '/api/me/generation-feedback';
 
@@ -51,7 +51,7 @@ export function GenerationFeedbackProvider({ children }: { children: React.React
       dismiss.current = toast(message, 'success', {
         prompt: '만들어 본 느낌을 설문으로 알려 줄래요? 약 3분 걸려요.',
         label: '설문 답하기',
-        href: GENERATION_FEEDBACK_LINKS[mode],
+        href: `/survey/${mode}`,
       });
     }).finally(() => {
       if (request.current === controller) request.current = null;
