@@ -15,6 +15,7 @@ export default defineConfig({
       'lib/admin/routeAuthorization.test.ts',
       'lib/admin/memberAccounts.test.ts',
       'lib/server/generationQuota.test.ts',
+      'lib/server/generationFeedback.test.ts',
     ],
     environment: 'node',
   },

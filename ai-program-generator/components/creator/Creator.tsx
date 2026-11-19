@@ -18,6 +18,7 @@ import Card from '@/components/ui/Card';
 import Chip, { CHIP_COLORS } from '@/components/ui/Chip';
 import { TextInput, TextArea, Label, HelpTip } from '@/components/ui/Field';
 import { useToast } from '@/components/ui/Toast';
+import { useGenerationSuccess } from '@/components/common/GenerationFeedback';
 import { playSuccess } from '@/lib/client/sound';
 import { buildGeneratePrompt, buildModifyPrompt } from './prompts';
 import { buildDebugRequest } from '@/lib/ai/fixRequest';
@@ -56,6 +57,7 @@ export default function Creator() {
 
   const { user, loading: authLoading, isStudent, isTeacher } = useAuth();
   const { toast } = useToast();
+  const notifyGenerationSuccess = useGenerationSuccess();
   const router = useRouter();
   const nameRef = useRef<HTMLInputElement>(null);
   const modifyRef = useRef<HTMLTextAreaElement>(null);
@@ -193,7 +195,7 @@ export default function Creator() {
       setResultTab('preview');
       setPreviewKey((k) => k + 1);
       playSuccess();
-      toast('우와! 멋진 프로그램을 완성했어요!', 'success');
+      notifyGenerationSuccess('create', user.uid, '우와! 멋진 프로그램을 완성했어요!');
     } catch (e) {
       if (!ctrl.signal.aborted && !(e instanceof Error && e.name === 'AbortError')) {
         toast(e instanceof Error ? e.message : '만들다가 문제가 생겼어요. 다시 해볼까요?');

@@ -23,6 +23,7 @@ import FullscreenFrame from '@/components/ui/FullscreenFrame';
 import BuilderBot from '@/components/ui/BuilderBot';
 import Button from '@/components/ui/Button';
 import { useToast } from '@/components/ui/Toast';
+import { useGenerationSuccess } from '@/components/common/GenerationFeedback';
 import TypePicker from './TypePicker';
 import StepScreen from './StepScreen';
 import SurveySummary from './SurveySummary';
@@ -72,6 +73,7 @@ export default function SurveyWizard() {
 
   const { user, loading: authLoading, isStudent, isTeacher } = useAuth();
   const { toast } = useToast();
+  const notifyGenerationSuccess = useGenerationSuccess();
   const router = useRouter();
 
   useEffect(() => () => { abortRef.current?.abort(); }, [user?.uid]);
@@ -325,7 +327,7 @@ export default function SurveyWizard() {
       setCode(result);
       setPreviewKey((k) => k + 1);
       playSuccess();
-      toast('우와! 멋진 걸 만들었어요!', 'success');
+      notifyGenerationSuccess('easy', user.uid, '우와! 멋진 걸 만들었어요!');
     } catch (e) {
       // 사용자가 '그만 만들기'로 취소한 경우는 에러 토스트 없이 조용히 설문으로 복귀
       if (!ctrl.signal.aborted && !(e instanceof Error && e.name === 'AbortError')) {
