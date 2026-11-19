@@ -106,7 +106,7 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
-    // 만들기 방식별 설문 안내 기록은 서버 API에서만 처리한다.
+    // 만들기 방식별 설문 안내·참여 기록은 서버 API에서만 처리한다.
     match /generationFeedback/{uid} {
       allow read, write: if false;
     }
