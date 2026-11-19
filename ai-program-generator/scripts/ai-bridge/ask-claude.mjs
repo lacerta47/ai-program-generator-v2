@@ -10,12 +10,17 @@ if (letter.turns >= MAX_TURNS * 2 - 1) throw new Error(`왕복 상한(${MAX_TURN
 
 const t0 = Date.now();
 const r = runCli(CLAUDE, ['-p', '--output-format', 'text', '--add-dir', ROOT,
-  '--allowedTools', 'Read', 'Glob', 'Grep', 'Bash(git log:*)', 'Bash(git diff:*)', 'Bash(git show:*)', 'Bash(git status:*)'],
+  '--no-session-persistence', '--permission-mode', 'dontAsk', '--tools', 'Read,Glob,Grep,Bash',
+  '--allowedTools', 'Read', 'Glob', 'Grep', 'Bash(git log:*)', 'Bash(git diff:*)', 'Bash(git show:*)', 'Bash(git status:*)', 'Bash(git rev-parse:*)'],
   { input: buildPrompt(letter, 'claude'), timeoutMs: Number(process.env.BRIDGE_TIMEOUT_MS ?? 600_000) });
 const reply = r.stdout;
+if (r.timedOut || r.status !== 0) {
+  console.error(r.stderr.slice(-2000));
+  throw new Error(r.timedOut ? 'claude 시간 초과' : `claude 실행 실패 (exit ${r.status})`);
+}
 if (!reply.trim()) {
   console.error(r.stderr.slice(-2000));
-  throw new Error(r.timedOut ? 'claude 시간 초과' : `claude가 답을 쓰지 않음 (exit ${r.status})`);
+  throw new Error(`claude가 답을 쓰지 않음 (exit ${r.status})`);
 }
 appendReply(path, 'Claude', reply, `claude -p read-only · ${Math.round((Date.now() - t0) / 1000)}s`);
 console.log(`답변 추가: ${path} (${Math.round((Date.now() - t0) / 1000)}s)`);

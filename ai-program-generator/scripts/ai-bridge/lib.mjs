@@ -23,7 +23,7 @@ export function readLetter(path) {
     if (kv) meta[kv[1]] = kv[2].trim();
   }
   const body = m[2];
-  const turns = (body.match(/^## (답변|재질문)\b/gm) ?? []).length;
+  const turns = (body.match(/^## (?:답변|재질문)(?=\s|$)/gm) ?? []).length;
   return { path, meta, body, turns, text };
 }
 

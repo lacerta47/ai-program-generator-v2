@@ -10,7 +10,7 @@
 | `docs/ai-bridge/inbox/claude/*.md` | Codex가 Claude에게 보낸 편지 |
 | `docs/ai-bridge/archive/` | 결론이 난 편지(결정은 `docs/decisions/`로 옮긴 뒤 이동) |
 | `scripts/ai-bridge/ask-codex.mjs` | Claude 측 실행. `codex exec -s read-only --ephemeral` |
-| `scripts/ai-bridge/ask-claude.mjs` | Codex 측 실행. `claude -p` + 읽기 도구만 허용 |
+| `scripts/ai-bridge/ask-claude.mjs` | Codex 측 실행. `claude -p` + 읽기 도구·허용 Git 명령으로 제한 |
 
 ## 편지 형식
 
@@ -47,7 +47,8 @@ node scripts/ai-bridge/ask-claude.mjs           # Codex가 쓰는 대칭 명령
 ## 안전선 (양쪽 대칭)
 
 - 호출된 쪽은 **읽기 전용**: 파일 생성·수정·커밋 불가. 저장소를 읽고 `git log/diff/show` 정도로 확인만 한다.
-- 세션 비저장(`--ephemeral`), 시간 제한, 왕복 상한 3.
+- 세션 비저장(Codex `--ephemeral`, Claude `--no-session-persistence`), 시간 제한, 왕복 상한 3.
+- Claude는 `--tools`로 도구 종류를 제한하고 `--permission-mode dontAsk`와 `--allowedTools`로 미허용 호출을 거부한다. 이 도구 제한은 OS 파일시스템 샌드박스와 동일한 보장은 아니다.
 - 유료 AI 생성·운영 데이터 변경·배포·정책 변경은 다리에서 하지 않는다. 답변에 "승인 필요"로만 표시.
 - 비용은 답변 절의 주석에 남긴다(`tokens …`). 실측: 제안 1건 검토에 약 170초·2.9만 토큰. **변경 묶음당 제안 1회 + 리뷰 1회, 필요 시 재검토 1회**가 기준. 승인 경계·보안·작업 간 의존성처럼 판단이 필요한 때만 쓰고, 상태 공유·오탈자는 Issue·PR로.
 
