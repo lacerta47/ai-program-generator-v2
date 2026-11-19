@@ -106,6 +106,11 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // 만들기 방식별 설문 안내 기록은 서버 API에서만 처리한다.
+    match /generationFeedback/{uid} {
+      allow read, write: if false;
+    }
+
     // 닉네임 점유 — 문서ID=소문자별명, 값={uid}. 한 번 점유하면 그 계정 영구 소유(재활용 없음).
     // 프로필과 같은 서버 트랜잭션에서만 생성한다.
     match /nicknames/{key} {

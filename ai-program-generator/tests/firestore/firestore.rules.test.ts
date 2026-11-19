@@ -398,6 +398,18 @@ describe('Firestore 권한 규칙', () => {
       }
     });
 
+    test('만들기 설문은 본인과 관리자도 클라이언트에서 직접 접근할 수 없다', async () => {
+      await env.withSecurityRulesDisabled(async (context) => {
+        await setDoc(doc(context.firestore(), 'generationFeedback/verified-user'), { create: { offeredAt: NOW } });
+      });
+      for (const context of [anonymous(), verifiedUser(), studentA(), admin()]) {
+        const ref = doc(db(context), 'generationFeedback/verified-user');
+        await assertFails(getDoc(ref));
+        await assertFails(setDoc(ref, { create: { offeredAt: NOW } }));
+        await assertFails(deleteDoc(ref));
+      }
+    });
+
     test('생성 입장·시작 카운터는 모든 클라이언트 역할에서 조작할 수 없다', async () => {
       for (const collection of ['genAdmission', 'genRate']) {
         for (const context of [anonymous(), verifiedUser(), studentA(), admin()]) {

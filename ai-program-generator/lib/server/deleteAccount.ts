@@ -32,6 +32,7 @@ export async function deleteAccountCascade(uid: string): Promise<void> {
   usage.forEach((d) => refs.push(d.ref));
   refs.push(adminDb.doc(`users/${uid}`));
   refs.push(adminDb.doc(`photoConsents/${uid}`));
+  refs.push(adminDb.doc(`generationFeedback/${uid}`));
   refs.push(adminDb.doc(`limits/${uid}`));
   refs.push(adminDb.doc(`memberUsage/${uid}`));
   refs.push(adminDb.doc(`teachers/${uid}`));

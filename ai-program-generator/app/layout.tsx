@@ -6,6 +6,7 @@ import VisitBeacon from '@/components/common/VisitBeacon';
 import { AuthProvider } from '@/components/auth/AuthProvider';
 import { ToastProvider } from '@/components/ui/Toast';
 import { ConfirmProvider } from '@/components/ui/ConfirmProvider';
+import { GenerationFeedbackProvider } from '@/components/common/GenerationFeedback';
 
 const jua = Jua({ weight: '400', subsets: ['latin'], variable: '--font-jua', display: 'swap' });
 const gowun = Gowun_Dodum({ weight: '400', subsets: ['latin'], variable: '--font-gowun', display: 'swap' });
@@ -62,7 +63,9 @@ export default function RootLayout({
         <ThemeProvider>
           <ToastProvider>
             <AuthProvider>
-              <ConfirmProvider>{children}</ConfirmProvider>
+              <ConfirmProvider>
+                <GenerationFeedbackProvider>{children}</GenerationFeedbackProvider>
+              </ConfirmProvider>
             </AuthProvider>
           </ToastProvider>
         </ThemeProvider>
