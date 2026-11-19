@@ -12,6 +12,6 @@
 | 모델 배정 연구 메모 보존 | Codex | codex/preserve-model-routing-notes | 초안 PR에 보존 | 역사적 가격·후보이며 운영 정책 미적용 | [#180](https://github.com/lacerta47/ai-program-generator-v2/pull/180) |
 | 협업 규칙·결정 형식 | Codex → Claude 리뷰 | codex/cooperation-rules | 초안 PR에 보존 | 리뷰 지적 반영, 병합은 하지 않음 | [#181](https://github.com/lacerta47/ai-program-generator-v2/pull/181) |
 | 계정별 설문 후속 | 별도 기존 세션 | codex/survey-profile-access | 별도 경로에서 병합됨 | 22:15 KST main 반영 확인. 이번 세션은 해당 폴더·main을 변경하지 않음 | [#175](https://github.com/lacerta47/ai-program-generator-v2/pull/175) |
-| 지침 통합·CHANGELOG 재생성·기본 폴더 전환 | Claude 담당으로 전달됨 | 미확인 | 이번 작업 범위 밖 | 전환 전 보존 확인 필요. 완료를 추정하지 않음 | [#173](https://github.com/lacerta47/ai-program-generator-v2/pull/173) 원 제안 |
+| CHANGELOG 재생성·기본 폴더 전환 | Claude 담당으로 전달됨 | 미확인 | 이번 작업 범위 밖 | 지침 통합은 새 사용자 지시로 #182에서 구현. 전환 전 보존 확인 필요 | [#173](https://github.com/lacerta47/ai-program-generator-v2/pull/173) 원 제안 |
 
 갱신 시 각 행에 담당·브랜치·상태·다음 행동·Issue/PR을 기록한다. 종료된 행은 Issue에 결과를 남긴 뒤 다음 정리 때 제거한다. 멈춘 작업에는 막힌 이유를 쓰고, 다른 세션의 작업 상태를 추측해 변경하지 않는다.
