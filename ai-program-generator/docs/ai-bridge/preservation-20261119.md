@@ -25,13 +25,15 @@
 | 목적 | 브랜치 | 파일 수 | 보존 범위 |
 |---|---|---:|---|
 | 운영 메일 | codex/preserve-operations-email | 10 | 일일 통계·신고 메일, health API, 집계·테스트·문서·Cron 설정 |
-| 과거 검증 기록 | codex/preserve-validation-records | 5 | CHANGELOG, generation-wait-retry 기록 3개, production-functional-security-review |
+| 과거 검증 기록 | codex/preserve-validation-records | 5 | 날짜를 붙인 로컬 CHANGELOG 사본, generation-wait-retry 기록 3개, production-functional-security-review |
 | 미로·수족관 | codex/preserve-maze-aquarium | 6 | typeGuides와 테스트, 품질·간격·먹이 반응 기록 4개 |
 | 모델 연구 메모 | codex/preserve-model-routing-notes | 1 | model-routing-plan의 기존 미커밋 계획·비용 비교 기록 |
 
 네 브랜치는 조사 당시 최신 origin/main `dac127b8ead99f9f6fce8b1d7ccfa0e285ddf0d6`에서 별도 worktree로 만들고 검증된 백업본에서 선택한 파일만 복사했다. 원본 상태와 파일 전체는 로컬 백업에 남는다.
 
 운영 메일의 Vitest 설정 두 파일에는 main의 기존 generationFeedback 테스트 등록을 유지했다. 오래된 원본 설정을 통째로 적용하면 그 등록이 빠지므로 필요한 통합 조정 2줄만 더했다. 다른 보존 파일은 백업과 동일하게 유지했다.
+
+설문 #175가 현행 CHANGELOG를 갱신해 #178에 충돌이 생긴 뒤, 과거 로컬 이력은 같은 docs 폴더의 `CHANGELOG-local-20261103.md`에 원본 바이트로 보존했다. #178은 현행 `CHANGELOG.md`를 변경하지 않는다. 원본 Markdown의 강제 줄바꿈 공백과 마지막 빈 줄도 유지했으며 해당 사본의 diff 검사에서만 기존 공백을 허용했다. 나머지 문서·코드의 공백 검사는 기본 설정으로 수행했다.
 
 원격 보존: [운영 메일 #177](https://github.com/lacerta47/ai-program-generator-v2/pull/177), [검증 기록 #178](https://github.com/lacerta47/ai-program-generator-v2/pull/178), [생성 품질 #179](https://github.com/lacerta47/ai-program-generator-v2/pull/179), [모델 메모 #180](https://github.com/lacerta47/ai-program-generator-v2/pull/180). 모두 초안이며 병합하지 않았다.
 
