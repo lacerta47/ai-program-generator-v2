@@ -1,5 +1,5 @@
 // AI 브리지 공용: 편지함 파일 파싱·답변 덧붙이기·CLI 호출. ask-codex.mjs / ask-claude.mjs가 쓴다.
-import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, statSync } from 'node:fs';
+import { readFileSync, writeFileSync, appendFileSync, existsSync, mkdirSync, readdirSync, statSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { join, dirname, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -31,6 +31,10 @@ export function appendReply(path, who, reply, extra, audit) {
   const record = audit ? `\n### 호출 기록\n\n\`\`\`json\n${JSON.stringify(audit, null, 2)}\n\`\`\`\n` : '';
   const block = `\n\n## 답변 (${who}, ${kst()})\n${extra ? `<!-- ${extra} -->\n` : ''}\n${reply.trim()}\n${record}`;
   writeFileSync(path, readFileSync(path, 'utf8').replace(/\s+$/, '') + block);
+}
+
+export function appendFailure(path, audit) {
+  appendFileSync(path, `\n\n## 호출 실패 (${kst()})\n\n\`\`\`json\n${JSON.stringify(audit, null, 2)}\n\`\`\`\n`);
 }
 
 /** 상대 AI에게 넘길 전체 프롬프트. 규칙 + 편지 원문. 상대는 저장소를 읽을 수는 있지만 쓰지 못한다. */

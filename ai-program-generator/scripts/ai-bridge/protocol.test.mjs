@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { settingsFor, validateLetter, commandArgs, parseResponse, replyIdentity, requireSuccess } from './protocol.mjs';
+import { settingsFor, validateLetter, validateReviewContext, commandArgs, parseResponse, replyIdentity, requireSuccess } from './protocol.mjs';
 import { buildPrompt } from './lib.mjs';
 
 const sha = 'a'.repeat(40);
@@ -12,7 +12,7 @@ const jsonl = (...events) => events.map((event) => JSON.stringify(event)).join('
 test('requires pinned models and explicit supported effort', () => {
   assert.deepEqual(settingsFor({ claude: { model: 'claude-fable-5-2', effort: 'medium' } }, 'claude'),
     { model: 'claude-fable-5-2', effort: 'medium' });
-  for (const value of [{ model: 'opus', effort: 'medium' }, { model: '', effort: 'medium' },
+  for (const value of [{ model: 'opus', effort: 'medium' }, { model: 'OPUS', effort: 'medium' }, { model: '', effort: 'medium' },
     { model: 'claude-fable-5-2' }, { model: 'claude-fable-5-2', effort: 'automatic' }]) {
     assert.throws(() => settingsFor({ claude: value }, 'claude'));
   }
@@ -29,12 +29,22 @@ test('both CLIs receive explicit settings without weakening session or tool rest
   assert.equal(codex[codex.indexOf('--model') + 1], 'gpt-6.1-sol');
   assert.ok(codex.includes('model_reasoning_effort="medium"'));
   assert.ok(codex.includes('read-only') && codex.includes('--ephemeral') && codex.includes('--json'));
+  assert.ok(codex.includes('--ignore-user-config'));
   const claude = commandArgs('claude', { model: 'claude-fable-5-2', effort: 'medium' }, '/repo');
   assert.equal(claude[claude.indexOf('--model') + 1], 'claude-fable-5-2');
   assert.equal(claude[claude.indexOf('--effort') + 1], 'medium');
   assert.ok(claude.includes('stream-json') && claude.includes('--no-session-persistence'));
   assert.equal(claude[claude.indexOf('--permission-mode') + 1], 'dontAsk');
   assert.ok(!claude.includes('Edit') && !claude.includes('Write'));
+  assert.ok(claude.includes('--safe-mode') && claude.includes('--strict-mcp-config') && claude.includes('mcp__*'));
+  assert.ok(claude.includes('{"mcpServers":{}}'));
+  assert.ok(!claude.some((arg) => arg.startsWith('Bash(') && arg.includes('*')));
+});
+
+test('requires the reviewed commit to match a clean working tree', () => {
+  validateReviewContext(sha, sha, false);
+  assert.throws(() => validateReviewContext(sha, head, false));
+  assert.throws(() => validateReviewContext(sha, sha, true));
 });
 
 test('uses assistant response model, ignoring selected model, helper usage, and self-report', () => {
@@ -83,6 +93,17 @@ test('checks letter identity, caller HEAD, and reviewed SHA separately', () => {
   assert.throws(() => replyIdentity(header.replace(sha, 'c'.repeat(40)), letter, head));
   assert.throws(() => replyIdentity(header.replace(head, sha), letter, head));
   assert.throws(() => replyIdentity(`Acknowledged\n${header}`, letter, head));
+});
+
+test('preserves available usage and model evidence from a failed Claude result', () => {
+  assert.throws(() => parseResponse('claude', jsonl(
+    { type: 'assistant', message: { model: 'observed-model' } },
+    { type: 'result', subtype: 'error_max_turns', is_error: true, usage: { output_tokens: 17 } },
+  )), (error) => {
+    assert.deepEqual(error.evidence.response_models, ['observed-model']);
+    assert.equal(error.evidence.usage.output_tokens, 17);
+    return true;
+  });
 });
 
 test('nonzero exit, timeout, and empty stdout are never treated as replies', () => {
