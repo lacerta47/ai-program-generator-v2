@@ -1,5 +1,7 @@
 // 요청 설정과 CLI가 실제로 제공한 응답 메타데이터를 구분한다.
 export const TIERS = ['normal', 'high'];
+/** 브리지 호출에서 끄는 Codex 플러그인 id(`~/.codex/config.toml`의 [plugins."<id>"]). 환경에 플러그인이 늘면 여기에 추가. */
+export const CODEX_DISABLED_PLUGINS = ['codex-app-tools@openai-bundled'];
 
 /** 편지 `tier`(기본 normal)에 맞는 요청 설정. high는 config.tiers.high[target]을 쓰며, 없으면 조용히 기본값으로 내려가지 않고 실패한다. */
 export function settingsFor(config, target, tier = 'normal') {
@@ -33,8 +35,12 @@ export function commandArgs(target, settings, root) {
   if (target === 'codex') {
     // `--ignore-user-config`는 쓰지 않는다: 이 환경에서는 사용자 config가 Codex의 명령 실행 정책(PowerShell 허용)을 담고 있어,
     // 빼면 Codex가 파일 하나도 못 읽는다(2026-11-20 실측: "blocked by policy"). 격리는 read-only 샌드박스·ephemeral로 유지한다.
+    // 대신 사용자 config를 유지한 채 앱(MCP) 기능과 설치 플러그인만 끈다(Codex 제안, 2026-11-20 설치 CLI에서 수용 확인).
     return ['exec', '--sandbox', 'read-only', '--ephemeral', '--model', settings.model,
-      '-c', `model_reasoning_effort="${settings.effort}"`, '-C', root, '--json', '-'];
+      '-c', `model_reasoning_effort="${settings.effort}"`,
+      '-c', 'features.apps=false',
+      ...CODEX_DISABLED_PLUGINS.flatMap((id) => ['-c', `plugins."${id}".enabled=false`]),
+      '-C', root, '--json', '-'];
   }
   return ['-p', '--model', settings.model, '--effort', settings.effort,
     '--output-format', 'stream-json', '--verbose', '--add-dir', root,

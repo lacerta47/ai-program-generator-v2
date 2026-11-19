@@ -1,5 +1,5 @@
-import { readFileSync, mkdirSync, copyFileSync, mkdtempSync, rmSync } from 'node:fs';
-import { homedir } from 'node:os';
+import { readFileSync, mkdirSync, copyFileSync, mkdtempSync, rmSync, realpathSync, lstatSync } from 'node:fs';
+import { homedir, tmpdir } from 'node:os';
 import { join, resolve, relative, isAbsolute, dirname } from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
@@ -17,29 +17,41 @@ function createReviewWorktree(topLevel, reviewSha, letterPath) {
   const base = process.env.BRIDGE_WORKTREE_DIR || join(homedir(), '.ai-bridge');
   mkdirSync(base, { recursive: true });
   const dir = mkdtempSync(join(base, 'review-'));
-  gitIn(topLevel)('worktree', 'add', '--detach', '--quiet', dir, reviewSha);
-  const rel = relative(topLevel, letterPath);
-  mkdirSync(dirname(join(dir, rel)), { recursive: true });
-  copyFileSync(letterPath, join(dir, rel));
-  if (readFileSync(join(dir, rel), 'utf8') !== readFileSync(letterPath, 'utf8')) throw new Error('편지 복사본이 원본과 다릅니다.');
-  return {
-    topLevel: dir,
-    root: join(dir, relative(topLevel, ROOT)),
-    letterPath: join(dir, rel),
-    remove() {
-      try { gitIn(topLevel)('worktree', 'remove', '--force', dir); }
-      catch { try { rmSync(dir, { recursive: true, force: true }); gitIn(topLevel)('worktree', 'prune'); } catch { console.error(`임시 worktree를 지우지 못했습니다. 직접 삭제하세요: ${dir}`); } }
-    },
+  const remove = () => {
+    try { gitIn(topLevel)('worktree', 'remove', '--force', dir); }
+    catch { try { rmSync(dir, { recursive: true, force: true }); gitIn(topLevel)('worktree', 'prune'); } catch { console.error(`임시 worktree를 지우지 못했습니다. 직접 삭제하세요: ${dir}`); } }
   };
+  try {
+    gitIn(topLevel)('worktree', 'add', '--detach', '--quiet', dir, reviewSha);
+    const rel = relative(topLevel, letterPath);
+    mkdirSync(dirname(join(dir, rel)), { recursive: true });
+    copyFileSync(letterPath, join(dir, rel));
+    if (readFileSync(join(dir, rel), 'utf8') !== readFileSync(letterPath, 'utf8')) throw new Error('편지 복사본이 원본과 다릅니다.');
+    return { topLevel: dir, root: join(dir, relative(topLevel, ROOT)), letterPath: join(dir, rel), remove };
+  } catch (error) {
+    remove(); // 생성 도중 실패해도 잔존물을 남기지 않는다(Codex 리뷰 2026-11-20).
+    throw error;
+  }
+}
+
+/** 편지 경로: 편지함 안의 실제 파일이어야 한다. 심볼릭 링크와 realpath가 편지함 밖인 경우는 거부(Codex 리뷰 2026-11-20). */
+function resolveLetterPath(target, argPath) {
+  const path = resolve(pickLetter(target, argPath));
+  const inboxDir = realpathSync(join(INBOX, target));
+  if (lstatSync(path).isSymbolicLink()) throw new Error('편지는 심볼릭 링크일 수 없습니다.');
+  const real = realpathSync(path);
+  const inboxRelative = relative(inboxDir, real);
+  if (inboxRelative.startsWith('..') || isAbsolute(inboxRelative) || !real.endsWith('.md') || inboxRelative.includes('/') || inboxRelative.includes('\\')) {
+    throw new Error('대상 편지함 바로 아래의 Markdown 파일만 호출할 수 있습니다.');
+  }
+  return real;
 }
 
 export function runBridge(target) {
-  const path = resolve(pickLetter(target, process.argv[2]));
-  const inboxRelative = relative(join(INBOX, target), path);
-  if (inboxRelative.startsWith('..') || isAbsolute(inboxRelative) || !path.endsWith('.md')) {
-    throw new Error('대상 편지함 안의 Markdown 파일만 호출할 수 있습니다.');
-  }
+  const path = resolveLetterPath(target, process.argv[2]);
   const letter = readLetter(path);
+  // Codex는 Temp 아래 경로를 작업 폴더로 받지 않는다(C:\로 떨어짐). 호출 폴더가 Temp 아래면 깨끗해도 홈 아래 임시 worktree를 쓴다.
+  const rootUnderTemp = realpathSync(ROOT).toLowerCase().startsWith(realpathSync(tmpdir()).toLowerCase());
   const started = Date.now();
   const audit = {
     target, status: 'failed', phase: 'preflight', tier: null, requested_model: null, requested_effort: null,
@@ -67,7 +79,7 @@ export function runBridge(target) {
     audit.caller_head = callerGit('rev-parse', 'HEAD');
     const letterRel = relative(callerTop, path).replaceAll('\\', '/');
     audit.caller_dirty = Boolean(callerGit('status', '--porcelain', '--untracked-files=all', '--', ':/', `:(top,exclude,literal)${letterRel}`));
-    audit.execution = planExecution(audit.review_sha, audit.caller_head, audit.caller_dirty);
+    audit.execution = rootUnderTemp ? 'temp_worktree' : planExecution(audit.review_sha, audit.caller_head, audit.caller_dirty);
     if (audit.execution === 'temp_worktree') review = createReviewWorktree(callerTop, audit.review_sha, path);
 
     // 2) 실제로 읽힐 트리(현재 또는 임시 worktree)에서 다시 확인한다. 여기서는 항상 HEAD==검토 SHA, 깨끗해야 한다.
