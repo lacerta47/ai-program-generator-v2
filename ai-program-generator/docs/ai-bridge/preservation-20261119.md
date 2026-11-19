@@ -6,6 +6,8 @@
 
 백업 경로: `C:/Users/amh47/.codex/backups/lun-cooperation-20261119/`. `manifest.json`에 원본 경로·브랜치·HEAD·파일 상태·크기·SHA-256을 기록했다. 복사본 체크섬과 복사 당시 원본을 대조했고, 상태 목록·HEAD가 복사 도중 바뀌지 않았음을 확인했다. `.env.local`, `serviceAccountKey.json`은 복사 대상에서 제외했다. ignored 파일 전체를 복사한 백업은 아니다.
 
+보존 기한은 사용자 삭제 결정 전까지이며 자동 삭제하지 않는다. 삭제 판단 주체는 사용자다. AI가 worktree를 정리하더라도 이 백업의 삭제를 함께 수행하지 않는다.
+
 | 원본 | 기준 HEAD | 복사 파일 | 삭제 상태 기록 | 크기(바이트) |
 |---|---|---:|---:|---:|
 | 기본 폴더 Documents/test | f8d1bc9258a423638a61f0252145e9a648655c75 | 1465 | 12 | 250255452 |
@@ -31,4 +33,8 @@
 
 운영 메일의 Vitest 설정 두 파일에는 main의 기존 generationFeedback 테스트 등록을 유지했다. 오래된 원본 설정을 통째로 적용하면 그 등록이 빠지므로 필요한 통합 조정 2줄만 더했다. 다른 보존 파일은 백업과 동일하게 유지했다.
 
-이 문서와 WORKBOARD의 후속 갱신에 초안 PR 링크와 검사 결과를 남긴다. 보존 PR은 기능 완성·배포 준비 판정이 아니다. 메일 발송, 유료 생성, Google 제출, 운영 UI의 실제 검증은 이번 작업에서 수행하지 않는다. 가격·모델 후보 기록은 과거 계획이며 현재 단가나 운영 적용을 뜻하지 않는다.
+원격 보존: [운영 메일 #177](https://github.com/lacerta47/ai-program-generator-v2/pull/177), [검증 기록 #178](https://github.com/lacerta47/ai-program-generator-v2/pull/178), [생성 품질 #179](https://github.com/lacerta47/ai-program-generator-v2/pull/179), [모델 메모 #180](https://github.com/lacerta47/ai-program-generator-v2/pull/180). 모두 초안이며 병합하지 않았다.
+
+로컬 검사: 운영 메일 및 기존 설문 API 테스트 10건, 생성 가이드 테스트 23건, 두 코드 브랜치의 타입 검사·프로덕션 빌드(린트 포함), 각 브랜치 diff 검사 통과. 운영 메일/생성 품질 브랜치는 새 worktree에서 더미 Firebase 빌드 설정으로 확인했고 비밀 설정을 복사하지 않았다. 문서 전용 브랜치에는 앱 빌드를 반복하지 않았다. CI 결과는 각 PR의 현재 상태를 기준으로 확인한다.
+
+보존 PR은 기능 완성·배포 준비 판정이 아니다. 메일 발송, 유료 생성, Google 제출, 운영 UI의 실제 검증은 이번 작업에서 수행하지 않는다. 가격·모델 후보 기록은 과거 계획이며 현재 단가나 운영 적용을 뜻하지 않는다.
