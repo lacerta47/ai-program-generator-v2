@@ -17,6 +17,8 @@
 
 각 CLI에 `--model`과 추론 설정(Codex `model_reasoning_effort`, Claude `--effort`)을 명시한다. `default`·`opus` 등 가변 별칭은 사용하지 않는다. 데스크톱 대화의 모델 선택이나 로컬 기본값을 그대로 따르는 방식이 아니다. 설정을 바꾸려면 이 파일을 수정하고 상대 리뷰·실제 호출 결과로 확인한다.
 
+Claude와의 합의 및 실제 호출 근거는 [결정 기록](../decisions/2026-11-19-bridge-model-evidence.md)과 [검증 보고서](model-settings-validation-20261119.md)에 있다.
+
 ## 어디에 무엇이
 
 | 경로 | 뜻 |
