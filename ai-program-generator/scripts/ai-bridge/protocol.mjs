@@ -26,10 +26,10 @@ export function commandArgs(target, settings, root) {
   }
   return ['-p', '--model', settings.model, '--effort', settings.effort,
     '--output-format', 'stream-json', '--verbose', '--add-dir', root,
-    '--safe-mode', '--strict-mcp-config', '--mcp-config', '{"mcpServers":{}}', '--disallowedTools', 'mcp__*',
-    '--no-session-persistence', '--permission-mode', 'dontAsk', '--tools', 'Read,Glob,Grep,Bash',
-    '--allowedTools', 'Read', 'Glob', 'Grep', 'Bash(git rev-parse HEAD)',
-    'Bash(git status --short)', 'Bash(git diff --stat)', 'Bash(git show --stat HEAD)'];
+    '--safe-mode', '--restricted', '--strict-mcp-config', '--mcp-config', '{"mcpServers":{}}',
+    '--disallowedTools', 'mcp__*', 'Read(**/.env.local)', 'Read(**/serviceAccountKey.json)',
+    '--no-session-persistence', '--permission-mode', 'dontAsk', '--tools', 'Read,Glob,Grep',
+    '--allowedTools', 'Read', 'Glob', 'Grep'];
 }
 
 export function validateReviewContext(reviewSha, head, dirty) {
@@ -44,7 +44,11 @@ function tokenUsage(usage) {
 }
 
 export function parseResponse(target, stdout) {
-  const events = stdout.split(/\r?\n/).filter((line) => line.trim()).map((line) => JSON.parse(line));
+  const events = [];
+  let malformed = false;
+  for (const line of stdout.split(/\r?\n/).filter((line) => line.trim())) {
+    try { events.push(JSON.parse(line)); } catch { malformed = true; }
+  }
   if (target === 'claude') {
     const result = events.findLast((event) => event.type === 'result');
     const models = [...new Set(events.filter((event) => event.type === 'assistant')
@@ -52,7 +56,7 @@ export function parseResponse(target, stdout) {
     const evidence = { response_models: models,
       response_model_source: models.length ? 'assistant.message.model' : 'not_exposed_by_cli',
       usage: tokenUsage(result?.usage) };
-    if (!result || result.is_error || result.subtype !== 'success' || !result.result?.trim()) {
+    if (malformed || !result || result.is_error || result.subtype !== 'success' || !result.result?.trim()) {
       throw Object.assign(new Error('Claude가 성공한 최종 답신을 반환하지 않았습니다.'), { evidence });
     }
     return { reply: result.result, ...evidence };
@@ -60,7 +64,7 @@ export function parseResponse(target, stdout) {
   const result = events.findLast((event) => event.type === 'turn.completed');
   const reply = events.findLast((event) => event.type === 'item.completed' && event.item?.type === 'agent_message')?.item.text;
   const evidence = { response_models: [], response_model_source: 'not_exposed_by_cli', usage: tokenUsage(result?.usage) };
-  if (!result || events.some((event) => event.type === 'turn.failed') || !reply?.trim()) {
+  if (malformed || !result || events.some((event) => event.type === 'turn.failed') || !reply?.trim()) {
     throw Object.assign(new Error('Codex가 성공한 최종 답신을 반환하지 않았습니다.'), { evidence });
   }
   // 현재 Codex exec JSONL은 응답 모델 필드를 제공하지 않는다. 요청값/AI 자기보고로 채우지 않는다.

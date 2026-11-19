@@ -4,7 +4,7 @@
 
 양쪽은 [AGENTS.md](../../AGENTS.md)를 공통 규칙 원본으로 사용한다. 루트 `AGENTS.md`와 `CLAUDE.md`도 이 원본을 가리킨다. 브리지는 동일한 원본 내용을 두 방향의 프롬프트에 직접 전달하고 해시를 기록한다. 기존에 열려 있던 상대 세션의 기억이나 지침을 자동 갱신하지 않는다.
 
-공통이라는 뜻은 프로젝트 규칙의 원본과 전달 내용이 같다는 뜻이다. 각 서비스의 시스템 지침·관리자 정책까지 동일하게 만든다는 뜻은 아니다. Claude는 safe mode·빈 MCP 설정·MCP 도구 차단으로 사용자 훅/플러그인/메모리의 추가 주입을 제한하고, Codex는 `--ignore-user-config`로 사용자 설정의 MCP 등을 로드하지 않는다. 필요한 공통 지침은 호출 측이 명시적으로 전달한다. 관리자 강제 정책은 여전히 적용될 수 있다.
+공통이라는 뜻은 프로젝트 규칙의 원본과 전달 내용이 같다는 뜻이다. 각 서비스의 시스템 지침·관리자 정책까지 동일하게 만든다는 뜻은 아니다. Claude는 safe/restricted mode·빈 MCP 설정·MCP 도구 차단으로 사용자 훅/플러그인/메모리의 추가 주입을 제한하고, Codex는 `--ignore-user-config`로 사용자 설정의 MCP 등을 로드하지 않는다. 필요한 공통 지침은 호출 측이 명시적으로 전달한다. 관리자 강제 정책은 여전히 적용될 수 있다.
 
 ## 고정된 요청 설정
 
@@ -58,6 +58,7 @@ sha: dac127b8ead99f9f6fce8b1d7ccfa0e285ddf0d6
 - `requested_model`, `requested_effort`: config.json에서 CLI에 전달한 값.
 - `response_models`, `response_model_source`, `model_match`: Claude는 stream-json의 `assistant.message.model`을 수집한다. 여러 모델이 관찰되면 모두 남긴다. 요청과 정확히 다르면 기록은 보존하고 종료 코드 1로 알린다. 날짜 접미사 차이도 자동으로 같다고 추정하지 않으며 실제 모델 변경인지 수동 확인한다. 초기화 시 선택 모델, 보조 모델 사용량, AI 자기보고로 실제 응답 모델을 대신하지 않는다.
 - **현재 Codex exec JSONL에는 응답 모델이 없다.** `response_models: []`, 출처 `not_exposed_by_cli`, `model_match: null`로 기록한다. 이는 요청 모델과 동일하다는 확인이 아니다. 양쪽의 실제 적용 추론 수준도 현재 CLI가 반환하지 않아 `response_effort: null`로 기록한다.
+- `status: success`는 CLI가 끝나고 본문·SHA 검사를 통과했다는 뜻이다. `model_match: null`이면 실제 응답 모델은 여전히 미확인이다.
 - `review_sha`: 호출 측 Git이 확인한 검토 커밋. `head_before`/`head_after`는 실행 worktree의 HEAD, `reported_head`/`reported_review_sha`는 답신 첫 줄에서 확인한 AI의 보고값이다. 이들은 서로 다른 근거이며 자기보고가 실제 코드 검토를 완전히 증명하지 않는다.
 - `worktree_dirty`: 현재 편지를 제외한 저장소 전체의 미커밋·미추적 변경 유무. true이면 호출 전에 중단한다.
 - `instructions_sha256`, `context_mode`, `cli_version`, `started_at`, `elapsed_ms`, `cli_elapsed_ms`, `usage`: 전달한 지침과 추가 설정 제한 모드, 실행 버전·전체/CLI 호출 소요·제공 토큰 사용량. 제공하지 않는 사용량을 추정하지 않는다.
@@ -82,7 +83,7 @@ node scripts/ai-bridge/ask-claude.mjs           # Codex가 쓰는 대칭 명령
 
 - 호출된 쪽은 **읽기 전용**: 파일 생성·수정·커밋 불가. 저장소를 읽고 `git log/diff/show` 정도로 확인만 한다.
 - 세션 비저장(Codex `--ephemeral`, Claude `--no-session-persistence`), 시간 제한, 왕복 상한 3.
-- Claude는 `--tools`로 도구 종류를 제한하고 `--permission-mode dontAsk`와 `--allowedTools`로 미허용 호출을 거부한다. Git은 HEAD·짧은 상태·변경 통계만 고정 명령으로 허용하며 임의 Git 인자/셸 조합은 허용하지 않는다. safe mode와 MCP 차단도 적용한다. 이 도구 제한은 OS 파일시스템 샌드박스와 동일한 보장은 아니다.
+- Claude에는 Read·Glob·Grep만 제공하고 셸·MCP·편집 도구는 제공하지 않는다. restricted mode로 파일 도구의 작업 디렉터리를 제한하고 `.env.local`·`serviceAccountKey.json`에 Read 차단 규칙도 전달한다. Git 검증은 호출 측의 고정 코드가 수행하며, AI가 HEAD를 독립 확인하지 못하면 reported_head는 null이다. 이 도구 제한은 OS 파일시스템 샌드박스와 동일한 보장은 아니다. 비밀 설정을 검증 worktree에 복사하지 않는다.
 - 유료 AI 생성·운영 데이터 변경·배포·정책 변경은 다리에서 하지 않는다. 답변에 "승인 필요"로만 표시.
 - 비용은 답변 절의 주석에 남긴다(`tokens …`). 실측: 제안 1건 검토에 약 170초·2.9만 토큰. **변경 묶음당 제안 1회 + 리뷰 1회, 필요 시 재검토 1회**가 기준. 승인 경계·보안·작업 간 의존성처럼 판단이 필요한 때만 쓰고, 상태 공유·오탈자는 Issue·PR로.
 
