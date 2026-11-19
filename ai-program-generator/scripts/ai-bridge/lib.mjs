@@ -27,22 +27,28 @@ export function readLetter(path) {
   return { path, meta, body, turns, text };
 }
 
-export function appendReply(path, who, reply, extra) {
-  const block = `\n\n## 답변 (${who}, ${kst()})\n${extra ? `<!-- ${extra} -->\n` : ''}\n${reply.trim()}\n`;
+export function appendReply(path, who, reply, extra, audit) {
+  const record = audit ? `\n### 호출 기록\n\n\`\`\`json\n${JSON.stringify(audit, null, 2)}\n\`\`\`\n` : '';
+  const block = `\n\n## 답변 (${who}, ${kst()})\n${extra ? `<!-- ${extra} -->\n` : ''}\n${reply.trim()}\n${record}`;
   writeFileSync(path, readFileSync(path, 'utf8').replace(/\s+$/, '') + block);
 }
 
 /** 상대 AI에게 넘길 전체 프롬프트. 규칙 + 편지 원문. 상대는 저장소를 읽을 수는 있지만 쓰지 못한다. */
-export function buildPrompt(letter, me) {
+export function buildPrompt(letter, me, policy) {
   const other = me === 'codex' ? 'Claude' : 'Codex';
   return `당신은 이 저장소(ai-program-generator)에서 ${other} Code와 협업하는 ${me === 'codex' ? 'Codex' : 'Claude'}입니다.
 아래는 ${other}가 docs/ai-bridge/ 편지함으로 보낸 편지입니다. 규칙:
 - 이 호출은 읽기 전용입니다. 파일을 만들거나 고치거나 커밋하지 마세요. 필요하면 저장소를 읽고 명령을 실행해 확인은 해도 됩니다.
 - 편지의 [요청] 항목에 번호별로 답하세요. 동의하지 않으면 이유와 대안을 함께 적으세요.
 - 확인한 파일·커밋이 있으면 경로와 SHA를 적으세요. 추측과 확인 사실을 구분하세요.
-- 답의 첫 줄은 "원문 id: <편지 id> · 확인 HEAD: <git rev-parse HEAD 결과 또는 '미확인'>" 로 시작하고, 끝에 '미확인 사항' 절을 둡니다.
+- 답의 첫 줄은 정확히 "원문 id: ${letter.meta.id} · 확인 HEAD: <git rev-parse HEAD 결과 또는 미확인> · 검토 SHA: ${letter.meta.sha}" 로 쓰고, 끝에 '미확인 사항' 절을 둡니다. 호출 HEAD와 검토 기준 SHA는 서로 다를 수 있으므로 구분하세요.
+- 모델 이름이나 추론 수준을 자기보고로 확정하지 마세요. 호출 측이 CLI의 응답 메타데이터를 별도로 기록합니다.
 - 답은 마크다운, 한국어, 간결하게. 답변 본문만 출력하고 인사말은 생략하세요.
-- 사용자 승인이 필요한 일(유료 AI 호출, 운영 데이터 변경, 배포, 정책 변경)은 하지 말고 "승인 필요"라고 표시만 하세요.
+- 사용자 승인이 필요한 일(제품 유료 AI 생성 호출, 운영 데이터 변경, 배포, 정책 변경)은 하지 말고 "승인 필요"라고 표시만 하세요. 이번 읽기 전용 협업 검토 호출 자체는 사용자가 승인했습니다.
+
+=== 양쪽에 동일하게 전달하는 공통 지침 (AGENTS.md) ===
+${policy ?? '저장소의 AGENTS.md를 먼저 읽으세요.'}
+=== 공통 지침 끝 ===
 
 === 편지 (${basename(letter.path)}) ===
 ${letter.text}
@@ -50,7 +56,7 @@ ${letter.text}
 }
 
 export function runCli(cmd, args, { input, timeoutMs }) {
-  const r = spawnSync(cmd, args, { input, encoding: 'utf8', timeout: timeoutMs, maxBuffer: 64 * 1024 * 1024, windowsHide: true });
+  const r = spawnSync(cmd, args, { input, cwd: ROOT, encoding: 'utf8', timeout: timeoutMs, maxBuffer: 64 * 1024 * 1024, windowsHide: true });
   return { status: r.status, stdout: r.stdout ?? '', stderr: r.stderr ?? '', timedOut: r.error?.code === 'ETIMEDOUT' };
 }
 
