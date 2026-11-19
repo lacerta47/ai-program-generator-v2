@@ -31,4 +31,5 @@
 
 ## 배포
 
-PR 검사·병합 및 운영 배포 결과는 아래에 완료 후 기록한다.
+- [PR #171](https://github.com/lacerta47/ai-program-generator-v2/pull/171). 기능 커밋 `281ca86`.
+- CI 검사·병합·운영 배포의 최종 결과와 배포 주소는 PR의 배포 점검 댓글에 기록한다.
