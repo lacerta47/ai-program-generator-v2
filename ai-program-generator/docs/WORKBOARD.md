@@ -5,7 +5,7 @@
 | 작업 | 담당 | 브랜치 | 상태 | 다음 행동·막힘 | Issue / PR |
 |---|---|---|---|---|---|
 | 브리지 모델·응답 증거·공통 지침 | Codex·Claude | main | #184·#186 반영 | 일반·높은 영향 호출 설정과 검토 SHA별 작업 트리는 활성화. Codex의 실제 응답 모델은 CLI 미제공 | [#184](https://github.com/lacerta47/ai-program-generator-v2/pull/184) · [#186](https://github.com/lacerta47/ai-program-generator-v2/pull/186) |
-| 협업·작업 교대 연습 | Codex ↔ Claude | codex/claude-cooperation-drill | 연습 중 | 변경된 SHA·승인 범위·검사 환경을 인계별로 확인 | [#189](https://github.com/lacerta47/ai-program-generator-v2/issues/189) |
+| 협업·작업 교대 연습 | Codex ↔ Claude | codex/claude-cooperation-drill | 연습 완료·초안 검토 | 다음 작업은 해당 Issue에서 담당·검토 SHA를 확인. 역방향 Windows 파일 읽기 제한은 미해결 | [#189](https://github.com/lacerta47/ai-program-generator-v2/issues/189) · [초안 #190](https://github.com/lacerta47/ai-program-generator-v2/pull/190) |
 | 원본 다섯 작업 폴더 조사·로컬 보존 | Codex | codex/cooperation-rules | 백업 검증 완료 | 원본 전환·삭제는 범위 밖. 로컬 전용 자료는 유지 | [#176](https://github.com/lacerta47/ai-program-generator-v2/issues/176) |
 | 운영 메일 보존 | Codex | codex/preserve-operations-email | 초안 PR에 보존 | 로컬 테스트·타입·빌드 통과, 실제 발송 안 함 | [#177](https://github.com/lacerta47/ai-program-generator-v2/pull/177) |
 | 과거 운영 검증 기록 보존 | Codex | codex/preserve-validation-records | 초안 PR에 보존 | 2026-11-02~03 기록이며 현재 정상 판정 아님 | [#178](https://github.com/lacerta47/ai-program-generator-v2/pull/178) |

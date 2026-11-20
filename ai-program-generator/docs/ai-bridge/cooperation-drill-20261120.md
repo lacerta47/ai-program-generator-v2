@@ -17,20 +17,24 @@ Issue / PR / 담당과 상태
 
 승인 줄에는 이번 검토에 승인 대상이 없으면 ‘대상 없음(읽기 전용)’으로 적는다. 선행 작업은 승인 대상이지만 이번 호출에서 의견만 구할 때는 ‘대상 있음(작업명) · 이번은 검토만, 실행 승인 미요청’으로 적는다. [양식 검토와 재질문 시험](archive/claude/2026-11-20-drill-11-adoption.md)
 
+승인된 시도 이후 실제 제공자 호출 여부가 불명확하면 ‘사용 여부 미확인’으로 적고, 확인될 때까지 그 횟수를 잔여로 계산하지 않는다. 제품의 할당량 환불과 사용자가 승인한 실행 횟수는 별도로 판단한다. [불명확한 호출의 인계](archive/claude/2026-11-20-drill-35-approval-unknown.md)
+
 근거가 직접 읽은 파일인지 발신자가 전달한 발췌인지 표시한다. 해당 코드와 diff를 읽지 못했다면 미검토다. 브리지 답변 성공과 해당 SHA의 CI 성공은 각각 별도 근거다. 높은 영향 변경에서 코드 직접 검토가 막히면 완료 판정을 보류하고, 승인 범위 안에서 그 SHA의 관련 파일을 읽을 수 있는 세션에 인계한다. [검토 범위 판정](archive/claude/2026-11-20-drill-17-review-evidence-level.md)
+
+한 편지에 목표, 검토 SHA, 관련 파일·diff 범위, 답변 형식을 적고 같은 근거를 쓰는 질문을 묶는다. 검토 대상은 커밋으로 남기고 호출 중에 그 작업 트리를 변경하지 않는다. CLI 호출 시간과 브리지 전체 시간을 따로 잰다. 검토 SHA와 지침 해시를 확인하는 절차는 유지한다. [지연 시간과 왕복 검토](archive/claude/2026-11-20-drill-37-controller-speed.md)
 
 한 편지는 작성과 호출을 담당하는 세션 하나를 Issue에 지정한다. 답신을 기다리는 동안 다른 쪽의 추가 근거는 편지에 덮어쓰지 않고 Issue에 남긴다. 실패는 기존 미답 질문의 재시도이며, 성공 답신 뒤에 새 쟁점이 생길 때 재질문을 추가한다. 종결 전 보관본과 링크를 확인한다. 동일 편지 동시 호출과 동시 보관은 이번 시험 범위에서 제외했다. [담당 교대 검토](archive/claude/2026-11-20-drill-20-concurrent-ownership.md)
 
 방향 이름은 발신자부터 적는다. Codex → Claude 호출은 Claude가 해당 작업 트리의 파일을 읽을 수 있었다. Claude → Codex 호출은 이번 Windows 환경에서 파일 읽기 실패가 반복됐고 발췌로 의견을 받았다. Codex Desktop이 별도로 Issue·Git을 읽을 수 있는지와 구분한다. 다른 대화 세션에 인계할 때는 이 기록의 Issue와 작업 SHA를 확인한다. [방향 정정](archive/claude/2026-11-20-drill-29-direction-labels.md)
 
-## 실제 사례와 합의
+## 사례별 적용 범위
 
 | 사례 | 확인 결과와 적용 범위 |
 |---|---|
 | 초기 인계와 SHA 불일치 | 이전 브리지 커밋 `f889ff2ecfda02e8d6ec81d5a01a170376622dd4`의 임시 트리에서 검토를 실행했다. 11-20 검증 문서는 이후 커밋에서 추가되었고 이전 트리에서 검색되지 않았다. 호출 전후 HEAD와 검토 SHA가 일치했다. 발신 폴더의 HEAD와 검토 트리의 HEAD를 구분해 기록한다. [Claude 검토](archive/claude/2026-11-20-drill-02-pr-stack.md) |
 | 스택 PR | #173 squash 뒤 충돌한 #174·#181·#183은 #184로 대체돼 병합됐다. 새 작업은 가능한 한 main에서 별도 브랜치를 만들고 의존 PR을 명시한다. 스택이 필요할 때는 기존 협업 규칙을 따르고 다른 작업자의 브랜치는 그대로 둔다. [대체 PR #184](https://github.com/lacerta47/ai-program-generator-v2/pull/184) |
 | 운영 검증 보고 | 발신 Codex가 #178의 원문에서 요청 방식 미기재와 CSP 확인을 직접 대조했다. Claude는 전달받은 발췌에 근거해 과거 200 응답이 POST였다는 판단을 철회했다. 역방향 Codex도 전달받은 정보로 과거 실패 원인을 확정할 수 없다고 답했고, 저장소 읽기는 실패했다. 11-20 결과는 해당 조건에서 미리보기 재현 안 됨, 수정 생성 1회 확인, 관리자 읽기 확인·쓰기 미실시로 범위를 제한한다. [정정과 인계](archive/claude/2026-11-20-drill-04-reconcile-release.md) · [Codex 응답](archive/codex/2026-11-20-drill-05-codex-handoff.md) |
-| 운영 메일 초안 #177 | 고위험 브리지 설정으로 리뷰했다. main과 초안의 합성 트리에서 설문·메일 API 테스트 등록과 두 예약 실행 경로를 확인했다. 합성 트리의 테스트 실행과 운영 설정은 미확인이다. 설정이 이미 있다면 배포 후 첫 Cron이 메일을 보낼 수 있으므로 검토·병합·발송 승인을 구분한다. [Claude 검토](archive/claude/2026-11-20-drill-06-operations-email.md) · [승인 범위 합의](archive/claude/2026-11-20-drill-07-approval-scope.md) |
+| 운영 메일 초안 #177 | 높은 영향 설정으로 리뷰했다. main과 초안의 합성 트리에서 설문·메일 API 모의 테스트 15건이 통과했고 두 예약 실행 경로를 확인했다. 실제 운영 설정과 발송은 미확인이다. 설정이 이미 있다면 배포 후 첫 Cron이 메일을 보낼 수 있으므로 검토·병합·발송 승인을 구분한다. [Claude 검토](archive/claude/2026-11-20-drill-06-operations-email.md) · [승인 범위 합의](archive/claude/2026-11-20-drill-07-approval-scope.md) |
 | 미로·수족관 초안 #179 | 가이드 테스트, 기존 생성물의 관찰, 새 가이드의 실제 생성 효과가 각각 다르다. 버튼 문구가 바뀌어도 먹이 방향 전환·접근·섭취가 발생했는지 별도로 확인한다. 당시 결과 파일과 생성 시점 가이드 SHA를 함께 넘긴다. [Claude 검토](archive/claude/2026-11-20-drill-08-maze-aquarium.md) |
 | 편지 재사용 | 보관된 답신은 그 파일을 포함한 커밋부터 새 검토에서 읽을 수 있다. 미커밋 답신은 새 편지에 짧게 발췌한다. 브리지 자료를 직접 읽지 못하면 전달 근거로 표시한다. [Claude 검토](archive/claude/2026-11-20-drill-09-archive-handoff.md) |
 | 같은 승인 사례 7개 | A~G를 양쪽에 독립적으로 보냈고 판정이 7개 모두 일치했다. 정책 변경 문서와 스택 PR의 기준 PR은 파일 경로만으로 자동 처리하지 않고, 효과와 병합 방식 충돌을 확인한다. 이 사례에 따른 새 승인 정책은 정하지 않았다. [Claude 판정](archive/claude/2026-11-20-drill-12-decision-matrix.md) · [Codex 판정](archive/codex/2026-11-20-drill-13-decision-matrix.md) |
@@ -46,10 +50,11 @@ Issue / PR / 담당과 상태
 - 역방향에서 읽기 도구가 실패하면 필요한 근거를 확인한 SHA·경로·발췌로 넘겨 의견을 받는다. 해당 답신의 직접 검토는 미확인으로 남긴다.
 - #177과 기준 main으로 만든 합성 트리 `5bd4be61b0fceee40546b02270f550e10b4876d9`를 별도 로컬 폴더에 내보내 API 테스트를 실행했다. 동일한 package-lock의 설치본으로 `generationFeedback.test.ts` 10건, `operationsEmail.test.ts` 5건을 확인했다. 이 결과는 합성 트리의 mock 테스트에 해당한다. 실제 PR head의 CI, 운영 설정과 발송은 각자 근거가 필요하다.
 - 같은 편지의 재질문 1회에서 응답 첫 줄 검증이 실패했다. 실패 기록을 유지하고 요구 형식을 한 줄로 다시 제시해 정상 답신을 받았다. [재질문 기록](archive/claude/2026-11-20-drill-11-adoption.md)
-- 초안 #190의 중간 SHA `6125e712d0f2a528c16759b9d289bc38cb2cbcfb`에 연결된 build·firestore-rules가 통과했다. 후속 커밋의 기록에 그 CI를 그대로 쓰지 않는다. [CI 실행](https://github.com/lacerta47/ai-program-generator-v2/actions/runs/44751177351) · [새 SHA 인계 판정](archive/claude/2026-11-20-drill-30-new-head-review.md)
+- 초안 #190의 중간 SHA `59349d230a03e939544285702956fc3899bf3a0d`에 연결된 build·firestore-rules가 통과했다. 최종 커밋의 CI는 초안 PR의 해당 SHA에 기록한다. [중간 CI 실행](https://github.com/lacerta47/ai-program-generator-v2/actions/runs/44754434230) · [새 SHA 인계 판정](archive/claude/2026-11-20-drill-30-new-head-review.md)
 
 ## 남은 항목과 담당
 
+- #190은 브리지 코드 변경을 포함한 초안이다. 이번 연습의 발신자는 main 병합과 운영 실행을 승인받지 않았다. 관련 테스트와 현재 PR의 CI는 해당 SHA의 검사 근거로 남긴다.
 - 역방향 Codex의 Windows 파일 읽기 제한은 발췌 인계로 가려서 통과 처리하지 않았다. 실제 코드 교대 시 수신 담당이 검토 SHA의 파일을 읽을 수 있는지 확인하고 막히면 직접 검토를 보류한다.
 - #188 보고서에서 200 응답만으로 전달 문제를 배제하는 문구는 근거가 부족하다. 이 연습은 문구의 범위를 판정했고, 원래 보고서를 수정하는 일은 별도 작업으로 남긴다.
 - 운영 메일·생성 품질은 각 초안의 다음 제품 작업에서 별도로 판단한다. 여기서 실행한 검사는 운영 시나리오 전체를 다루지 않는다.
