@@ -49,6 +49,7 @@ test('ignores reply and follow-up examples inside Markdown fences', () => {
     { lines: [reply, '  ~~~md', '## 재질문', ' ~~~~'], turns: 1, answered: true },
     { lines: ['````md', '```', '~~~~', '```` trailing', '## 답변', '`````', reply], turns: 1, answered: true },
     { lines: ['```inline```', reply, '## 재질문'], turns: 2, answered: false },
+    { lines: ['    ```md', reply], turns: 1, answered: true },
   ];
   try {
     for (const { lines, turns, answered } of cases) {
