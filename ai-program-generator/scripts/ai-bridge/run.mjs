@@ -50,6 +50,8 @@ function resolveLetterPath(target, argPath) {
 export function runBridge(target) {
   const path = resolveLetterPath(target, process.argv[2]);
   const letter = readLetter(path);
+  if (letter.turns >= MAX_TURNS * 2 - 1) throw new Error(`왕복 상한(${MAX_TURNS})에 도달했습니다. 남은 쟁점은 Issue에 기록하세요: ${path}`);
+  if (letter.answered) throw new Error(`이미 답한 편지입니다. 재질문을 추가하거나 보관하세요: ${path}`);
   // Codex는 Temp 아래 경로를 작업 폴더로 받지 않는다(C:\로 떨어짐). 호출 폴더가 Temp 아래면 깨끗해도 홈 아래 임시 worktree를 쓴다.
   const rootUnderTemp = realpathSync(ROOT).toLowerCase().startsWith(realpathSync(tmpdir()).toLowerCase());
   const started = Date.now();
@@ -66,7 +68,6 @@ export function runBridge(target) {
   let review = null;
   try {
     validateLetter(letter, target);
-    if (letter.turns >= MAX_TURNS * 2 - 1) throw new Error(`왕복 상한(${MAX_TURNS})에 도달: ${path}`);
     const settings = settingsFor(JSON.parse(readFileSync(join(ROOT, 'scripts/ai-bridge/config.json'), 'utf8')), target, letter.meta.tier ?? 'normal');
     audit.tier = settings.tier;
     audit.requested_model = settings.model;

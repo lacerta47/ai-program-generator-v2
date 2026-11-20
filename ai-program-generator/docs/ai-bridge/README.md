@@ -55,7 +55,9 @@ sha: dac127b8ead99f9f6fce8b1d7ccfa0e285ddf0d6
 
 **호출된 AI는 항상 검토 SHA의 트리를 읽는다.** 호출 측 HEAD가 검토 SHA와 같고 편지 외 변경이 없으면 현재 트리에서 바로 호출한다(`execution: current`). 그렇지 않으면 스크립트가 검토 SHA의 **임시 worktree를 만들고 편지만 복사해 그 안에서 호출한 뒤 지운다**(`execution: temp_worktree`). 위치는 `~/.ai-bridge/review-*`(환경변수 `BRIDGE_WORKTREE_DIR`) — Temp 아래에 두면 Codex가 작업 폴더로 받지 않는다. 삭제에 실패하면 경로를 stderr에 알린다(`git worktree list`로 잔존 확인). 미추적 파일이 늘 깔린 기본 폴더에서도 호출할 수 있고, 호출 측의 미커밋 코드는 상대에게 보이지 않는다. 검토할 코드·지침·이전 답신은 어떤 경우든 **먼저 커밋돼 있어야** 한다 — 커밋되지 않은 변경은 검토 대상이 아니다. 재질문 때도 현재 검토 기준으로 sha를 갱신한다.
 
-이어 물으려면 `## 재질문` 절을 쓰고 다시 실행한다. **왕복 1회 = 제안(재질문) 1건 + 답신 1건, 한 편지는 최대 3왕복** — 남은 쟁점은 Issue에 정리하고 사용자 판단이 필요한 것만 올린다.
+이어 물으려면 `## 재질문` 절을 쓰고 다시 실행한다. 현재 질문에 이미 답했거나 세 번 답한 편지는 파일을 바꾸지 않고 호출을 중단한다. **왕복 1회 = 제안(재질문) 1건 + 답신 1건, 한 편지는 최대 3왕복** — 남은 쟁점은 Issue에 정리하고 사용자 판단이 필요한 것만 올린다.
+
+마크다운 코드 블록 안의 `## 답변`·`## 재질문` 예시는 편지 상태나 왕복 횟수에 반영하지 않는다. 닫히지 않은 코드 블록이 있으면 스크립트가 답변 또는 실패 기록을 덧붙일 때 먼저 닫는다.
 
 ## 실제 호출 기록
 
@@ -83,7 +85,7 @@ node scripts/ai-bridge/ask-claude.mjs           # Codex가 쓰는 대칭 명령
 node scripts/ai-bridge/archive.mjs docs/ai-bridge/inbox/claude/2026-11-19-foo.md   # 결론 난 편지 보관(+ docs 안 링크 갱신)
 ```
 
-**보관 규칙**: 편지의 쟁점이 Issue/PR/decisions로 옮겨져 더 이을 질문이 없으면 `archive.mjs`로 `archive/<to>/`에 옮긴다. 보관은 답신이 1개 이상인 편지만 대상이고, 그 편지를 가리키는 `docs/**` 링크는 스크립트가 함께 고친다. inbox에는 **진행 중인 편지만** 남긴다.
+**보관 규칙**: 편지의 쟁점이 Issue/PR/decisions로 옮겨져 더 이을 질문이 없으면 `archive.mjs`로 `archive/<to>/`에 옮긴다. 마지막 질문에 답했고 같은 이름의 보관본이 없어야 한다. 그 편지를 가리키는 `docs/**` 링크는 스크립트가 함께 고친다. inbox에는 **진행 중인 편지만** 남긴다.
 
 환경: `CODEX_BIN`, `CLAUDE_BIN`, `BRIDGE_TIMEOUT_MS`(기본 10분).
 
@@ -100,5 +102,7 @@ node scripts/ai-bridge/archive.mjs docs/ai-bridge/inbox/claude/2026-11-19-foo.md
 ## 구현은 각자 자기 세션에서
 
 다리는 **질문·리뷰·의견** 전용이다. 구현·커밋·PR은 각 AI가 자기 세션에서 자기 브랜치에 한다. 선점은 GitHub Issue, 현황은 `docs/WORKBOARD.md`, 규칙 원본은 `AGENTS.md`, 결정은 `docs/decisions/`(기반 정리 작업에서 신설).
+
+작업 교대에는 [여섯 줄 인계 양식과 실제 협업 사례](cooperation-drill-20261120.md)를 참고한다.
 
 검증: `node --test scripts/ai-bridge/*.test.mjs`는 모델·SHA·실패 처리의 로컬 회귀 검사다. 실제 CLI 호출은 사용자 승인된 협업 검토에서 따로 수행한다. CLI 메타데이터 형식은 [Codex 비대화 문서](https://developers.openai.com/codex/noninteractive), [Claude 비대화 문서](https://code.claude.com/docs/en/headless)를 기준으로 하고 설치된 버전의 실제 결과를 함께 확인한다.
