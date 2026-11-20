@@ -16,6 +16,7 @@ export default defineConfig({
       'lib/admin/memberAccounts.test.ts',
       'lib/server/generationQuota.test.ts',
       'lib/server/generationFeedback.test.ts',
+      'lib/server/operationsEmail.test.ts',
     ],
     environment: 'node',
   },
