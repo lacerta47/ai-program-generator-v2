@@ -101,4 +101,6 @@ node scripts/ai-bridge/archive.mjs docs/ai-bridge/inbox/claude/2026-11-19-foo.md
 
 다리는 **질문·리뷰·의견** 전용이다. 구현·커밋·PR은 각 AI가 자기 세션에서 자기 브랜치에 한다. 선점은 GitHub Issue, 현황은 `docs/WORKBOARD.md`, 규칙 원본은 `AGENTS.md`, 결정은 `docs/decisions/`(기반 정리 작업에서 신설).
 
+작업 교대에는 [여섯 줄 인계 양식과 실제 협업 사례](cooperation-drill-20261120.md)를 참고한다.
+
 검증: `node --test scripts/ai-bridge/*.test.mjs`는 모델·SHA·실패 처리의 로컬 회귀 검사다. 실제 CLI 호출은 사용자 승인된 협업 검토에서 따로 수행한다. CLI 메타데이터 형식은 [Codex 비대화 문서](https://developers.openai.com/codex/noninteractive), [Claude 비대화 문서](https://code.claude.com/docs/en/headless)를 기준으로 하고 설치된 버전의 실제 결과를 함께 확인한다.

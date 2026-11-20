@@ -21,6 +21,8 @@ Issue / PR / 담당과 상태
 
 한 편지는 작성과 호출을 담당하는 세션 하나를 Issue에 지정한다. 답신을 기다리는 동안 다른 쪽의 추가 근거는 편지에 덮어쓰지 않고 Issue에 남긴다. 실패는 기존 미답 질문의 재시도이며, 성공 답신 뒤에 새 쟁점이 생길 때 재질문을 추가한다. 종결 전 보관본과 링크를 확인한다. 동일 편지 동시 호출과 동시 보관은 이번 시험 범위에서 제외했다. [담당 교대 검토](archive/claude/2026-11-20-drill-20-concurrent-ownership.md)
 
+방향 이름은 발신자부터 적는다. Codex → Claude 호출은 Claude가 해당 작업 트리의 파일을 읽을 수 있었다. Claude → Codex 호출은 이번 Windows 환경에서 파일 읽기 실패가 반복됐고 발췌로 의견을 받았다. Codex Desktop이 별도로 Issue·Git을 읽을 수 있는지와 구분한다. 다른 대화 세션에 인계할 때는 이 기록의 Issue와 작업 SHA를 확인한다. [방향 정정](archive/claude/2026-11-20-drill-29-direction-labels.md)
+
 ## 실제 사례와 합의
 
 | 사례 | 확인 결과와 적용 범위 |
@@ -44,6 +46,7 @@ Issue / PR / 담당과 상태
 - 역방향에서 읽기 도구가 실패하면 필요한 근거를 확인한 SHA·경로·발췌로 넘겨 의견을 받는다. 해당 답신의 직접 검토는 미확인으로 남긴다.
 - #177과 기준 main으로 만든 합성 트리 `5bd4be61b0fceee40546b02270f550e10b4876d9`를 별도 로컬 폴더에 내보내 API 테스트를 실행했다. 동일한 package-lock의 설치본으로 `generationFeedback.test.ts` 10건, `operationsEmail.test.ts` 5건을 확인했다. 이 결과는 합성 트리의 mock 테스트에 해당한다. 실제 PR head의 CI, 운영 설정과 발송은 각자 근거가 필요하다.
 - 같은 편지의 재질문 1회에서 응답 첫 줄 검증이 실패했다. 실패 기록을 유지하고 요구 형식을 한 줄로 다시 제시해 정상 답신을 받았다. [재질문 기록](archive/claude/2026-11-20-drill-11-adoption.md)
+- 초안 #190의 중간 SHA `6125e712d0f2a528c16759b9d289bc38cb2cbcfb`에 연결된 build·firestore-rules가 통과했다. 후속 커밋의 기록에 그 CI를 그대로 쓰지 않는다. [CI 실행](https://github.com/lacerta47/ai-program-generator-v2/actions/runs/44751177351) · [새 SHA 인계 판정](archive/claude/2026-11-20-drill-30-new-head-review.md)
 
 ## 남은 항목과 담당
 
