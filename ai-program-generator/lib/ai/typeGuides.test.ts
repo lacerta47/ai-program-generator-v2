@@ -102,6 +102,96 @@ describe('getTypeGuide', () => {
     expect(guide).not.toMatch(/viewBox="0 0 400 400"/);
   });
 
+  it('미로의 함정 선택과 재도전 규칙을 보강하고 다른 유형에는 붙이지 않는다', () => {
+    const guide = getTypeGuide('maze', '귀신이 미로를 돌아다녀. 60초 안에 열쇠를 찾아 탈출해.');
+
+    expect(guide).toContain('귀신만 골랐다면 구덩이·거미줄·얼음·화살을 추가하지 마세요');
+    expect(guide).toContain('고정 함정은 한 번 발동한 뒤 해제');
+    expect(guide).toContain('같은 미로를 다시 시도하는 동안 해제 상태를 유지');
+    expect(guide).toContain('충돌 뒤에는 플레이어와 귀신을 분리');
+    expect(guide).toContain('하나의 상태를 기준으로 화면 표시와 출구 판정');
+    expect(guide).toContain('벽 칸마다 반복 이모지를 채우지 마세요');
+    for (const type of ['dressup', 'aquarium', 'quiz']) {
+      expect(getTypeGuide(type)).not.toContain('고정 함정은 한 번 발동한 뒤 해제');
+    }
+  });
+
+  it('수족관은 실제 무대 크기와 시간 기준 속도를 요구하며 꾸미기에는 영향을 주지 않는다', () => {
+    const guide = getTypeGuide('aquarium', '느릿느릿 헤엄치는 거북이가 떠다니게 해.');
+
+    expect(guide).toContain('min-height: 280px');
+    expect(guide).toContain('실제 수조 요소의 `getBoundingClientRect()`');
+    expect(guide).toContain('너비·높이가 양수일 때만 최초 생물을 배치');
+    expect(guide).toContain('ResizeObserver');
+    expect(guide).toContain('생물의 상대 위치와 종류·수를 유지');
+    expect(guide).toContain('경과 시간 `dt`를 곱하세요');
+    expect(guide).toContain('0.8~1.8%');
+    expect(guide).toContain('학생이 명시한 다른 속도 선택은 우선');
+    expect(guide).toContain('30fps·60fps·120fps');
+    expect(getTypeGuide('dressup')).not.toContain('30fps·60fps·120fps');
+    expect(getTypeGuide('maze')).not.toContain('ResizeObserver');
+  });
+
+  it('미로의 수집 조건이 이동을 막거나 문 표시가 보드 크기를 바꾸지 않도록 요구한다', () => {
+    const guide = getTypeGuide('maze');
+
+    expect(guide).toContain('벽=1·길=0만 저장');
+    expect(guide).toContain('서로 다른 길 칸');
+    expect(guide).toContain('귀신은 벽이나 이동 금지 칸으로 취급하지 마세요');
+    expect(guide).toContain('6초 주기 중 처음 2초');
+    expect(guide).toContain('이동과 충돌은 같은 안전 상태');
+    expect(guide).toContain('목표 미달성 상태라도 출구 칸의 진입·이동·통과는 허용');
+    expect(guide).not.toContain('문 통과를 허용하지 마세요');
+    expect(guide).toContain('repeat(N, minmax(0, 1fr))');
+    expect(guide).toContain('문 아이콘의 표시 크기는 바뀌면 안 됩니다');
+    expect(guide).toContain('한 칸씩');
+  });
+
+  it('수족관의 윤곽선과 작은 눈을 요구하고 거북이의 상하좌우 움직임을 유지한다', () => {
+    const guide = getTypeGuide('aquarium');
+
+    expect(guide).toContain('등껍질·머리·발');
+    expect(guide).toContain('2~3px');
+    expect(guide).toContain('학생이 고른 팔레트');
+    expect(guide).toContain('작은 점눈');
+    expect(guide).toContain('과도하게 큰 흰자');
+    expect(guide).toContain('상하좌우');
+    expect(guide).toContain('정규화');
+    expect(getTypeGuide('dressup')).not.toContain('6초 주기 중 처음 2초');
+    expect(getTypeGuide('maze')).not.toContain('과도하게 큰 흰자');
+  });
+
+  it('수족관 생물의 초기 분산과 시간 기준 회피를 요구하고 다른 유형에는 붙이지 않는다', () => {
+    const guide = getTypeGuide('aquarium');
+
+    expect(guide).toContain('격자의 서로 다른 구역에 한 마리씩');
+    expect(guide).toContain('몸통·머리·지느러미');
+    expect(guide).toContain('최대 20개');
+    expect(guide).toContain('생물 종류·수·크기는 임의로 줄이지 마세요');
+    expect(guide).toContain('거품·빛·먹이는 생물 간격 계산에서 제외');
+    expect(guide).toContain('같은 px 좌표계');
+    expect(guide).toContain('회피량을 먼저 계산한 뒤');
+    expect(guide).toContain('dt를 적용해 방향을 천천히');
+    expect(guide).toContain('중심 거리가 0이면 생물 번호');
+    expect(guide).toContain('원래 속도를 유지');
+    expect(guide).toContain('새 먹이 배정 기능은 추가하지 마세요');
+    for (const type of ['maze', 'dressup', 'quiz']) {
+      expect(getTypeGuide(type)).not.toContain('회피량을 먼저 계산한 뒤');
+    }
+  });
+
+  it('구현한 먹이 기능은 전역 추적과 실제 섭취까지 요구하고 선택하지 않은 기능은 추가하지 않는다', () => {
+    const guide = getTypeGuide('aquarium');
+
+    expect(guide).toContain('먹이 주기를 선택했거나 구현했다면');
+    expect(guide).toContain('방향 전환·접근 → 섭취 후 먹이 제거');
+    expect(guide).toContain('수조 전체에서 찾아 추적');
+    expect(guide).toContain('접근 전에 없애지 마세요');
+    expect(guide).toContain('접근 가능한 위치에 머물게');
+    expect(guide).toContain('먹이 기능을 요구하지 않은 경우에는 이 규칙 때문에 새로 추가하지 마세요');
+    expect(getTypeGuide('maze')).not.toContain('수조 전체에서 찾아 추적');
+  });
+
   it('미로 가이드에 넣은 예시 코드는 실제로 동작하고, 만든 미로는 항상 출구까지 길이 있다', () => {
     const guide = getTypeGuide('maze');
     const blocks = [...guide.matchAll(/```\n([\s\S]*?)```/g)].map((m) => m[1]);
