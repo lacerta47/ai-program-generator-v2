@@ -23,8 +23,9 @@ export function readLetter(path) {
     if (kv) meta[kv[1]] = kv[2].trim();
   }
   const body = m[2];
-  const turns = (body.match(/^## (?:답변|재질문)(?=\s|$)/gm) ?? []).length;
-  return { path, meta, body, turns, text };
+  const headings = [...body.matchAll(/^## (답변|재질문)(?=\s|$)/gm)];
+  const answered = headings.at(-1)?.[1] === '답변';
+  return { path, meta, body, turns: headings.length, answered, text };
 }
 
 export function appendReply(path, who, reply, extra, audit) {
@@ -45,7 +46,7 @@ export function buildPrompt(letter, me, policy) {
 - 이 호출은 읽기 전용입니다. 파일을 만들거나 고치거나 커밋하지 마세요. 허용된 읽기 도구로 저장소를 확인하세요. Claude 호출에는 셸 도구가 없으므로 HEAD를 독립 확인할 수 없으면 미확인으로 적으세요. 호출 측이 Git으로 확인한 HEAD와 검토 SHA를 별도 기록합니다.
 - 편지의 [요청] 항목에 번호별로 답하세요. 동의하지 않으면 이유와 대안을 함께 적으세요.
 - 확인한 파일·커밋이 있으면 경로와 SHA를 적으세요. 추측과 확인 사실을 구분하세요.
-- 답의 첫 줄은 정확히 "원문 id: ${letter.meta.id} · 확인 HEAD: <직접 확인한 전체 SHA 또는 미확인> · 검토 SHA: ${letter.meta.sha}" 로 쓰고, 끝에 '미확인 사항' 절을 둡니다. 현재 프로토콜은 호출 HEAD와 검토 기준 SHA가 같을 때만 시작하지만, 두 근거는 구분해 기록하세요.
+- 답의 첫 줄은 정확히 "원문 id: ${letter.meta.id} · 확인 HEAD: <직접 확인한 전체 SHA 또는 미확인> · 검토 SHA: ${letter.meta.sha}" 로 쓰고, 끝에 '미확인 사항' 절을 둡니다. 확인 HEAD는 검토에 사용한 작업 트리의 HEAD입니다. 발신 작업 폴더의 HEAD는 검토 SHA와 다를 수 있으며, 호출 기록의 caller_head로 따로 남깁니다.
 - 모델 이름이나 추론 수준을 자기보고로 확정하지 마세요. 호출 측이 CLI의 응답 메타데이터를 별도로 기록합니다.
 - 답은 마크다운, 한국어, 간결하게. 답변 본문만 출력하고 인사말은 생략하세요.
 - 사용자 승인이 필요한 일(제품 유료 AI 생성 호출, 운영 데이터 변경, 배포, 정책 변경)은 하지 말고 "승인 필요"라고 표시만 하세요. 이번 읽기 전용 협업 검토 호출 자체는 사용자가 승인했습니다.
@@ -70,7 +71,7 @@ export function pickLetter(to, argPath) {
   const dir = join(INBOX, to);
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
   const files = readdirSync(dir).filter((f) => f.endsWith('.md')).map((f) => join(dir, f))
-    .filter((p) => { const l = readLetter(p); return !/^## 답변/m.test(l.body.split(/^## 재질문/m).pop()); })
+    .filter((p) => !readLetter(p).answered)
     .sort((a, b) => statSync(a).mtimeMs - statSync(b).mtimeMs);
   if (!files.length) throw new Error(`${to} 편지함에 답할 편지가 없습니다.`);
   return files[0];

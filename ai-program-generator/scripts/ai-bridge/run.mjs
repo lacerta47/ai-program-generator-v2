@@ -66,6 +66,7 @@ export function runBridge(target) {
   let review = null;
   try {
     validateLetter(letter, target);
+    if (letter.answered) throw new Error(`이미 답한 편지입니다. 재질문을 추가하거나 보관하세요: ${path}`);
     if (letter.turns >= MAX_TURNS * 2 - 1) throw new Error(`왕복 상한(${MAX_TURNS})에 도달: ${path}`);
     const settings = settingsFor(JSON.parse(readFileSync(join(ROOT, 'scripts/ai-bridge/config.json'), 'utf8')), target, letter.meta.tier ?? 'normal');
     audit.tier = settings.tier;

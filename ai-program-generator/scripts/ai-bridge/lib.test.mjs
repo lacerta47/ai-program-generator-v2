@@ -13,6 +13,7 @@ test('counts Korean reply and follow-up headings through the three-round limit',
     for (let count = 0; count <= headings.length; count++) {
       writeFileSync(path, `---\nid: test\nfrom: codex\nto: claude\n---\n# 제목\n${headings.slice(0, count).join('\n')}\n`);
       assert.equal(readLetter(path).turns, count);
+      assert.equal(readLetter(path).answered, count % 2 === 1);
     }
   } finally {
     unlinkSync(path);
@@ -27,9 +28,11 @@ test('keeps failure evidence without counting it as a successful round', () => {
     writeFileSync(path, '---\nid: test\n---\n# Question\n');
     appendFailure(path, { status: 'failed', phase: 'decode', usage: { output_tokens: 17 } });
     assert.equal(readLetter(path).turns, 0);
+    assert.equal(readLetter(path).answered, false);
     assert.ok(readFileSync(path, 'utf8').includes('"output_tokens": 17'));
     appendReply(path, 'Claude', 'reply', null, { status: 'success', review_sha: 'a'.repeat(40) });
     assert.equal(readLetter(path).turns, 1);
+    assert.equal(readLetter(path).answered, true);
     assert.ok(readFileSync(path, 'utf8').includes('"review_sha": "' + 'a'.repeat(40) + '"'));
   } finally {
     unlinkSync(path);
