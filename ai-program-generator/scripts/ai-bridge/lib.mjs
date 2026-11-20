@@ -12,6 +12,31 @@ export function kst() {
   return new Date(Date.now() + 9 * 3600e3).toISOString().replace('T', ' ').slice(0, 16) + ' KST';
 }
 
+function scanLetterBody(body) {
+  let openFence = '';
+  let turns = 0;
+  let answered = false;
+  for (const line of body.split(/\r?\n/)) {
+    const fence = line.match(/^ {0,3}(`{3,}|~{3,})(.*)$/);
+    if (openFence) {
+      if (fence && fence[1][0] === openFence[0] && fence[1].length >= openFence.length && /^[ \t]*$/.test(fence[2])) {
+        openFence = '';
+      }
+      continue;
+    }
+    if (fence && (fence[1][0] === '~' || !fence[2].includes('`'))) {
+      openFence = fence[1];
+      continue;
+    }
+    const heading = line.match(/^## (답변|재질문)(?=\s|$)/);
+    if (heading) {
+      turns++;
+      answered = heading[1] === '답변';
+    }
+  }
+  return { turns, answered, openFence };
+}
+
 /** 편지 파일(docs/ai-bridge/inbox/<to>/<id>.md). frontmatter + 본문 + 답변 절들. */
 export function readLetter(path) {
   const text = readFileSync(path, 'utf8');
@@ -23,19 +48,22 @@ export function readLetter(path) {
     if (kv) meta[kv[1]] = kv[2].trim();
   }
   const body = m[2];
-  const headings = [...body.matchAll(/^## (답변|재질문)(?=\s|$)/gm)];
-  const answered = headings.at(-1)?.[1] === '답변';
-  return { path, meta, body, turns: headings.length, answered, text };
+  return { path, meta, body, ...scanLetterBody(body), text };
 }
 
 export function appendReply(path, who, reply, extra, audit) {
+  const letter = readLetter(path);
+  const replyBody = reply.trim();
+  const { openFence } = scanLetterBody(replyBody);
   const record = audit ? `\n### 호출 기록\n\n\`\`\`json\n${JSON.stringify(audit, null, 2)}\n\`\`\`\n` : '';
-  const block = `\n\n## 답변 (${who}, ${kst()})\n${extra ? `<!-- ${extra} -->\n` : ''}\n${reply.trim()}\n${record}`;
-  writeFileSync(path, readFileSync(path, 'utf8').replace(/\s+$/, '') + block);
+  const block = `\n\n## 답변 (${who}, ${kst()})\n${extra ? `<!-- ${extra} -->\n` : ''}\n${replyBody}${openFence ? '\n' + openFence : ''}\n${record}`;
+  const existing = letter.text.trimEnd() + (letter.openFence ? '\n' + letter.openFence : '');
+  writeFileSync(path, existing + block);
 }
 
 export function appendFailure(path, audit) {
-  appendFileSync(path, `\n\n## 호출 실패 (${kst()})\n\n\`\`\`json\n${JSON.stringify(audit, null, 2)}\n\`\`\`\n`);
+  const { openFence } = readLetter(path);
+  appendFileSync(path, `${openFence ? '\n' + openFence : ''}\n\n## 호출 실패 (${kst()})\n\n\`\`\`json\n${JSON.stringify(audit, null, 2)}\n\`\`\`\n`);
 }
 
 /** 상대 AI에게 넘길 전체 프롬프트. 규칙 + 편지 원문. 상대는 저장소를 읽을 수는 있지만 쓰지 못한다. */

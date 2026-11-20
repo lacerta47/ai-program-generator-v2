@@ -39,3 +39,51 @@ test('keeps failure evidence without counting it as a successful round', () => {
     rmdirSync(dir);
   }
 });
+
+test('ignores reply and follow-up examples inside Markdown fences', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'ai-bridge-fences-'));
+  const path = join(dir, 'letter.md');
+  const reply = '## 답변 (Claude, 시각)';
+  const cases = [
+    { lines: ['```md', '## 답변', '```'], turns: 0, answered: false },
+    { lines: [reply, '  ~~~md', '## 재질문', ' ~~~~'], turns: 1, answered: true },
+    { lines: ['````md', '```', '~~~~', '```` trailing', '## 답변', '`````', reply], turns: 1, answered: true },
+    { lines: ['```inline```', reply, '## 재질문'], turns: 2, answered: false },
+  ];
+  try {
+    for (const { lines, turns, answered } of cases) {
+      writeFileSync(path, ['---', 'id: test', '---', ...lines].join('\r\n'));
+      const letter = readLetter(path);
+      assert.equal(letter.turns, turns, lines.join('\n'));
+      assert.equal(letter.answered, answered, lines.join('\n'));
+    }
+  } finally {
+    unlinkSync(path);
+    rmdirSync(dir);
+  }
+});
+
+test('keeps appended replies and failure records outside unclosed fences', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'ai-bridge-close-fences-'));
+  const path = join(dir, 'letter.md');
+  const question = '---\nid: test\n---\n~~~md\n## 답변\nexample';
+  try {
+    writeFileSync(path, question);
+    appendReply(path, 'Claude', 'answer\n````md\n## 재질문\nexample', null, { status: 'success' });
+    const answered = readLetter(path);
+    assert.equal(answered.turns, 1);
+    assert.equal(answered.answered, true);
+    assert.match(answered.text, /example\n~~~\n\n## 답변 /);
+    assert.match(answered.text, /example\n````\n\n### 호출 기록/);
+
+    writeFileSync(path, question);
+    appendFailure(path, { status: 'failed' });
+    const failed = readLetter(path);
+    assert.equal(failed.turns, 0);
+    assert.equal(failed.answered, false);
+    assert.match(failed.text, /example\n~~~\n\n## 호출 실패 /);
+  } finally {
+    unlinkSync(path);
+    rmdirSync(dir);
+  }
+});
