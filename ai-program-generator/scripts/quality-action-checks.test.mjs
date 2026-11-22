@@ -114,8 +114,23 @@ function roulette(again, broken = false) {
   return { type: 'roulette', answers: { use: 'snack', slots: 's4', again }, code: { html, css, javascript } };
 }
 
+function ledCalculator() {
+  return {
+    type: 'calc',
+    answers: { mode: 'calc', ops: ['pct'], display: 'ledold' },
+    code: {
+      html: '<output id="calc-result"><span aria-hidden="true">.</span><span id="calc-result-value" aria-live="polite">0</span></output>'
+        + '<button data-calc-key="8">8</button><button data-calc-key="pct">%</button>',
+      css: '#calc-result-value{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}',
+      javascript: "let number = 0; const value = document.querySelector('#calc-result-value'); "
+        + "document.querySelector('[data-calc-key=\"8\"]').onclick = () => { number = 8; value.textContent = number; }; "
+        + "document.querySelector('[data-calc-key=pct]').onclick = () => { value.textContent = number / 100; };",
+    },
+  };
+}
+
 // Run the real offline inspector with working and broken samples. No AI or public network.
-test('offline inspector distinguishes working quiz/roulette flows from broken outputs', () => {
+test('offline inspector distinguishes working quiz, roulette and LED flows from broken outputs', () => {
   const root = realpathSync(tmpdir());
   const dir = mkdtempSync(join(root, 'lun-quality-actions-'));
   try {
@@ -125,6 +140,7 @@ test('offline inspector distinguishes working quiz/roulette flows from broken ou
       'roulette-repeat': roulette('yes'), 'roulette-exclude': roulette('exclude'), 'roulette-wheel': roulette('no'),
       'roulette-delegated': { ...roulette('exclude'), answers: { again: 'aichoose' } },
       'roulette-wrong-winner': roulette('yes', true),
+      'calc-led-text': ledCalculator(),
     };
     for (const [name, fixture] of Object.entries(fixtures)) {
       writeFileSync(join(dir, name + '-after.json'), JSON.stringify(fixture));
@@ -147,6 +163,8 @@ test('offline inspector distinguishes working quiz/roulette flows from broken ou
     assert.deepEqual(outputs['roulette-delegated'].rouletteContract.spins.map(spin => spin.count), [4, 3]);
     assert(outputs['quiz-dead-confirm'].errors.some(error => error.stage === 'quiz-empty'));
     assert(outputs['roulette-wrong-winner'].errors.some(error => error.stage === 'roulette-result'));
+    assert.deepEqual(outputs['calc-led-text'].errors, []);
+    assert.deepEqual(outputs['calc-led-text'].coreAction.runs.map(run => run.status), ['passed', 'passed']);
   } finally {
     const target = realpathSync(dir);
     assert.equal(dirname(target), root);

@@ -448,7 +448,12 @@ try {
           const width = document.documentElement.clientWidth;
           const overflow = document.documentElement.scrollWidth - width;
           const selectors = 'canvas, button, input, [role="button"], [id*="result" i], [class*="result" i], [id*="clock" i], [class*="clock" i], [id*="time" i], [class*="time" i], [id*="display" i], [class*="display" i], .container, .card';
-          const elements = [...document.querySelectorAll(selectors)];
+          const elements = [...document.querySelectorAll(selectors)].filter(element => {
+            if (element.id !== 'calc-result-value') return true;
+            const box = element.getBoundingClientRect(), style = getComputedStyle(element);
+            // The LED result includes a 1px text node for assistive technology.
+            return !(style.position === 'absolute' && style.overflow === 'hidden' && box.width <= 1 && box.height <= 1);
+          });
           const offscreen = elements.filter((element) => {
             const r = element.getBoundingClientRect(), s = getComputedStyle(element);
             return s.display !== 'none' && s.visibility !== 'hidden' && r.width > 0 && (r.left < -4 || r.right > width + 4);
