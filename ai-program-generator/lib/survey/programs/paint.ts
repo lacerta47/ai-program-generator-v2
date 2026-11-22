@@ -177,7 +177,7 @@ export const paint: ProgramType = {
       id: 'rainbow_speed',
       role: 'flow',
       question: '무지개 색이 얼마나 빠르게 바뀔까?',
-      showIf: (a) => a.rainbow === 'yes',
+      showIf: (a) => a.brush === 'crayon' && a.rainbow === 'yes',
       options: [
         {
           id: 'slow',
@@ -464,18 +464,17 @@ export const paint: ProgramType = {
         },
       ],
     },
-    // STEP 13 — 저장. 미리보기 iframe의 보안 정책상 Clipboard API는 사용할 수 없으므로
-    // 아이가 고를 수 있는 출력 방식도 실제로 작동하는 PNG 다운로드로 통일한다.
+    // STEP 13 — PNG. 격리 미리보기는 그림 표시, 내려받은 작품 HTML은 파일 저장을 지원한다.
     {
       id: 'save',
       role: 'output',
-      question: '내 그림을 PNG 파일로 저장할까?',
+      question: '내 그림을 PNG 이미지로 만들까?',
       options: [
         {
           id: 'download',
-          label: 'PNG로 저장하기',
+          label: 'PNG 이미지 만들기',
           icon: '💾',
-          promptFragment: '그림을 PNG 이미지로 다운로드하는 저장 버튼을 넣어.',
+          promptFragment: '그림을 PNG로 만드는 버튼을 넣어. 미리보기에서는 만든 그림을 화면에 보여주고, 내려받은 작품 HTML에서는 파일로 저장할 수 있게 해.',
         },
         {
           id: 'no',

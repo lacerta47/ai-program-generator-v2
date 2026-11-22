@@ -1,4 +1,8 @@
-import type { ProgramType } from '../types';
+import type { ProgramType, SurveyAnswers } from '../types';
+
+function hasFavorite(answers: SurveyAnswers): boolean {
+  return answers.kind === 'me' && Array.isArray(answers.meinfo) && answers.meinfo.includes('fav');
+}
 
 export const card: ProgramType = {
   id: 'card',
@@ -19,7 +23,7 @@ export const card: ProgramType = {
           id: 'me',
           label: '내 소개',
           icon: '🙋',
-          promptFragment: '내 이름·좋아하는 것·꿈을 소개하는 카드.',
+          promptFragment: '내 소개 카드야. 소개하고 싶은 항목을 골랐다면 그 항목만 따로 보여줘. 항목을 고르지 않았으면 짧은 인사말을 보여줘.',
         },
         {
           id: 'hello',
@@ -107,10 +111,7 @@ export const card: ProgramType = {
       id: 'favkind',
       role: 'goal',
       question: '좋아하는 게 뭐야?',
-      showIf: (a) => {
-        const v = a.meinfo;
-        return Array.isArray(v) && v.includes('fav');
-      },
+      showIf: hasFavorite,
       options: [
         {
           id: 'food',
@@ -150,7 +151,7 @@ export const card: ProgramType = {
       id: 'animaldetail',
       role: 'goal',
       question: '어떤 동물을 좋아해?',
-      showIf: (a) => a.favkind === 'animal',
+      showIf: (a) => hasFavorite(a) && a.favkind === 'animal',
       options: [
         {
           id: 'dog',
@@ -247,7 +248,7 @@ export const card: ProgramType = {
           id: 'no',
           label: '아니, 별만',
           icon: '⭐',
-          promptFragment: '좋아하는 것을 별도 항목으로 추가하지 마.',
+          promptFragment: '우주 배경에는 가만히 있는 별만 그려. 별똥별과 행성 효과는 넣지 마.',
         },
       ],
     },
@@ -305,14 +306,14 @@ export const card: ProgramType = {
       ],
     },
 
-    // Step 8 — 꾸밈 움직임 (deco가 하나라도 선택됐을 때)
+    // Step 8 — 사진에 겹치지 않는 다른 장식이 있을 때
     {
       id: 'decomotion',
       role: 'flow',
       question: '꾸밈 장식을 어떻게 움직일까?',
       showIf: (a) => {
         const v = a.deco;
-        return Array.isArray(v) && v.length > 0;
+        return Array.isArray(v) && v.some(id => id !== 'photo');
       },
       options: [
         {
@@ -457,9 +458,9 @@ export const card: ProgramType = {
         },
         {
           id: 'no',
-          label: '아니, 그림만',
+          label: '아니, 이름은 쓰지 않을래',
           icon: '🖼️',
-          promptFragment: '사진 첨부·사진 영역을 넣지 마.',
+          promptFragment: '이름과 한 줄 메시지를 직접 입력하는 칸은 넣지 마. 카드의 기본 문구와 고른 장식은 그대로 보여줘.',
         },
       ],
     },

@@ -1,4 +1,8 @@
-import type { ProgramType } from '../types';
+import type { ProgramType, SurveyAnswers } from '../types';
+
+function hasPianoPractice(answers: SurveyAnswers): boolean {
+  return answers.instrument === 'piano' && (answers.playmode === 'follow' || answers.playmode === 'both');
+}
 
 export const sound: ProgramType = {
   id: 'sound',
@@ -103,7 +107,7 @@ export const sound: ProgramType = {
       id: 'songslist',
       role: 'goal',
       question: '어떤 동요를 따라칠까?',
-      showIf: (a) => a.playmode === 'follow' || a.playmode === 'both',
+      showIf: hasPianoPractice,
       options: [
         {
           id: 'twinkle',
@@ -150,10 +154,10 @@ export const sound: ProgramType = {
       role: 'appearance',
       question: '건반이나 버튼을 몇 개 만들까?',
       options: [
-        { id: 'small', label: '적게 (5개)', icon: '👌', promptFragment: '건반·버튼을 5개로 적게 만들어.' },
+        { id: 'small', label: '적게 (5개)', icon: '👌', promptFragment: '기본 연주 화면에 건반·버튼 5개를 보여줘. 따라치기 곡에 다른 음이 필요하면 음역 전환으로 그 음도 직접 누를 수 있게 해.' },
         { id: 'medium', label: '보통 (8개)', icon: '✋', promptFragment: '건반·버튼을 8개로 만들어.' },
         { id: 'large', label: '많이 (13개)', icon: '🙌', promptFragment: '건반·버튼을 13개로 많이 만들어.' },
-        { id: 'two_octaves', label: '두 옥타브 (16개)', icon: '🎹', promptFragment: '건반·버튼을 두 옥타브(16개)로 만들어.' },
+        { id: 'two_octaves', label: '아주 많이 (16개)', icon: '🎹', promptFragment: '건반·버튼을 16개로 만들어. 음높이가 있는 악기는 두 옥타브에 걸쳐 배치해.' },
       ],
     },
 
@@ -227,7 +231,8 @@ export const sound: ProgramType = {
     {
       id: 'score',
       role: 'rule',
-      question: '연주를 잘 하면 별이나 점수를 줄까?',
+      question: '따라치기에서 별이나 점수를 줄까?',
+      showIf: hasPianoPractice,
       options: [
         { id: 'stars', label: '별 모으기', icon: '⭐', promptFragment: '올바른 음을 누를 때마다 별을 모아 화면에 보여주는 기능을 넣어.' },
         { id: 'points', label: '점수 올리기', icon: '🔢', promptFragment: '올바른 음을 누를 때마다 점수가 올라가는 기능을 넣어.' },

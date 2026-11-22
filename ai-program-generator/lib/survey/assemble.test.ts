@@ -9,9 +9,9 @@ describe('그림판 PNG 저장 정규화', () => {
   it.each(['copy', 'clipboard', 'both'])('예전 %s 답을 PNG 다운로드로 이관한다', (save) => {
     const answers = { save };
 
-    expect(assemblePrompt(paint, answers)).toContain('PNG 이미지로 다운로드');
+    expect(assemblePrompt(paint, answers)).toContain('미리보기에서는 만든 그림을 화면에 보여주고');
     expect(assemblePrompt(paint, answers)).not.toContain('클립보드');
-    expect(surveyToPlan(paint, answers).etc).toContain('PNG로 저장하기');
+    expect(surveyToPlan(paint, answers).etc).toContain('PNG 이미지 만들기');
   });
 
   it('새 설문에는 PNG 다운로드와 저장 안 함만 표시한다', () => {

@@ -26,8 +26,8 @@ export const clock: ProgramType = {
       question: '어떤 시계를 만들까?',
       options: [
         { id: 'clock', label: '디지털 시계', icon: '🕐', promptFragment: '지금 시각을 실시간으로 보여주는 디지털 시계를 만들어. 매초 시간이 갱신돼.' },
-        { id: 'timer', label: '타이머(거꾸로 세기)', icon: '⏳', promptFragment: '정한 시간부터 0까지 거꾸로 세는 카운트다운 타이머를 만들어. 시작·멈춤·다시 버튼을 넣어.' },
-        { id: 'stopwatch', label: '스톱워치', icon: '⏱️', promptFragment: '0부터 시간이 올라가는 스톱워치를 만들어. 시작·멈춤·다시(리셋) 버튼을 넣어.' },
+        { id: 'timer', label: '타이머(거꾸로 세기)', icon: '⏳', promptFragment: '정한 시간부터 0까지 거꾸로 세는 카운트다운 타이머를 만들어. 분:초를 보여주고 선택한 버튼 방식으로 시작·멈춤·다시를 조작하게 해.' },
+        { id: 'stopwatch', label: '스톱워치', icon: '⏱️', promptFragment: '0부터 시간이 올라가는 스톱워치를 만들어. 분:초를 보여주고 선택한 버튼 방식으로 시작·멈춤·다시를 조작하게 해.' },
         { id: 'alarm', label: '알람 시계', icon: '⏰', promptFragment: '지금 시각을 보여주고, 정한 시각이 되면 알려주는 알람 시계를 만들어. 알람 시각을 정하는 부분을 넣어.' },
       ],
     },
@@ -75,6 +75,7 @@ export const clock: ProgramType = {
       id: 'seconds',
       role: 'output',
       question: '초까지 보여줄까?',
+      showIf: (a) => a.kind === 'clock' || a.kind === 'alarm',
       options: [
         { id: 'yes', label: '시:분:초 다 보여줘', icon: '⏱️', promptFragment: '시간을 시:분:초까지 모두 보여줘.' },
         { id: 'no', label: '시:분만 크게', icon: '🕐', promptFragment: '시간을 시:분만 크게 보여줘(초는 생략).' },
@@ -99,6 +100,7 @@ export const clock: ProgramType = {
       id: 'sound',
       role: 'sound',
       question: '알림 소리는 어떻게 할까?',
+      showIf: (a) => a.kind === 'timer' || a.kind === 'alarm',
       options: [
         { id: 'dingdong', label: '딩동', icon: '🔔', promptFragment: '알릴 때 Web Audio API로 만든 "딩동" 소리를 내줘.' },
         { id: 'beep', label: '삐삐', icon: '📟', promptFragment: '알릴 때 Web Audio API로 만든 "삐삐" 알람 소리를 내줘.' },
@@ -111,6 +113,7 @@ export const clock: ProgramType = {
       id: 'controls',
       role: 'control',
       question: '버튼은 어떻게 할까?',
+      showIf: (a) => a.kind === 'timer' || a.kind === 'stopwatch',
       options: [
         { id: 'three', label: '시작·멈춤·다시', icon: '🎛️', promptFragment: '시작·멈춤·다시 버튼을 또렷하게 각각 넣어.' },
         { id: 'onebig', label: '큰 버튼 하나로', icon: '🔘', promptFragment: '누를 때마다 시작↔멈춤이 바뀌는 큰 버튼 하나와, 다시(리셋) 버튼을 넣어.' },
@@ -121,12 +124,13 @@ export const clock: ProgramType = {
       id: 'extra',
       role: 'output',
       question: '더 넣을 기능이 있을까? (여러 개 OK)',
+      showIf: (a) => a.kind === 'timer' || a.kind === 'stopwatch',
       multi: true,
       options: [
         { id: 'bar', label: '진행 막대바', icon: '📊', promptFragment: '남은 시간이나 지난 시간을 보여주는 진행 막대바를 함께 넣어.' },
         { id: 'colorchange', label: '시간 따라 색 변하기', icon: '🌈', promptFragment: '시간이 줄거나 늘수록 화면 색이 점점 변하게 해.' },
         { id: 'cheer', label: '응원 문구', icon: '💬', promptFragment: '"조금만 더!" 같은 응원 문구를 가끔 보여줘.' },
-        { id: 'lap', label: '기록 남기기', icon: '📝', promptFragment: '"기록" 버튼으로 그때의 시간을 목록에 남기게 해.' },
+        { id: 'lap', label: '시간 표시 메모하기', icon: '📝', promptFragment: '"기록" 버튼으로 타이머는 현재 남은 시간, 스톱워치는 현재 지난 시간을 그 자리에서 목록에 남기게 해.' },
         { id: 'none', label: '없어도 돼', icon: '👍', promptFragment: '진행 막대·색 변화·응원 문구·기록 기능을 넣지 마.', exclusive: true },
       ],
     },
