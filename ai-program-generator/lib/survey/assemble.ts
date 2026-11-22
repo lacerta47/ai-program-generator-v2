@@ -42,6 +42,13 @@ export function assemblePrompt(type: ProgramType, answers: SurveyAnswers): strin
   if (designSelections.length) {
     parts.push(`[학생이 고른 디자인]\n자동 디자인 프리셋보다 아래 선택을 우선하세요.\n${designSelections.join('\n')}`);
   }
+  if (type.id === 'roulette') {
+    const stopEffects = type.steps.find(step => step.id === 'stopfx');
+    const hasWinSound = stopEffects && selectedOptions(type, stopEffects, answers).some(option => option.id === 'cheer');
+    parts.push(hasWinSound
+      ? '[당첨 소리: 켜기] 멈춘 뒤 한 번만 재생해. 돌 때 소리 설정과 별개야.'
+      : '[당첨 소리: 끄기] 당첨용 오디오 함수나 재생 호출을 만들지 마. 회전 중 소리와 시각 효과만 각 선택에 맞춰.');
+  }
   return parts.join(' ');
 }
 

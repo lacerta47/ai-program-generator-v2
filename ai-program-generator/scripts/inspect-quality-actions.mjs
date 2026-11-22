@@ -3,6 +3,7 @@ import { readdirSync, readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { createServer } from 'node:http';
 import { createRequire } from 'node:module';
+import { hasQuizTimer, inspectQuiz, inspectRouletteSpins } from './quality-action-checks.mjs';
 const require = createRequire(import.meta.url);
 const { chromium } = require('C:/Users/amh47/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright');
 const dir = resolve(process.argv[2]);
@@ -25,23 +26,25 @@ try {
     while (next < files.length) {
       const file = files[next++];
       const id = file.slice(0, -5);
+      const row = JSON.parse(readFileSync(resolve(dir, file), 'utf8'));
+      const inspectionVersion = ['quiz', 'roulette'].includes(row.type) ? 15 : 12;
       const output = resolve(dir, `${id}.actions.json`);
       if (existsSync(output)) {
         const saved = JSON.parse(readFileSync(output, 'utf8'));
-        if (saved.inspectionVersion === 12 && (!id.startsWith('maze-') || saved.mazeAutoPlay)) continue;
+        if (saved.inspectionVersion === inspectionVersion && (!id.startsWith('maze-') || saved.mazeAutoPlay)) continue;
       }
-      const row = JSON.parse(readFileSync(resolve(dir, file), 'utf8'));
       if (!row.code) continue;
       const c = row.code;
       docs.set(id, `<!doctype html><html lang="ko"><meta charset="utf-8"><style>${c.css}</style><body>${c.html}<script>${c.javascript}</script></body></html>`);
       const context = await browser.newContext({ viewport: { width: 1200, height: 900 }, acceptDownloads: false });
-      const result = { id, inspectionVersion: 12, errors: [], actions: [], incomplete: false };
+      const result = { id, inspectionVersion, errors: [], actions: [], incomplete: false };
       let stage = 'load', timer;
       await context.route('**/*', route => {
         const url = new URL(route.request().url());
         return url.protocol === 'http:' && ['localhost', '127.0.0.1'].includes(url.hostname) && url.port === String(server.address().port) && route.request().method() === 'GET' ? route.continue() : route.abort();
       });
       const page = await context.newPage();
+      if (row.type === 'quiz' && hasQuizTimer(row.answers ?? {})) await page.clock.install();
       page.on('pageerror', e => result.errors.push({ stage, message: e.message }));
       page.on('dialog', d => d.dismiss());
       async function work() {
@@ -82,26 +85,13 @@ try {
               contractError('pointer', '고정 포인터가 원판 12시 방향에서 아래쪽을 향하지 않음');
             }
           }
-          if (result.rouletteContract.result) {
-            const before = (await display.innerText({ timeout: 500 })).trim();
-            const namedSpinButton = frame.locator('#spin-button:visible, button[id*="spin" i]:visible, [role=button][id*="spin" i]:visible, button[class*="spin" i]:visible').first();
-            const labeledSpinButton = frame.locator('button:visible, [role=button]:visible, [onclick]:visible').filter({ hasText: /돌리|뽑|출발|시작|spin/i }).first();
-            const trigger = await namedSpinButton.count() ? namedSpinButton : await labeledSpinButton.count() ? labeledSpinButton : wheel;
-            if (!await trigger.count()) contractError('result', '룰렛을 시작할 조작 요소가 없음');
-            else {
-              try { await trigger.click({ timeout: 1000 }); } catch { contractError('result', '룰렛 시작 조작 실패'); }
-              let after = before;
-              for (let i = 0; i < 24 && (after === before || !/당첨 결과\s*:/.test(after)); i++) {
-                await page.waitForTimeout(250);
-                after = (await display.innerText({ timeout: 500 })).trim();
-              }
-              const resultBox = await display.boundingBox({ timeout: 500 }).catch(() => null);
-              const visible = resultBox && resultBox.width > 0 && resultBox.height > 0 && resultBox.y < 900 && resultBox.y + resultBox.height > 0;
-              Object.assign(result.rouletteContract, { before, after, changed: after !== before, visible: Boolean(visible) });
-              if (after === before || !/당첨 결과\s*:/.test(after)) contractError('result', '6초 안에 명시적인 당첨 결과가 표시되지 않음');
-              if (!visible) contractError('result', '당첨 결과 영역이 현재 화면에 보이지 않음');
-            }
+          if (result.rouletteContract.wheel && result.rouletteContract.pointer && result.rouletteContract.result) {
+            result.rouletteContract.spins = await inspectRouletteSpins(frame, page, row.answers ?? {}, contractError);
           }
+        }
+        if (row.type === 'quiz') {
+          stage = 'quiz-lifecycle';
+          result.quizContract = await inspectQuiz(frame, page, row.answers ?? {}, contractError);
         }
         if (row.type === 'game') {
           stage = 'game-lifecycle';

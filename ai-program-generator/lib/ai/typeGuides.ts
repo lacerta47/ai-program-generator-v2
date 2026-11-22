@@ -153,10 +153,45 @@ const PAINT_GUIDE = `
 
 const QUIZ_GUIDE = `
 
-**퀴즈 확인 버튼 규칙 (반드시 지킬 것)**:
-1. 퀴즈는 격리된 미리보기에서 실행되므로 HTML form 제출에 의존하지 마세요. 확인 버튼은 \`type="button"\`으로 만들고 \`click\` 이벤트에서 직접 답을 채점하세요. \`type="submit"\`과 form의 \`submit\` 이벤트를 사용하지 마세요.
-2. 직접 입력형이면 답이 비어 있을 때 확인 버튼을 눌러도 화면에 \`답을 먼저 써 주세요.\`를 표시하세요. 답이 있으면 채점 결과와 다음 문제로 넘어가는 버튼을 표시하세요. 입력칸의 Enter 키도 같은 채점 함수를 호출하세요.
-3. 보기 선택형이면 선택지를 고르지 않은 확인 클릭에는 선택 안내를 표시하고, 고른 뒤에는 같은 채점 함수로 정오답을 판정하세요.`;
+**퀴즈 실행 기준**:
+- CSS에 \`[hidden] { display: none !important; }\`를 반드시 넣으세요. 정답 안내·다음 버튼·종료 카드는 처음에 숨기고 필요한 단계에서만 \`hidden\`을 해제하세요. 카드의 flex/grid 스타일이 숨김 상태를 덮어쓰면 첫 화면에 종료 결과가 잘못 보입니다.
+- 확인은 \`type="button"\`으로 만들고 form의 \`submit\` 이벤트를 사용하지 마세요. \`quiz-confirm\`은 빈 답일 때도 누를 수 있어야 합니다. 문제는 \`quiz-question\`, 입력은 \`quiz-answer\`, 보기 버튼은 \`data-quiz-option\`입니다.
+- 선택 즉시 채점하지 마세요. 아래 채점 흐름 하나를 확인 버튼, 직접 입력 Enter, 시간 종료에서 공통으로 사용하세요. \`feedback\`, \`correction\`, \`explanation\`, \`nextButton\`은 각각 \`quiz-feedback\`, \`quiz-correction\`, \`quiz-explanation\`, \`quiz-next\` 요소입니다. \`readAnswer\`는 고른 보기 또는 입력값, \`currentQuestion\`은 현재 문항, \`recordAnswer\`는 점수·선택된 목숨 처리입니다. 필요한 함수와 변수를 같은 스크립트 안에 정의하세요.
+\`\`\`
+function normalizeQuizAnswer(value) {
+  return String(value ?? '').normalize('NFKC').trim().toLowerCase();
+}
+function submitQuiz(timedOut) {
+  if (graded) return;
+  const answer = normalizeQuizAnswer(readAnswer());
+  feedback.hidden = false;
+  if (!timedOut && !answer) {
+    feedback.dataset.quizState = 'empty';
+    correction.textContent = answerInput ? '답을 먼저 써 주세요.' : '답을 먼저 골라 주세요.';
+    explanation.textContent = '';
+    nextButton.hidden = true;
+    return;
+  }
+  graded = true;
+  clearInterval(timerId);
+  const item = currentQuestion();
+  const correct = !timedOut && answer === normalizeQuizAnswer(item.answer);
+  feedback.dataset.quizState = timedOut ? 'timeout' : correct ? 'correct' : 'incorrect';
+  const message = timedOut ? '시간이 다 됐어요.' : correct ? '맞았어요!' : '아쉬워요.';
+  correction.textContent = message + ' 정답: ' + item.answer;
+  explanation.textContent = item.explanation;
+  nextButton.hidden = false;
+  recordAnswer(correct);
+}
+confirmButton.addEventListener('click', () => submitQuiz(false));
+answerInput?.addEventListener('keydown', event => {
+  if (event.key !== 'Enter' || event.isComposing || event.repeat) return;
+  event.preventDefault();
+  submitQuiz(false);
+});
+\`\`\`
+- 시간 종료는 \`submitQuiz(true)\`를 한 번 부릅니다. 다음 버튼을 눌러야 문제·차례가 바뀝니다. 마지막·목숨 소진 때는 정답을 읽은 뒤 ‘결과 보기’로 넘어갑니다. 결과는 \`quiz-finish\`, 다시하기는 \`quiz-restart\`. 다음·다시하기 때 이전 타이머를 지우고 \`graded=false\`와 빈 답으로 시작하세요.
+- \`quiz-feedback\`에는 \`aria-live="polite"\`를 붙이세요. 문제마다 정답 하나와 검증 가능한 쉬운 설명 한 문장을 준비하세요. 보기는 중복 금지, 뺄셈은 음수 답 금지, 곱셈은 고른 범위 안의 한 자리 피연산자입니다. 동작 줄이기에서는 깜빡임 대신 강조색을 사용하세요.`;
 
 // 소리 규칙도 반복 재생에서 실제로 필요한 수명주기만 남긴다.
 const USER_GESTURE_AUDIO_GUIDE = `
@@ -181,15 +216,36 @@ const AQUARIUM_GUIDE = `
 // 화면 위로 잘리는 문제가 확인됐다. 디자인은 제한하지 않고 박스 모델과 흐름 배치만 고정한다.
 const ROULETTE_GUIDE = `
 
-**룰렛 모바일 배치 규칙 (반드시 지킬 것)**:
-1. CSS 첫 부분에 \`*, *::before, *::after { box-sizing: border-box; }\`를 넣으세요. 원판의 테두리까지 지정한 너비와 높이 안에 포함해야 합니다.
-2. 제목·원판·돌리기 버튼·결과·항목 목록은 문서 흐름에 위에서 아래로 배치하세요. 제목·버튼·결과에 \`position: absolute\`를 쓰지 마세요.
-3. 원판을 감싼 요소는 \`width: min(72vw, 42vh, 320px)\`, \`aspect-ratio: 1\`, \`position: relative\`, \`flex: 0 0 auto\`로 만드세요. 원판 자체는 \`width: 100%\`, \`height: 100%\`로 하고 고정 px 너비를 다시 주지 마세요.
-4. 포인터가 원판 위로 나오는 높이만큼 원판 감싼 요소 위에 최소 32px 여백을 두세요. 포인터에 음수 top을 쓰더라도 제목이나 화면 위쪽과 겹치거나 잘리면 안 됩니다.
-5. 포인터는 \`#roulette-pointer\` 한 개만 사용하세요. 원판·원판 감싼 요소의 \`::before\`·\`::after\`로 포인터, 추가 원, 타원, 테두리 장식을 만들지 마세요.
-6. 앱의 가장 바깥 컨테이너는 \`width: min(100%, 600px)\`, \`margin-inline: auto\`, 모바일 좌우 padding 16px 이상으로 만드세요. \`width: 90%\`와 고정 padding·margin을 더해 화면 폭을 넘기지 마세요.
-7. 390px 화면에서 제목·포인터·원판·버튼·\`#roulette-result\`가 좌우 또는 위쪽으로 잘리지 않아야 하고 문서의 가로 스크롤이 생기면 안 됩니다.
-8. 멈춘 뒤 결과 문장은 다른 표현으로 바꾸지 말고 반드시 정확히 \`당첨 결과: 항목명\` 형식으로 표시하세요.`;
+**룰렛 실행 기준**:
+- \`box-sizing: border-box\`를 적용하고 제목→원판→조작→결과→범례를 문서 흐름에 배치하세요. 바깥 폭은 \`min(100%, 600px)\`, 모바일 좌우 여백은 최소 16px입니다. 원판을 감싼 요소는 \`width: min(72vw, 42vh, 320px)\`의 정사각형, \`position: relative\`, 위에 최소 32px 여백. 포인터는 12시에 고정하고 가상요소로 추가 원, 타원, 포인터를 만들지 마세요. 390px 화면에서도 잘림이나 가로 스크롤이 없어야 합니다.
+- 그리는 순서와 결과 목록의 순서를 하나로 사용하세요. i번째 칸과 번호의 중심은 시계방향으로 \`i * (360 / 개수)\`도입니다. 0번 칸 중심을 12시에 두고 경계는 중심의 양쪽 반 칸씩 그리세요. 예를 들어 conic-gradient는 \`from -(180 / 개수)deg\`에서 시작합니다.
+- 아래의 \`wheel\`은 \`roulette-wheel\`, \`result\`는 당첨 문구만 넣는 \`roulette-result\`입니다. 처음 원판의 \`data-spin-count\`는 0. 돌리기와 다시 돌리기는 같은 \`spinTo\`를 사용하고, 회전 중 새 입력·명단 변경을 막으세요.
+\`\`\`
+let rotation = 0;
+let spinning = false;
+function spinTo(index, items, durationMs) {
+  if (spinning || !items.length || index < 0 || index >= items.length) return;
+  spinning = true;
+  const center = index * (360 / items.length);
+  const advance = ((-center - rotation) % 360 + 360) % 360;
+  rotation += 1080 + advance;
+  const transform = 'rotate(' + rotation + 'deg)';
+  const ms = matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : durationMs;
+  wheel.style.transition = ms ? 'transform ' + ms + 'ms ease-out' : 'none';
+  wheel.style.transform = transform;
+  function finishSpin() {
+    wheel.style.transition = 'none';
+    wheel.style.transform = transform;
+    result.textContent = '당첨 결과: ' + items[index];
+    wheel.dataset.spinCount = String(Number(wheel.dataset.spinCount) + 1);
+    spinning = false;
+  }
+  if (ms) setTimeout(finishSpin, ms);
+  else finishSpin();
+}
+\`\`\`
+- \`durationMs\`는 5초 이내, 결과 형식은 \`당첨 결과: 항목명\`입니다. 축하·확대·흔들림은 원판을 감싼 요소나 범례에서만 실행해 원판의 transform을 덮어쓰지 마세요. 회전음·당첨음은 각각 선택했을 때만 사용하세요.
+- 제외나 목록 변경은 회전 전에 원판과 범례를 같은 목록으로 다시 그리세요. 인원 수 모드는 처음부터 그 목록을 1번부터 6번으로 시작하고 인원 변경 시 같은 규칙으로 다시 만드세요. 명단 추가는 \`type="button"\` 클릭 또는 입력칸 Enter에서 같은 함수를 호출하고 form 제출에 의존하지 마세요.`;
 
 // 신규 게임 6종 90회 점검에서, 성공작은 핵심 동작보다 장식을 먼저 늘릴 이유가 없었고
 // 블록 쌓기 3건은 빈 보드 상태에서 첫 draw/render를 호출해 같은 런타임 오류가 났다.
