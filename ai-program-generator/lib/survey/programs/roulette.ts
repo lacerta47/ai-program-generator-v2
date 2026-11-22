@@ -8,16 +8,15 @@ export const roulette: ProgramType = {
     '버튼을 누르면 빙글빙글 돌다가 멈추며 하나를 뽑아주는 룰렛 웹 프로그램을 만들어줘. 칸에는 예시 항목을 미리 채워 넣고, 아이들이 켜자마자 바로 돌릴 수 있게 완성형으로 만들어.\n' +
     // 회전 텍스트·포인터 방향·결과 가시성이 자주 깨진다. 가장 단순한 고정 계약으로 유도하고 자동 검사도 같은 ID를 사용한다.
     '**룰렛 표시와 당첨 계약 — 반드시 지킬 것**:\n' +
-    '- 회전하는 원판은 `id="roulette-wheel"`, 고정 포인터는 `id="roulette-pointer"`, 결과 영역은 `id="roulette-result"`를 사용해. 세 요소를 모두 반드시 만들어.\n' +
+    '- 회전하는 원판은 `id="roulette-wheel"`, 고정 포인터는 `id="roulette-pointer"`, 결과 영역은 `id="roulette-result"`, 돌리기 버튼은 `id="roulette-spin"`으로 만들어.\n' +
     '- 포인터는 원판 바깥 12시 방향 가운데에 고정하고 원판과 함께 회전시키지 마. 삼각형 끝이 아래쪽, 즉 원판 중심을 정확히 향해야 해. CSS 삼각형이면 위쪽 테두리(border-top)에 색을 넣어 아래를 향하게 하고 `data-direction="down"`도 붙여.\n' +
     '- 당첨 칸 계산은 포인터가 가리키는 12시 방향을 기준으로 해. 눈에 보이는 칸과 계산된 결과가 반드시 같아야 해.\n' +
     '- 결과 영역에는 처음에 짧은 안내를 보여주고, 5초 안에 회전을 끝낸 뒤 `당첨 결과: 항목명`을 24px 이상의 큰 글자로 바꿔 보여줘. `aria-live="polite"`를 붙여. 결과를 팝업이나 색종이 뒤에 가리지 마.\n' +
     '- 원판 크기는 `min(72vw, 42vh, 320px)` 안에서 반응형으로 잡고, 작은 화면에서도 제목·원판·돌리기 버튼·결과가 보이게 해. `body`에 `overflow: hidden`을 쓰지 마.\n' +
     '**룰렛 한글 글자 배치 — 반드시 지킬 것**:\n' +
     '- 항목 이름은 절대 회전시키지 마. 모든 글자는 똑바로(수평으로) 읽혀야 해. 이게 가장 중요해.\n' +
-    '- 가장 안전한 방법(권장): 원판 칸은 색(원하면 1,2,3… 번호)만 넣어 단순하게 그리고, 항목 이름 전체는 원판 옆이나 아래에 번호와 함께 세로로 나열한 가로 목록(범례)으로 보여줘. 예: "① 김밥  ② 라면  ③ 피자 …". 그리고 룰렛이 멈추면 뽑힌 항목을 화면에 큰 글씨로 똑바로 보여줘.\n' +
-    '- 칸 안에 직접 이름을 넣고 싶으면, HTML 글자를 각 칸 위치(중심에서 바깥쪽)에 놓되 회전(transform: rotate)을 쓰지 말고 수평 그대로 둬. 여러 칸 글자가 겹치거나 중앙에 뭉치지 않게 해.\n' +
-    '- canvas에 글자를 회전시켜 그리지 마.',
+    '- 원판에는 색과 번호만 쓰고, 항목 이름은 수평으로 읽을 수 있는 범례에 표시해. 칸 중심 방향의 번호를 원판과 함께 도는 실제 DOM/SVG 요소로 그려 번호 N에 `data-roulette-slot="N"`을 붙여. `id="roulette-legend"` 목록의 각 줄에 `data-roulette-item="N"`을 붙이고 이름만 담은 안쪽 요소에 `data-roulette-label`을 붙여. 번호는 회전마다 1부터 연속으로 배정해.\n' +
+    '- 고정 칸 모드의 예시 항목 수는 고른 칸 수에 맞춰 줄이거나 보충해. 명단을 바꾸는 모드는 실제 항목 수에 맞춰 칸·번호·범례를 함께 갱신해. 원판 위 글자와 번호는 겹치지 않게 해.',
   buildName: (a) => {
     const labels: Record<string, string> = {
       lunch: '점심 메뉴 룰렛',
@@ -40,7 +39,7 @@ export const roulette: ProgramType = {
       question: '어떤 때 쓸 룰렛이야?',
       options: [
         { id: 'lunch', label: '점심 메뉴', icon: '🍱', promptFragment: '점심 메뉴 뽑기 룰렛이야. 칸에 김밥·라면·피자·치킨·볶음밥·떡볶이를 채워줘.' },
-        { id: 'name', label: '이름 뽑기', icon: '👤', promptFragment: '이름 뽑기 룰렛이야. 칸에 다빈·수아·지호·민준·예린·태양을 채워줘.' },
+        { id: 'name', label: '이름 뽑기', icon: '👤', promptFragment: '이름 뽑기 룰렛이야. 처음 채울 항목과 칸 수는 고른 명단 입력 방식에 맞춰.' },
         { id: 'snack', label: '간식 뽑기', icon: '🍭', promptFragment: '간식 뽑기 룰렛이야. 칸에 아이스크림·과자·젤리·초콜릿·팝콘·사탕을 채워줘.' },
         { id: 'game', label: '게임 정하기', icon: '🎮', promptFragment: '게임 정하기 룰렛이야. 칸에 보드게임·술래잡기·숨바꼭질·달리기·공기·고무줄을 채워줘.' },
         { id: 'task', label: '오늘의 할 일', icon: '📋', promptFragment: '오늘 할 일 뽑기 룰렛이야. 칸에 책 읽기·운동하기·그림 그리기·청소하기·일기 쓰기·악기 연습을 채워줘.' },
@@ -58,22 +57,22 @@ export const roulette: ProgramType = {
       showIf: (a) => a.use === 'name',
       options: [
         { id: 'preset', label: '미리 적혀있게', icon: '📝', promptFragment: '이름은 미리 적힌 예시 이름을 사용해.' },
-        { id: 'type', label: '직접 타이핑', icon: '⌨️', promptFragment: '이름을 직접 타이핑해서 추가하고 삭제할 수 있는 입력 칸을 넣어줘.' },
-        { id: 'count', label: '숫자로 인원 수', icon: '🔢', promptFragment: '인원 수를 숫자로 입력하면 번호가 자동으로 칸에 채워지게 해줘.' },
+        { id: 'type', label: '직접 타이핑', icon: '⌨️', promptFragment: '이름을 입력해 추가하거나 삭제할 수 있게 해. 추가는 type="button"의 클릭과 입력칸 Enter에서 같은 함수를 호출해. form 제출을 사용하지 마. 예시 이름은 고른 최대 인원 이하로 넣고 실제 명단의 사람 수에 맞춰 칸을 다시 그려. 두 명 미만이면 먼저 이름을 더 넣으라고 알려줘.' },
+        { id: 'count', label: '숫자로 인원 수', icon: '🔢', promptFragment: '처음부터 이름 대신 번호 1번부터 6번을 채워 돌릴 수 있게 해. 2부터 30까지의 정수를 입력하면 1번부터 입력한 수까지 칸을 다시 채워. 범위 밖이나 소수에는 쉬운 안내를 보여줘.' },
       ],
     },
 
-    // Step 3 — 몇 명 (Chain B: namemethod==='type' 일 때) [2-level chain 완성]
+    // Step 3 — 직접 입력 명단의 최대 인원
     {
       id: 'namecount',
       role: 'goal',
-      question: '보통 몇 명을 뽑아?',
-      showIf: (a) => a.namemethod === 'type',
+      question: '이름을 몇 명까지 넣을까?',
+      showIf: (a) => a.use === 'name' && a.namemethod === 'type',
       options: [
-        { id: 'n5', label: '5명 이하', icon: '🖐️', promptFragment: '이름 칸은 최대 5개까지 입력할 수 있게 해줘.' },
-        { id: 'n10', label: '6~10명', icon: '🔟', promptFragment: '이름 칸은 최대 10개까지 입력할 수 있게 해줘.' },
-        { id: 'n20', label: '11~20명', icon: '2️⃣', promptFragment: '이름 칸은 최대 20개까지 입력할 수 있게 해줘.' },
-        { id: 'n30', label: '20명 이상', icon: '🏫', promptFragment: '이름 칸은 최대 30개까지 입력할 수 있게 해줘.' },
+        { id: 'n5', label: '최대 5명', icon: '🖐️', promptFragment: '이름 칸은 최대 5개까지 입력할 수 있게 해줘.' },
+        { id: 'n10', label: '최대 10명', icon: '🔟', promptFragment: '이름 칸은 최대 10개까지 입력할 수 있게 해줘.' },
+        { id: 'n20', label: '최대 20명', icon: '2️⃣', promptFragment: '이름 칸은 최대 20개까지 입력할 수 있게 해줘.' },
+        { id: 'n30', label: '최대 30명', icon: '🏫', promptFragment: '이름 칸은 최대 30개까지 입력할 수 있게 해줘.' },
       ],
     },
 
@@ -82,6 +81,7 @@ export const roulette: ProgramType = {
       id: 'slots',
       role: 'appearance',
       question: '칸을 몇 개 만들까?',
+      showIf: (a) => a.use !== 'name' || a.namemethod === 'preset',
       options: [
         { id: 's4', label: '4칸 (적게)', icon: '4️⃣', promptFragment: '룰렛 칸을 4개로 만들어.' },
         { id: 's6', label: '6칸 (보통)', icon: '6️⃣', promptFragment: '룰렛 칸을 6개로 만들어.' },
@@ -127,7 +127,7 @@ export const roulette: ProgramType = {
         { id: 'tick', label: '틱틱 소리', icon: '🎵', promptFragment: '룰렛이 돌아갈 때 Web Audio로 틱틱 소리가 나게 해.' },
         { id: 'whirl', label: '윙~ 소리', icon: '💨', promptFragment: '룰렛이 돌아갈 때 Web Audio로 윙윙 소리가 나게 해.' },
         { id: 'drum', label: '두구두구 소리', icon: '🥁', promptFragment: '룰렛이 돌아갈 때 Web Audio로 두구두구 드럼 소리가 나게 해.' },
-        { id: 'none', label: '조용하게', icon: '🔇', promptFragment: '룰렛이 돌거나 멈출 때 음악·효과음을 넣지 마.' },
+        { id: 'none', label: '도는 동안 조용하게', icon: '🔇', promptFragment: '룰렛이 도는 동안에는 음악·효과음을 넣지 마.' },
       ],
     },
 
@@ -136,7 +136,7 @@ export const roulette: ProgramType = {
       id: 'soundmood',
       role: 'sound',
       question: '어떤 느낌 소리가 좋아?',
-      showIf: (a) => a.spinsound !== 'none',
+      showIf: (a) => a.spinsound === 'tick' || a.spinsound === 'whirl' || a.spinsound === 'drum',
       options: [
         { id: 'fun', label: '신나게', icon: '🥳', promptFragment: 'Web Audio 효과음을 신나고 경쾌한 느낌으로 만들어.' },
         { id: 'tense', label: '긴장감 있게', icon: '😬', promptFragment: 'Web Audio 효과음을 긴장감 있고 스릴 있는 느낌으로 만들어.' },
@@ -163,11 +163,11 @@ export const roulette: ProgramType = {
     {
       id: 'bigshow',
       role: 'output',
-      question: '뽑힌 사람 이름을 크게 보여줄까?',
+      question: '당첨 결과에 축하 효과를 더할까?',
       showIf: (a) => a.use === 'name',
       options: [
-        { id: 'yes', label: '응, 크게!', icon: '🎤', promptFragment: '뽑힌 이름을 화면 한가운데에 아주 크게 잠깐 보여줘.' },
-        { id: 'no', label: '아니, 칸에만', icon: '🙂', promptFragment: '뽑힌 이름을 화면 가운데에 별도로 크게 펼쳐 보이지 마.' },
+        { id: 'yes', label: '응, 축하해요!', icon: '🎤', promptFragment: '당첨 문장은 그대로 두고, 결과 옆에서 결과를 가리지 않는 축하 효과를 보여줘.' },
+        { id: 'no', label: '결과만 볼래요', icon: '🙂', promptFragment: '당첨 결과는 항상 보여주고, 이름을 따로 보여주는 축하 화면은 만들지 마.' },
       ],
     },
 
@@ -176,9 +176,9 @@ export const roulette: ProgramType = {
       id: 'celebrate',
       role: 'output',
       question: '축하를 어떻게 보여줄까?',
-      showIf: (a) => a.bigshow === 'yes',
+      showIf: (a) => a.use === 'name' && a.bigshow === 'yes',
       options: [
-        { id: 'overlay', label: '화면 전체에 크게', icon: '📺', promptFragment: '뽑힌 이름을 화면 전체를 가리는 팝업에 크게 보여줘.' },
+        { id: 'overlay', label: '결과를 더 크게', icon: '📺', promptFragment: '당첨 결과 문장의 글씨를 더 크게 보여줘. 화면을 가리는 팝업이나 결과에 추가 문구는 넣지 마.' },
         { id: 'banner', label: '위에서 배너로', icon: '🎏', promptFragment: '뽑힌 이름이 위에서 아래로 내려오는 배너 형태로 보여줘.' },
         { id: 'emoji', label: '이모지 폭탄', icon: '🎆', promptFragment: '뽑힌 이름 주위에 이모지와 별이 폭발하듯 터지는 효과를 넣어.' },
         { id: 'glow', label: '빛나는 글씨', icon: '💡', promptFragment: '뽑힌 이름이 빛나고 커졌다 작아지는 애니메이션으로 보여줘.' },
@@ -191,8 +191,8 @@ export const roulette: ProgramType = {
       role: 'output',
       question: '다시 돌리기 버튼을 넣을까?',
       options: [
-        { id: 'yes', label: '응, 넣어줘', icon: '🔄', promptFragment: '결과 아래에 다시 돌리기 버튼을 넣어.' },
-        { id: 'exclude', label: '뽑힌 건 빼고 다시', icon: '❌', promptFragment: '결과 아래에 "다시 돌리기" 버튼을 넣어. 뽑힌 항목은 자동으로 제외돼.' },
+        { id: 'yes', label: '응, 넣어줘', icon: '🔄', promptFragment: '결과 아래에 다시 돌리기 버튼(id="roulette-again")을 넣어. 같은 항목도 다시 뽑힐 수 있어.' },
+        { id: 'exclude', label: '뽑힌 건 빼고 다시', icon: '❌', promptFragment: '결과 아래에 다시 돌리기 버튼(id="roulette-again")을 넣어. 다음 회전을 시작할 때 직전 당첨 항목 하나를 빼고 원판과 범례를 다시 만들어. 마지막 항목까지 뽑으면 종료 안내와 처음부터 버튼을 보여줘.' },
         { id: 'no', label: '룰렛 다시 누르면 돌아가요', icon: '👆', promptFragment: '별도의 다시 돌리기 버튼을 넣지 말고, 룰렛 자체를 다시 누르면 돌아가게 해.' },
       ],
     },

@@ -6,8 +6,8 @@ export const quiz: ProgramType = {
   label: '퀴즈',
   icon: '❓',
   basePrompt:
-    '문제를 하나씩 보여주고 보기 중에 답을 고르면 맞았는지 알려주는 퀴즈 게임 웹 프로그램을 만들어줘. ' +
-    '점수를 세고 마지막에 결과를 보여줘. 문제는 예시로 충분히 채워 넣어. ' +
+    '고른 방식(보기 선택 또는 직접 입력)으로 문제를 하나씩 푸는 퀴즈 게임 웹 프로그램을 만들어줘. ' +
+    '답을 확인한 뒤 정답과 쉬운 설명을 보여주고, 마지막에 고른 방식으로 결과를 보여줘. ' +
     '켜자마자 바로 시작할 수 있는 완성형으로 만들어.',
   buildName: (a) =>
     typeof a.topic === 'string' && a.topic !== AI_PICK ? `${a.topic} 퀴즈` : '나의 퀴즈',
@@ -34,13 +34,13 @@ export const quiz: ProgramType = {
           id: '숫자',
           label: '숫자·계산',
           icon: '🔢',
-          promptFragment: '한 자리 수 더하기·빼기 같은 쉬운 수학 퀴즈로 채워줘.',
+          promptFragment: '고른 연산과 숫자 범위에 맞춘 쉬운 수학 퀴즈로 채워줘.',
         },
         {
           id: '우주',
           label: '우주·별',
           icon: '🚀',
-          promptFragment: '행성·달·별자리에 대한 쉬운 우주 퀴즈로 채워줘.',
+          promptFragment: '행성·달·별자리에 대한 쉬운 우주 퀴즈로 채워줘. 별자리와 별무리를 구별해. 북두칠성은 큰곰자리의 일부인 별무리야.',
         },
         {
           id: '공룡',
@@ -107,8 +107,9 @@ export const quiz: ProgramType = {
       role: 'rule',
       question: '얼마나 큰 숫자로 계산할까?',
       showIf: (a) =>
+        a.topic === '숫자' &&
         typeof a.mathtype === 'string' &&
-        ['add', 'sub', 'mix', 'mul'].includes(a.mathtype as string),
+        ['add', 'sub', 'mix', 'mul'].includes(a.mathtype),
       options: [
         {
           id: 'tiny',
@@ -202,7 +203,7 @@ export const quiz: ProgramType = {
           id: 'picture',
           label: '그림 보고 맞히기',
           icon: '🖼️',
-          promptFragment: '각 문제는 이모지를 크게 보여주고 그게 무엇인지 보기 중에 골라 답해.',
+          promptFragment: '고른 주제의 각 문제에 이해를 돕는 그림이나 이모지를 크게 보여주고, 보기 중에 답을 고르게 해.',
         },
       ],
     },
@@ -314,12 +315,12 @@ export const quiz: ProgramType = {
         },
       ],
     },
-    // STEP 9 — 제한 시간 경고 (timer≠no일 때) [Conditional]
+    // STEP 9 — 제한 시간을 직접 고른 경우의 경고
     {
       id: 'timer_warn',
       role: 'rule',
-      question: '시간이 얼마 남았을 때 경고를 줄까?',
-      showIf: (a) => a.timer !== 'no',
+      question: '5초 남았을 때 어떻게 알려줄까?',
+      showIf: (a) => a.timer === 'yes10' || a.timer === 'yes20' || a.timer === 'yes30',
       options: [
         {
           id: 'red',
@@ -410,7 +411,7 @@ export const quiz: ProgramType = {
           id: 'friend',
           label: '친구랑 번갈아',
           icon: '👫',
-          promptFragment: '두 사람이 번갈아 문제를 푸는 2인 대전 모드를 추가해. 각자 점수를 따로 세어 마지막에 누가 이겼는지 보여줘.',
+          promptFragment: '두 사람이 한 화면에서 번갈아 문제를 풀게 해. 고른 문제 수는 두 사람 합계야. 각자 점수를 따로 세어 마지막에 결과를 보여줘.',
         },
       ],
     },
@@ -428,10 +429,10 @@ export const quiz: ProgramType = {
         },
         {
           id: 'type',
-          label: '나는 어떤 타입?',
+          label: '도전 별명 받기',
           icon: '🔮',
           promptFragment:
-            '마지막에 점수 대신 "너는 호기심 대장!" 같은 타입 진단 결과 카드를 보여줘. 맞힌 개수 구간마다 다른 타입 이름과 한 줄 설명을 정해두고, 다시하기 버튼도 넣어.',
+            '마지막에 점수 대신 "호기심 대장!"처럼 이번 도전을 축하하는 별명 카드와 한 줄 응원을 보여줘. 다시하기 버튼도 넣어.',
         },
         {
           id: 'medal',

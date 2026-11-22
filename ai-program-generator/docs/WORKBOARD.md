@@ -4,6 +4,7 @@
 
 | 작업 | 담당 | 브랜치 | 상태 | 다음 행동·막힘 | Issue / PR |
 |---|---|---|---|---|---|
+| 퀴즈·룰렛 선택 충돌과 실행 검사 | Codex → Claude 리뷰 | codex/easy-quiz-roulette | 재검증 7/10, 남은 3건 수정 후 3/3 | [전후 판정](quiz-roulette-retest-20261122.md). PR에서 검토 | [#192](https://github.com/lacerta47/ai-program-generator-v2/issues/192) |
 | 브리지 모델·응답 증거·공통 지침 | Codex·Claude | main | #184·#186 반영 | 일반·높은 영향 호출 설정과 검토 SHA별 작업 트리는 활성화. Codex의 실제 응답 모델은 CLI 미제공 | [#184](https://github.com/lacerta47/ai-program-generator-v2/pull/184) · [#186](https://github.com/lacerta47/ai-program-generator-v2/pull/186) |
 | 협업·작업 교대 연습 | Codex ↔ Claude | codex/claude-cooperation-drill | 연습 완료·초안 검토 | 다음 작업은 해당 Issue에서 담당·검토 SHA를 확인. 역방향 Windows 파일 읽기 제한은 미해결 | [#189](https://github.com/lacerta47/ai-program-generator-v2/issues/189) · [초안 #190](https://github.com/lacerta47/ai-program-generator-v2/pull/190) |
 | 원본 다섯 작업 폴더 조사·로컬 보존 | Codex | codex/cooperation-rules | 백업 검증 완료 | 원본 전환·삭제는 범위 밖. 로컬 전용 자료는 유지 | [#176](https://github.com/lacerta47/ai-program-generator-v2/issues/176) |
