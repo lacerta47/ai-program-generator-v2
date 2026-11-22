@@ -132,7 +132,7 @@ const DRESSUP_GUIDE = `
 7. 안경·볼터치는 얼굴, 목도리·배지는 몸통 기준점에 배치하고 동시에 표시하는 소품은 최대 2개로 제한하세요. 반짝이는 \`layer-effects\`에 넣어 캐릭터 부품과 겹치지 않게 하세요.
 8. \`dressup-stage\`는 화면 가운데 너비 \`min(88vw, 420px)\`, 정사각형으로 두고 SVG는 그 안에서 전부 보여야 합니다. 어떤 부품도 viewBox 0~400 밖으로 나가거나 무대의 \`overflow: hidden\` 때문에 잘리면 안 됩니다.
 9. 모바일은 캐릭터 무대 다음에 조작부를 한 열로 배치하세요. 캐릭터보다 조작부가 더 넓거나 높아 보이지 않게 하고, 각 부품 선택지는 한 줄당 3개 이하로 정리하세요.
-10. 랜덤 버튼은 \`base\`, \`eyes\`, \`mouth\`, \`head\`, \`accessories\` 중 선택지가 2개 이상인 레이어만 후보로 삼으세요. 그중 서로 다른 3개를 먼저 고른 뒤 각 레이어에서 현재 값을 제외한 선택지 하나를 골라 바꾸세요. 배경·효과는 변경 개수에 포함하지 말고, 버튼을 연속으로 눌러도 매번 실제 SVG 부품 레이어 3개 이상이 달라져야 합니다. 초기화 버튼은 최초 상태의 깊은 복사본을 새 상태로 할당한 뒤 모든 SVG 레이어를 다시 그리고, 특정 레이어만이 아니라 모든 직접 선택 버튼의 \`aria-pressed\`와 모든 이전·다음 방식의 현재 미리보기·이름을 순회해 복원하세요. 초기화 렌더링에서는 반짝임처럼 \`layer-effects\`를 변경하는 함수를 호출하지 마세요.
+10. 랜덤 버튼은 \`base\`, \`eyes\`, \`mouth\`, \`head\`, \`accessories\` 중 선택지가 2개 이상인 레이어만 후보로 삼으세요. 그중 변경 가능한 레이어는 최대 3개까지 고른 뒤 각 레이어에서 현재 값을 제외한 선택지 하나를 골라 바꾸세요. 후보가 3개 이상이면 3개를 모두 변경하세요. 캐릭터 종류·사진 원본·배경·효과는 유지하고, 실제 부품 레이어와 선택 표시를 함께 갱신하세요. 초기화 버튼은 최초 상태의 깊은 복사본을 새 상태로 할당한 뒤 모든 SVG 레이어를 다시 그리고, 특정 레이어만이 아니라 모든 직접 선택 버튼의 \`aria-pressed\`와 모든 이전·다음 방식의 현재 미리보기·이름을 순회해 복원하세요. 초기화 렌더링에서는 반짝임처럼 \`layer-effects\`를 변경하는 함수를 호출하지 마세요.
 11. 캐릭터와 눈·입·머리 장식 선택을 먼저 완성한 뒤 소품·배경·반짝임·소리·완성 효과를 추가하세요. 핵심 꾸미기가 완성되지 않으면 부가 효과를 생략하세요.`;
 
 const PHOTO_DRESSUP_GUIDE = `
@@ -148,7 +148,7 @@ const PAINT_GUIDE = `
 
 **그림판 안정성 규칙 (반드시 지킬 것)**:
 1. 캔버스와 계획서에 필요한 도구만 먼저 완성하고, HTML에 실제로 만든 요소만 찾으세요. 함수 선언 → 캔버스·상태 준비 → 이벤트 연결 순서를 지키세요.
-2. 저장은 캔버스의 \`toDataURL('image/png')\`을 이용한 PNG 다운로드 버튼 하나로 만드세요. 계획서가 클립보드 복사·붙여넣기·메시지 보내기를 요구해도 미리보기에서는 지원하지 않으므로 모두 PNG 다운로드로 바꾸세요. \`navigator.clipboard\`·\`ClipboardItem\`·\`localStorage\`·\`sessionStorage\`·\`btoa\`를 사용하지 마세요.
+2. 저장을 선택했다면 캔버스의 \`toDataURL('image/png')\`으로 PNG를 만드세요. 격리 미리보기에서는 만든 PNG를 화면에 보여주고, 내려받은 작품 HTML을 브라우저에서 직접 연 경우에는 PNG를 파일로 저장할 수 있게 하세요. 계획서가 클립보드 복사·붙여넣기·메시지 보내기를 요구해도 PNG 결과로 바꾸세요. 저장하지 않기를 골랐다면 저장 버튼과 다운로드를 만들지 마세요. \`navigator.clipboard\`·\`ClipboardItem\`·\`localStorage\`·\`sessionStorage\`·\`btoa\`를 사용하지 마세요.
 3. 캔버스 너비와 높이를 1 이상으로 정한 뒤 픽셀을 읽으세요. \`getImageData\`는 너비와 높이가 모두 0보다 클 때만 호출하세요.
 4. Canvas의 색 속성과 \`addColorStop\`에는 유효한 색상 리터럴을 넣으세요. \`'var(--색상)'\` 문자열을 직접 넣지 마세요.
 5. SVG 아이콘 버튼은 글자를 별도 \`<span class="button-label">\`에 넣고 그 span만 바꾸세요. 버튼 전체의 \`textContent\`를 바꾸지 마세요.`;
@@ -301,6 +301,47 @@ const SURVEY_TYPE_GUIDES: Record<string, string> = {
   roulette: ROULETTE_GUIDE,
 };
 
+/** 선택지와 브라우저 핵심 동작 검사가 공유하는 유형별 제작 규칙. */
+const CORE_GUIDES: Readonly<Record<string, string>> = {
+  paint: `
+**그림판 조작 확인**:
+- 그림을 그리는 주 캔버스에 id="paint-canvas", 전체 지우기 버튼에 id="paint-clear", PNG를 골랐을 때만 저장 버튼에 id="paint-save", 결과 그림에 id="paint-png"를 붙이세요. Pointer Events 한 세트로 마우스와 터치를 처리하고, 캔버스의 표시 크기와 내부 해상도 비율로 좌표를 환산하세요. touch-action: none은 그리는 영역에만 적용하세요.
+- 전체 지우기는 처음 종이·색칠 도안은 유지하고 사용자가 그린 선만 모두 지우세요. 360px와 390px에서도 그림과 지우기 버튼을 모두 쓸 수 있어야 합니다.`,
+  game: `
+**게임 시작·종료 확인**:
+- 게임 영역 id="game-stage"에 실제 상태대로 data-game-state="ready|playing|ended" 중 하나를 표시하세요. 시작은 id="game-start", 종료 안내는 id="game-end", 그 안내에서 다시 시작하는 버튼은 id="game-restart"를 쓰세요.
+- 시작·다시하기는 모두 점수, 장애물, 입력 상태를 초기화하고 종료 안내를 숨기세요. 프레임 게임에서는 초기화 도중 기존 requestAnimationFrame을 취소했다면, 초기화와 playing 전환이 끝난 뒤 새 루프 첫 프레임을 반드시 예약하세요. 키보드와 화면 버튼이 실제로 움직임이나 진행을 바꿔야 합니다. 게임 중 시작을 중복 처리하지 마세요. 가위바위보 선택 버튼에는 data-rps-move="rock|paper|scissors"를 붙이세요. 카드 뒤집기·퍼즐 같은 장르도 완료 뒤 다시 처음부터 시작할 수 있어야 합니다.`,
+  card: `
+**카드 내용과 조작 확인**:
+- 첫 화면 id="card-preview" 안에 id="card-message"로 고른 용도에 맞는 읽을 수 있는 문장을 보여주세요. 이름 입력을 골랐으면 카드 안에 id="card-name" 입력, id="card-recipient" 이름 표시를 만들어 타이핑 즉시 반영하세요. 런타임에서 별도 개인정보나 파일 업로드를 요청하지 마세요.
+- 자기소개는 학생이 고른 항목만 별도 제목과 내용으로 보여주세요. 예를 들어 좋아하는 것만 골랐다면 꿈 항목을 덧붙이지 마세요. 움직임은 고른 장식에만 주고 본문과 첨부 사진은 고정하세요. 클릭 효과가 없어도 별도로 고른 음악은 사용자의 재생 조작으로만 켜세요.`,
+  calc: `
+**숫자놀이 계산·학습 확인**:
+- 계산기의 [적용 연산]에 나온 버튼과 연산만 제공하세요. 표시되지 않은 연산은 버튼·키보드 처리 모두에서 제외하고, 초기값이나 예시의 다른 연산도 가져오지 마세요. 화면은 id="calc-result", 숫자·연산·결과 버튼에는 data-calc-key(0~9, add, sub, mul, div, pct, equals)를 붙이세요. 퍼센트 버튼은 현재 입력값을 100으로 나눠 표시하세요. LED 모양을 골랐어도 현재 계산값은 #calc-result 안의 id="calc-result-value"에 완전한 숫자 텍스트로 매번 갱신하세요(예: 0.08, 16). 계산값은 스크린 리더가 알 수 있게 aria-live="polite" 안에 두고, 모양만 그리는 LED 도형은 aria-hidden="true"로 묶으세요. 숫자 텍스트를 화면에서 감추려면 1px 클리핑을 사용하세요. hidden, display:none 또는 aria-hidden으로 실제 값까지 감추지 마세요. eval 없이 계산하고 0으로 나누면 이해하기 쉬운 문구를 보여주세요.
+- 연습 모드에서는 id="calc-problem", id="calc-entry", id="calc-check", id="calc-feedback"를 문제·답 입력칸·확인 버튼·피드백에 붙이세요. 피드백에는 data-answer-status="idle|incorrect|correct"로 현재 채점 상태를 표시하세요. 문제·정답을 같은 데이터에서 만들고 빈 입력을 채점하지 마세요. 오답 뒤에도 같은 문제에 다시 답할 수 있게 하세요. 숫자 맞히기는 고른 힌트 방식만 적용하고, 소리 끄기를 골랐으면 정답과 오답도 화면으로만 알려주세요.`,
+  fortune: `
+**메시지 뽑기 결과 확인**:
+- id="fortune-draw" 버튼을 누르면 고른 개수(1·3·5개)의 서로 다른 결과를 id="fortune-results" 안에 표시하고, 각 결과에 data-fortune-message를 붙이세요. 여러 개면 실제로 하나를 선택할 수 있게 하세요. 수수께끼는 별도 버튼 data-fortune-answer로 해당 결과에 숨겨 둔 data-fortune-solution을 보여주세요.
+- 결과는 애니메이션을 줄인 설정에서도 보여야 합니다. 한 번만 뽑기를 고르면 이후 첫 뽑기 버튼을 숨기거나 비활성화하세요. 크게 보기나 발표는 화면 안에서 동작시키세요. 메시지 이미지 만들기를 학생이 고른 경우에만 id="fortune-image-button"으로 PNG를 만들고 id="fortune-image"에 표시하세요. 현재 화면 확대나 발표를 골랐다면 확대나 발표 조작만 제공하세요. 별도 HTML을 브라우저에서 직접 열면 다운로드도 지원하세요. 시스템 클립보드나 공유 창은 호출하지 마세요.`,
+  sound: `
+**연주 동작 확인**:
+- 실제 소리를 내는 각 건반·패드에 data-sound-pad와 곡에서 쓰는 음 이름 또는 악기 이름을 붙이세요. 사용자가 누를 때마다 공통 Web Audio 경로에서 짧고 낮은 볼륨의 음을 한 번 재생하고, 연속 입력도 빠뜨리지 마세요.
+- 360px·390px에서는 건반 영역과 부모의 min-width를 0, 너비 상한을 100%로 하고 가로 스크롤을 만들지 마세요. 13·16건반은 모바일에서 한 줄에 최대 4개씩 필요한 행을 만들거나, 음역 전환으로 나눠서 같은 전체 음을 칠 수 있게 하세요. 한 건반의 실제 클릭 영역은 너비·높이 모두 최소 44px입니다. 예를 들어 모바일 그리드의 grid-template-columns를 repeat(4, minmax(44px, 1fr))로 두면 13·16개를 가로 스크롤 없이 배치할 수 있습니다. 고정 픽셀 최소 폭이나 overflow-x:auto로 넓은 건반을 숨기지 마세요.
+- 따라치기 모드는 피아노에서 학생이 따라치기 또는 둘 다를 골랐을 때만 넣으세요. 드럼·실로폰 등 다른 악기나 피아노 자유 연주에는 따라치기 버튼·점수·정답 판정을 넣지 마세요. 따라치기에서는 모드를 켠 순간부터 선택한 곡 이름, 현재 칠 음, 진행을 보여주고 맞는 음을 누를 때만 전진하세요.`,
+  dressup: `
+**꾸미기 완성 확인**:
+- 캐릭터 종류와 사진 원본은 선택한 상태로 유지하세요. 사진인 경우 원본 img에 id="dressup-photo"를 붙이세요. 랜덤과 초기화 버튼은 고른 경우에만 넣으세요. 완성 버튼을 선택한 경우 조작 뒤 id="dressup-result"를 보여주고 현재 부품·색·사진 배치가 유지된 상태에서 완성 카드, 이름 또는 전후 비교를 해당 선택에 맞게 제공하세요.`,
+  clock: `
+**시계·타이머 진행 확인**:
+- id="clock-display"에 지금 시각 또는 남거나 지난 시간을 표시하고 data-clock-seconds에도 같은 시간의 초 단위 값을 넣으세요(현재 시각은 자정부터 지난 초). 타이머·스톱워치에서 시작/재개는 id="clock-start", 별도 멈춤 버튼은 id="clock-pause", 다시는 id="clock-reset"을 쓰세요. 버튼 하나로 시작과 멈춤을 겸하는 선택은 id="clock-start" 하나와 다시 버튼을 쓰세요.
+- 시작·재개 시 deadline을 Date.now() + 남은 밀리초로 계산하고, 각 화면 갱신은 max(0, ceil((deadline - Date.now()) / 1000))로 하세요. 콜백마다 1초를 빼는 방식은 탭이 잠시 멈췄을 때 시간을 잃으므로 사용하지 마세요. 타이머는 0에서 멈추고 한 번만 알리세요. 멈춰 있는 동안 시간이 바뀌면 안 되고, 다시는 처음 상태와 시간을 함께 복원하세요. 디지털 시계에 타이머 버튼을 붙이지 마세요.`,
+};
+
+function getCoreTypeGuide(programType?: string): string {
+  const guide = programType && Object.hasOwn(CORE_GUIDES, programType) ? CORE_GUIDES[programType] : '';
+  return guide ? '\n' + guide : '';
+}
+
 function requestsAudio(prompt: string): boolean {
   const positiveAudioRequest = /Web Audio|AudioContext|소리가 나|소리를 내|소리를 넣|효과음|멜로디|음악을 넣|연주|악기|건반/i;
   return prompt
@@ -322,5 +363,5 @@ export function getTypeGuide(programType?: string, prompt = '', hasPhoto = false
     ? gameGuide(prompt)
     : (programType && SURVEY_TYPE_GUIDES[programType]) || '';
   const audioGuide = programType === 'sound' || requestsAudio(prompt) ? USER_GESTURE_AUDIO_GUIDE : '';
-  return designGuide + typeGuide + audioGuide;
+  return designGuide + typeGuide + getCoreTypeGuide(programType) + audioGuide;
 }

@@ -14,15 +14,15 @@ describe('getTypeGuide', () => {
     expect(getTypeGuide('dressup')).toMatch(/몬스터: 몸 중심/);
     expect(getTypeGuide('dressup')).toMatch(/최소 3개/);
     expect(getTypeGuide('dressup')).toMatch(/동시에 표시하는 소품은 최대 2개/);
-    expect(getTypeGuide('dressup')).toMatch(/서로 다른 3개를 먼저 고른 뒤/);
+    expect(getTypeGuide('dressup')).toMatch(/후보가 3개 이상이면 3개를 모두 변경/);
     expect(getTypeGuide('dressup')).toMatch(/현재 값을 제외한 선택지/);
-    expect(getTypeGuide('dressup')).toMatch(/배경·효과는 변경 개수에 포함하지 말고/);
+    expect(getTypeGuide('dressup')).toMatch(/캐릭터 종류·사진 원본·배경·효과는 유지/);
     expect(getTypeGuide('dressup')).toMatch(/모든 직접 선택 버튼의 .*aria-pressed/);
     expect(getTypeGuide('dressup')).toMatch(/초기화 렌더링에서는 반짝임/);
     expect(getTypeGuide('paint')).toMatch(/toDataURL/);
     expect(getTypeGuide('paint')).toMatch(/localStorage/);
     expect(getTypeGuide('paint')).toMatch(/navigator\.clipboard/);
-    expect(getTypeGuide('paint')).toMatch(/모두 PNG 다운로드로 바꾸세요/);
+    expect(getTypeGuide('paint')).toMatch(/격리 미리보기에서는 만든 PNG를 화면에 보여주고/);
     expect(getTypeGuide('paint')).toMatch(/getImageData/);
     expect(getTypeGuide('paint')).toMatch(/button-label/);
     expect(getTypeGuide('maze')).toMatch(/gameReady/);

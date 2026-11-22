@@ -1,5 +1,8 @@
 import type { ProgramType } from '../types';
 
+const PRACTICE_MODES = new Set(['guess', 'times', 'speed', 'animal', 'coin']);
+const BUTTON_SOUNDS = new Set(['click', 'boop', 'piano']);
+
 export const calc: ProgramType = {
   id: 'calc',
   label: '숫자놀이·계산기',
@@ -25,8 +28,8 @@ export const calc: ProgramType = {
       role: 'type',
       question: '어떤 숫자놀이를 만들까?',
       options: [
-        { id: 'calc', label: '계산기', icon: '🧮', promptFragment: '더하기·빼기·곱하기·나누기를 할 수 있는 계산기를 만들어.' },
-        { id: 'guess', label: '숫자 맞히기 게임', icon: '🎯', promptFragment: '컴퓨터가 숫자를 하나 정하면 내가 맞혀야 하는 숫자 맞히기 게임을 만들어. 더 큰지 작은지 힌트를 줘.' },
+        { id: 'calc', label: '계산기', icon: '🧮', promptFragment: '누른 숫자와 계산 결과를 보여주는 계산기를 만들어.' },
+        { id: 'guess', label: '숫자 맞히기 게임', icon: '🎯', promptFragment: '컴퓨터가 숫자를 하나 정하면 내가 맞혀야 하는 숫자 맞히기 게임을 만들어. 힌트 방식을 안 고르면 더 큰지 작은지 알려줘.' },
         { id: 'times', label: '구구단 연습', icon: '✖️', promptFragment: '구구단 문제를 하나씩 내고 답을 맞히면 점수가 올라가는 구구단 연습 프로그램을 만들어.' },
         { id: 'speed', label: '빠른 셈 게임', icon: '⚡', promptFragment: '제한 시간 안에 간단한 덧셈·뺄셈 문제를 최대한 많이 맞히는 빠른 셈 게임을 만들어.' },
         { id: 'animal', label: '동물 세기 게임', icon: '🐶', promptFragment: '화면에 동물이 나타나면 개수를 세어 맞히는 동물 세기 게임을 만들어.' },
@@ -54,7 +57,7 @@ export const calc: ProgramType = {
       role: 'rule',
       question: '힌트를 어떻게 줄까?',
       showIf: (a) =>
-        a.range === 'r50' || a.range === 'r100' || a.range === 'r1000',
+        a.mode === 'guess' && (a.range === 'r50' || a.range === 'r100' || a.range === 'r1000'),
       options: [
         { id: 'updown', label: '크다/작다만', icon: '⬆️', promptFragment: '정답보다 크면 "더 작아요", 작으면 "더 커요" 메시지를 줘.' },
         { id: 'warm', label: '뜨겁다/차갑다', icon: '🔥', promptFragment: '정답에 가까울수록 "뜨거워요!", 멀면 "차가워요!" 힌트를 줘.' },
@@ -108,7 +111,7 @@ export const calc: ProgramType = {
         { id: 'round', label: '둥근 버튼', icon: '🔵', promptFragment: '버튼을 동그랗게 만들어.' },
         { id: 'square', label: '네모 버튼', icon: '🟦', promptFragment: '버튼을 네모나게 만들어.' },
         { id: 'big', label: '아주 큰 버튼', icon: '🆙', promptFragment: '버튼을 손가락으로 누르기 쉽게 아주 크게 만들어.' },
-        { id: 'pill', label: '길쭉 둥근', icon: '🟢', promptFragment: '버튼을 길쭉하고 양쪽이 둥근 모양으로 만들어.' },
+        { id: 'pill', label: '모서리가 둥근 네모', icon: '🟢', promptFragment: '버튼을 가로로 긴 네모로 만들고 모서리만 조금 둥글게 해.' },
         { id: 'pillold', label: '알약 모양', icon: '💊', promptFragment: '버튼을 알약처럼 양쪽이 둥근 모양으로 만들어.' },
       ],
     },
@@ -140,12 +143,12 @@ export const calc: ProgramType = {
       ],
     },
 
-    // Step 9 — 소리 종류 (btnsound !== 'none')
+    // Step 9 — 답을 맞히는 놀이에서 소리를 골랐을 때
     {
       id: 'soundfx',
       role: 'sound',
       question: '정답 맞혔을 때 효과음을 어떻게 할까?',
-      showIf: (a) => a.btnsound !== 'none',
+      showIf: (a) => PRACTICE_MODES.has(String(a.mode)) && BUTTON_SOUNDS.has(String(a.btnsound)),
       options: [
         { id: 'fanfare', label: '빠빠빠 팡파레', icon: '🎺', promptFragment: '정답을 맞히면 Web Audio로 짧은 팡파레 소리가 나게 해.' },
         { id: 'tada', label: '짠~ 소리', icon: '🎉', promptFragment: '정답을 맞히면 Web Audio로 "짠~" 하는 소리가 나게 해.' },
@@ -158,9 +161,9 @@ export const calc: ProgramType = {
       id: 'wrongfx',
       role: 'output',
       question: '틀렸을 때 어떻게 할까?',
-      showIf: (a) => a.mode === 'guess' || a.mode === 'times' || a.mode === 'speed',
+      showIf: (a) => PRACTICE_MODES.has(String(a.mode)),
       options: [
-        { id: 'funny', label: '웃긴 소리', icon: '🤣', promptFragment: '오답일 때 Web Audio로 웃긴 효과음이 나게 해.' },
+        { id: 'funny', label: '재미있는 반응', icon: '🤣', promptFragment: '오답일 때 재미있는 표정이나 짧은 말풍선을 보여줘. 버튼 소리를 직접 골랐을 때만 짧은 오답음을 함께 넣어.' },
         { id: 'cheer', label: '응원 메시지', icon: '💪', promptFragment: '오답일 때 "잘 할 수 있어!" 같은 응원 메시지를 보여줘.' },
         { id: 'retry', label: '다시 해봐!', icon: '🔁', promptFragment: '오답일 때 "다시 해봐!" 메시지와 함께 바로 재도전할 수 있게 해.' },
       ],
@@ -176,8 +179,8 @@ export const calc: ProgramType = {
       options: [
         { id: 'clear', label: '지우기 버튼', icon: '🗑️', promptFragment: '입력한 숫자를 한 번에 지우는 C 버튼을 넣어.' },
         { id: 'back', label: '뒤로 지우기', icon: '⬅️', promptFragment: '마지막 숫자 하나만 지우는 ← 버튼을 넣어.' },
-        { id: 'mute', label: '소리 끄기', icon: '🔕', promptFragment: '소리를 켜고 끌 수 있는 버튼을 넣어.' },
-        { id: 'history', label: '계산 기록', icon: '📜', promptFragment: '이전에 계산한 내용을 아래에 목록으로 보여줘.' },
+        { id: 'mute', label: '소리 끄기', icon: '🔕', promptFragment: '버튼 소리를 골랐을 때만 소리를 켜고 끌 수 있는 버튼을 넣어.' },
+        { id: 'history', label: '이전 결과 모아 보기', icon: '📜', promptFragment: '계산기에서는 계산식과 답을, 답 맞히기 놀이에서는 이전에 푼 문제와 답을 아래에 목록으로 보여줘.' },
         { id: 'copy', label: '결과 크게 보기', icon: '📋', promptFragment: '복사 대신 결과값을 화면 안에 크게 펼쳐 보여주는 버튼을 넣어.' },
       ],
     },
@@ -192,7 +195,7 @@ export const calc: ProgramType = {
         { id: 'bignum', label: '큰 숫자', icon: '🔠', promptFragment: '결과 숫자를 화면에 아주 크게 표시해.' },
         { id: 'cute', label: '귀여운 글씨', icon: '🖋️', promptFragment: '결과 숫자를 둥글둥글 귀여운 글씨체로 표시해.' },
         { id: 'led', label: '게임 점수판처럼', icon: '🕹️', promptFragment: '결과 숫자를 게임 점수판처럼 보여줘.' },
-        { id: 'ledold', label: 'LED 숫자판', icon: '🔴', promptFragment: '결과 숫자를 LED 전광판처럼 보여줘.' },
+        { id: 'ledold', label: 'LED 숫자판', icon: '🔴', promptFragment: '결과 숫자를 7개 막대가 조합된 전자시계 숫자처럼 보여줘.' },
         { id: 'bubble', label: '말풍선', icon: '💬', promptFragment: '결과 숫자를 말풍선 안에 보여줘.' },
       ],
     },

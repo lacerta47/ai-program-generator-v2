@@ -1,4 +1,5 @@
 // Offline second pass: no AI requests, no publication, no external network.
+import { CORE_ACTION_VERSION, hasCoreAction, inspectCoreAction } from './quality-core-actions.mjs';
 import { readdirSync, readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { createServer } from 'node:http';
@@ -19,9 +20,12 @@ const server = createServer((req, res) => {
 });
 await new Promise(r => server.listen(0, '127.0.0.1', r));
 const browser = await chromium.launch({ executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true });
-const typeFilter = process.argv[3] ? new Set(process.argv[3].split(',').filter(Boolean)) : null;
+const typeArg = process.argv.slice(3).find(arg => !arg.startsWith('--'));
+const typeFilter = typeArg ? new Set(typeArg.split(',').filter(Boolean)) : null;
 const files = readdirSync(dir).filter(f => /-(before|after)\.json$/.test(f)).filter(f => !typeFilter || typeFilter.has(JSON.parse(readFileSync(resolve(dir, f), 'utf8')).type));
-let next = 0, done = 0;
+const requireCore = process.argv.includes('--require-core');
+let next = 0, done = 0, coreFailures = requireCore && !files.length ? 1 : 0;
+if (coreFailures) console.error('검사할 생성 결과가 없습니다.');
 try {
   await Promise.all(Array.from({ length: 3 }, async () => {
     while (next < files.length) {
@@ -31,11 +35,17 @@ try {
       const inspectionVersion = ['maze', 'aquarium'].includes(row.type) ? 17
         : ['quiz', 'roulette'].includes(row.type) ? 15 : 12;
       const output = resolve(dir, `${id}.actions.json`);
-      if (existsSync(output)) {
+      if (existsSync(output) && !hasCoreAction(row.type) && !requireCore) {
         const saved = JSON.parse(readFileSync(output, 'utf8'));
         if (saved.inspectionVersion === inspectionVersion && !saved.incomplete) continue;
       }
-      if (!row.code) continue;
+      if (!row.code) {
+        if (requireCore) {
+          coreFailures++;
+          console.error(`${id}: 검사할 생성 코드가 없습니다.`);
+        }
+        continue;
+      }
       const c = row.code;
       docs.set(id, `<!doctype html><html lang="ko"><meta charset="utf-8"><style>${c.css}</style><body>${c.html}<script>${c.javascript}</script></body></html>`);
       const context = await browser.newContext({ viewport: { width: 1200, height: 900 }, acceptDownloads: false });
@@ -50,6 +60,7 @@ try {
       page.on('pageerror', e => result.errors.push({ stage, message: e.message }));
       page.on('dialog', d => d.dismiss());
       async function work() {
+        if (row.type === 'clock') await page.clock.install();
         await page.goto(`http://127.0.0.1:${server.address().port}/${id}`, { timeout: 8000 });
         await page.waitForTimeout(500);
         const frame = page.frames().find(f => f.url().includes('/frame/'));
@@ -449,7 +460,12 @@ try {
           const width = document.documentElement.clientWidth;
           const overflow = document.documentElement.scrollWidth - width;
           const selectors = 'canvas, button, input, [role="button"], [id*="result" i], [class*="result" i], [id*="clock" i], [class*="clock" i], [id*="time" i], [class*="time" i], [id*="display" i], [class*="display" i], .container, .card';
-          const elements = [...document.querySelectorAll(selectors)];
+          const elements = [...document.querySelectorAll(selectors)].filter(element => {
+            if (element.id !== 'calc-result-value') return true;
+            const box = element.getBoundingClientRect(), style = getComputedStyle(element);
+            // The LED result includes a 1px text node for assistive technology.
+            return !(style.position === 'absolute' && style.overflow === 'hidden' && box.width <= 1 && box.height <= 1);
+          });
           const offscreen = elements.filter((element) => {
             const r = element.getBoundingClientRect(), s = getComputedStyle(element);
             return s.display !== 'none' && s.visibility !== 'hidden' && r.width > 0 && (r.left < -4 || r.right > width + 4);
@@ -464,12 +480,27 @@ try {
         await page.waitForTimeout(50);
         await page.screenshot({ path: resolve(dir, `${id}.mobile.png`), fullPage: true });
         if (result.responsive.offscreen.length || result.responsive.internalOverflow.length) contractError('responsive', '390px 화면에서 잘리거나 내부 영역을 벗어난 핵심 요소가 있음');
+        if (hasCoreAction(row.type)) {
+          stage = 'core-action';
+          const runs = [];
+          result.coreAction = { version: CORE_ACTION_VERSION, strict: requireCore, runs };
+          for (const width of [360, 390]) {
+            await page.setViewportSize({ width, height: 844 });
+            await page.reload({ timeout: 8000 });
+            const mobileFrame = page.frames().find(f => f.url().includes('/frame/'));
+            const run = await inspectCoreAction(mobileFrame, page, row.type, row.answers ?? {}, requireCore);
+            runs.push({ width, ...run });
+            if (run.status === 'failed') contractError('core-action', `${width}px: ${run.reason}`);
+          }
+        }
       }
       try { await Promise.race([work(), new Promise((_, reject) => { timer = setTimeout(() => reject(new Error('deadline')), 45000); })]); }
       catch (e) { result.incomplete = true; result.harnessError = e.message; }
       finally { clearTimeout(timer); await context.close(); docs.delete(id); }
+      if (requireCore && (result.incomplete || result.errors.length)) coreFailures++;
       writeFileSync(output, JSON.stringify(result, null, 2));
       console.log(JSON.stringify({ done: ++done, id, errors: result.errors, incomplete: result.incomplete }));
     }
   }));
 } finally { await browser.close(); server.close(); }
+if (coreFailures) process.exitCode = 1;

@@ -9,7 +9,7 @@ export function visibleSteps(type: ProgramType, answers: SurveyAnswers): SurveyS
 
 function selectedOptions(type: ProgramType, step: SurveyStep, answers: SurveyAnswers) {
   let a = answers[step.id];
-  // 예전 그림판 답에 남아 있는 Clipboard 선택도 보안 미리보기에서 작동하는 PNG 저장으로 이관한다.
+  // 예전 그림판 답에 남아 있는 Clipboard 선택도 PNG 이미지 출력으로 이관한다.
   if (type.id === 'paint' && step.id === 'save' && typeof a === 'string' && ['copy', 'clipboard', 'both'].includes(a)) {
     a = 'download';
   }
@@ -41,6 +41,12 @@ export function assemblePrompt(type: ProgramType, answers: SurveyAnswers): strin
   }
   if (designSelections.length) {
     parts.push(`[학생이 고른 디자인]\n자동 디자인 프리셋보다 아래 선택을 우선하세요.\n${designSelections.join('\n')}`);
+  }
+  if (type.id === 'calc' && answers.mode === 'calc') {
+    const operationStep = type.steps.find(step => step.id === 'ops');
+    const operations = operationStep ? selectedOptions(type, operationStep, answers).map(option => option.label) : [];
+    const names = operations.length ? operations.join(', ') : '더하기, 빼기, 곱하기, 나누기';
+    parts.push(`[적용 연산] ${names}. 이 목록의 연산만 버튼과 키보드에 연결해.`);
   }
   if (type.id === 'roulette') {
     const stopEffects = type.steps.find(step => step.id === 'stopfx');
