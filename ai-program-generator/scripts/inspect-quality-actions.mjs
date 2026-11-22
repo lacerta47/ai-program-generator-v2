@@ -5,6 +5,7 @@ import { resolve } from 'node:path';
 import { createServer } from 'node:http';
 import { createRequire } from 'node:module';
 import { hasQuizTimer, inspectQuiz, inspectRouletteSpins } from './quality-action-checks.mjs';
+import { inspectAquarium, inspectMazeGoals } from './quality-motion-checks.mjs';
 const require = createRequire(import.meta.url);
 const { chromium } = require('C:/Users/amh47/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright');
 const dir = resolve(process.argv[2]);
@@ -31,11 +32,12 @@ try {
       const file = files[next++];
       const id = file.slice(0, -5);
       const row = JSON.parse(readFileSync(resolve(dir, file), 'utf8'));
-      const inspectionVersion = ['quiz', 'roulette'].includes(row.type) ? 15 : 12;
+      const inspectionVersion = ['maze', 'aquarium'].includes(row.type) ? 17
+        : ['quiz', 'roulette'].includes(row.type) ? 15 : 12;
       const output = resolve(dir, `${id}.actions.json`);
       if (existsSync(output) && !hasCoreAction(row.type) && !requireCore) {
         const saved = JSON.parse(readFileSync(output, 'utf8'));
-        if (saved.inspectionVersion === inspectionVersion && (!id.startsWith('maze-') || saved.mazeAutoPlay)) continue;
+        if (saved.inspectionVersion === inspectionVersion && !saved.incomplete) continue;
       }
       if (!row.code) {
         if (requireCore) {
@@ -54,7 +56,7 @@ try {
         return url.protocol === 'http:' && ['localhost', '127.0.0.1'].includes(url.hostname) && url.port === String(server.address().port) && route.request().method() === 'GET' ? route.continue() : route.abort();
       });
       const page = await context.newPage();
-      if (row.type === 'quiz' && hasQuizTimer(row.answers ?? {})) await page.clock.install();
+      if (row.type === 'aquarium' || (row.type === 'quiz' && hasQuizTimer(row.answers ?? {}))) await page.clock.install();
       page.on('pageerror', e => result.errors.push({ stage, message: e.message }));
       page.on('dialog', d => d.dismiss());
       async function work() {
@@ -274,17 +276,17 @@ try {
               const rect = element.getBoundingClientRect(), style = getComputedStyle(element);
               return style.display !== 'none' && style.visibility !== 'hidden' && rect.width > 0 && rect.height > 0 ? rect : null;
             };
-            const players = [...document.querySelectorAll('[data-player="true"], .player-cell, .maze-player, #player, #player-element, [id*="player" i], [class*="player" i], .character, .hero')]
+            const players = [...document.querySelectorAll('[data-maze-player], [data-player="true"], .player-cell, .maze-player, #player, #player-element, [id*="player" i], [class*="player" i], .character, .hero')]
               .map((element) => ({ element, rect: visibleRect(element) }))
               .filter((item) => item.rect)
               .sort((a, b) => a.rect.width * a.rect.height - b.rect.width * b.rect.height);
             const player = players[0];
-            const boards = [...document.querySelectorAll('#maze-grid, .maze-grid, #mazeContainer, #maze-container, #maze, .maze-board, [id*="maze" i], [class*="maze" i], canvas')]
+            const boards = [...document.querySelectorAll('#maze-board, #maze-grid, .maze-grid, #mazeContainer, #maze-container, #maze, .maze-board, [id*="maze" i], [class*="maze" i], canvas')]
               .filter((element) => element !== player?.element && !element.matches('.maze-cell, [class*="cell" i]'))
               .map((element) => ({
                 element,
                 rect: visibleRect(element),
-                rank: element.matches('#maze-grid, .maze-grid, #mazeContainer, #maze-container, #maze, .maze-board') ? 0 : element.matches('canvas') ? 1 : 2,
+                rank: element.matches('#maze-board, #maze-grid, .maze-grid, #mazeContainer, #maze-container, #maze, .maze-board') ? 0 : element.matches('canvas') ? 1 : 2,
               }))
               .filter((item) => item.rect && item.rect.width > 80 && item.rect.height > 80)
               .sort((a, b) => a.rank - b.rank || a.rect.width * a.rect.height - b.rect.width * b.rect.height);
@@ -298,6 +300,11 @@ try {
             };
           });
           if (result.mazeVisualBounds.available && !result.mazeVisualBounds.inside) contractError('visual-bounds', '플레이어가 미로 표시 영역 밖에 있음');
+          stage = 'maze-goals';
+          result.mazeGoals = await inspectMazeGoals(page, frame, row.answers ?? {});
+          if (result.mazeGoals.status === 'fail') contractError('goals', result.mazeGoals.reason);
+        }
+        if (row.type === 'maze' && result.mazeGoals.reason === 'maze-markers-missing') {
           stage = 'maze-auto-plan';
           const plan = await frame.evaluate(() => {
             const read = (names) => {
@@ -378,6 +385,11 @@ try {
             }, plan.exit);
             Object.assign(result.mazeAutoPlay, { completedSteps, divergedAt }, outcome);
           }
+        }
+        if (row.type === 'aquarium') {
+          stage = 'aquarium-motion';
+          result.aquariumMotion = await inspectAquarium(page, frame, row.answers ?? {});
+          if (result.aquariumMotion.status === 'fail') contractError('motion', result.aquariumMotion.reason);
         }
         stage = 'layout-containment';
         result.layoutContainment = await frame.evaluate(() => {

@@ -7,7 +7,7 @@ export const maze: ProgramType = {
   basePrompt:
     '방향키나 화면 버튼으로 캐릭터를 움직여 출구로 나가는 실제로 작동하는 미로 게임 웹 프로그램을 만들어줘. ' +
     '미로는 코드로 자동 생성하고, 시작하면 바로 플레이할 수 있는 완성형으로 만들어. ' +
-    '화면 버튼(↑↓←→)도 반드시 표시해서 마우스나 터치로도 조작할 수 있게 해.',
+    '키보드 방향키와 화면 버튼(↑↓←→)을 항상 제공하고, 선택한 조작을 사용법에서 먼저 알려줘.',
   buildName: () => '나의 미로',
   steps: [
     // STEP 1 — 테마
@@ -82,25 +82,25 @@ export const maze: ProgramType = {
           id: 'small',
           label: '작게(쉬워요)',
           icon: '🐣',
-          promptFragment: '미로를 10×10 칸 정도의 작고 쉬운 크기로 만들어.',
+          promptFragment: '미로를 11×11 칸의 작고 쉬운 크기로 만들어.',
         },
         {
           id: 'medium',
           label: '보통',
           icon: '🐥',
-          promptFragment: '미로를 15×15 칸 정도의 적당한 크기로 만들어.',
+          promptFragment: '미로를 15×15 칸으로 만들어.',
         },
         {
           id: 'large',
           label: '크게(어려워요)',
           icon: '🦉',
-          promptFragment: '미로를 20×20 칸 정도의 크고 어려운 크기로 만들어.',
+          promptFragment: '미로를 21×21 칸의 크고 어려운 크기로 만들어.',
         },
         {
           id: 'huge',
           label: '아주 크게!',
           icon: '🦣',
-          promptFragment: '미로를 30×30 칸 정도의 아주 크고 복잡한 크기로 만들어.',
+          promptFragment: '미로를 25×25 칸의 아주 크고 복잡한 크기로 만들어.',
         },
       ],
     },
@@ -129,19 +129,19 @@ export const maze: ProgramType = {
     {
       id: 'control',
       role: 'control',
-      question: '어떻게 조작할까?',
+      question: '어떤 조작을 먼저 알려줄까?',
       options: [
         {
           id: 'arrow',
           label: '방향키',
           icon: '⌨️',
-          promptFragment: '키보드 방향키(←↑→↓)로 캐릭터를 이동시켜.',
+          promptFragment: '사용법에서 키보드 방향키(←↑→↓)를 먼저 안내해.',
         },
         {
           id: 'button',
           label: '화면 버튼',
           icon: '🕹️',
-          promptFragment: '화면 아래 방향 버튼(↑↓←→)을 눌러 캐릭터를 이동시켜.',
+          promptFragment: '사용법에서 화면 아래 방향 버튼(↑↓←→)을 먼저 안내해.',
         },
         {
           id: 'both',
@@ -153,7 +153,7 @@ export const maze: ProgramType = {
           id: 'swipe',
           label: '손가락 스와이프',
           icon: '👆',
-          promptFragment: '손가락으로 스와이프하거나 화면의 방향 버튼으로도 움직일 수 있게 해.',
+          promptFragment: '미로 위에서 손가락으로 스와이프하면 한 칸씩 이동하게 하고 이 조작을 먼저 안내해.',
         },
       ],
     },
@@ -229,7 +229,7 @@ export const maze: ProgramType = {
           id: 'key',
           label: '열쇠 찾고 문 열기',
           icon: '🗝️',
-          promptFragment: '미로 중간에 숨겨진 열쇠를 먼저 찾고, 그 다음 잠긴 문을 열어 탈출하면 클리어.',
+          promptFragment: '미로에서 열쇠를 찾은 뒤 출구에 도착하면 문이 열리고 클리어해. 열쇠를 찾기 전에도 출구 칸은 지날 수 있어.',
         },
       ],
     },
@@ -265,7 +265,7 @@ export const maze: ProgramType = {
       id: 'treasure_hint',
       role: 'rule',
       question: '보물이 어디 있는지 힌트를 줄까?',
-      showIf: (a) => a.treasure_count === '3' || a.treasure_count === '5',
+      showIf: (a) => a.goal === 'treasure' && (a.treasure_count === '3' || a.treasure_count === '5'),
       options: [
         {
           id: 'glow',
@@ -331,7 +331,7 @@ export const maze: ProgramType = {
           id: 'hole',
           label: '구덩이',
           icon: '🕳️',
-          promptFragment: '미로 안에 구덩이 함정을 넣어. 빠지면 처음부터 다시 시작해.',
+          promptFragment: '구덩이를 밟으면 시작 칸으로 돌아가고 그 구덩이는 이번 도전에서 해제돼. 얻은 물건은 유지해.',
         },
         {
           id: 'ice',
@@ -343,13 +343,13 @@ export const maze: ProgramType = {
           id: 'ghost',
           label: '귀신',
           icon: '👻',
-          promptFragment: '귀신이 미로를 돌아다녀. 닿으면 처음부터 다시 시작해.',
+          promptFragment: '길 위의 귀신에 부딪히면 시작 칸으로 돌아가되 얻은 물건은 유지해. 귀신이 쉬는 동안에는 지나갈 수 있어.',
         },
         {
           id: 'arrow_trap',
           label: '화살 함정',
           icon: '🏹',
-          promptFragment: '미로 벽에서 화살이 가끔 날아와. 맞으면 출발점으로 돌아가.',
+          promptFragment: '미로 벽에서 화살이 가끔 날아와. 맞으면 시작 칸으로 돌아가고 그 함정은 이번 도전에서 해제돼. 얻은 물건은 유지해.',
         },
         {
           id: 'none',

@@ -38,6 +38,15 @@ function aggregate(items) {
       mazePathFound: items.filter(r => r.extended?.mazeAutoPlay?.pathFound).length,
       mazeReachedExit: items.filter(r => r.extended?.mazeAutoPlay?.reachedExit).length,
       mazeVictorySignaled: items.filter(r => r.extended?.mazeAutoPlay?.victorySignaled).length,
+      mazeGoalPlayPassed: items.filter(r => r.extended?.mazeGoals?.status === 'pass').length,
+      mazeGoalPlayUnverified: items.filter(r => r.extended?.mazeGoals?.status === 'unverified').length,
+      aquariumTankPassed: items.filter(r => r.extended?.aquariumMotion?.status === 'pass').length,
+      aquariumMobilePassed: items.filter(r => r.extended?.aquariumMotion?.mobile).length,
+      aquariumFeedingPassed: items.filter(r => {
+        const aquarium = r.extended?.aquariumMotion;
+        return aquarium?.feeding ? aquarium.feeding.status === 'pass' : aquarium?.status === 'pass' && aquarium.consumed;
+      }).length,
+      aquariumTankUnverified: items.filter(r => r.extended?.aquariumMotion?.status === 'unverified').length,
       audioRepeated: items.filter(r => r.extended?.audioRepeat?.attempted > 0).length,
       audioRepeatAttempts: items.reduce((n, r) => n + (r.extended?.audioRepeat?.attempted || 0), 0),
     },

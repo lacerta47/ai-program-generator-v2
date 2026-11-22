@@ -87,10 +87,10 @@ export const aquarium: ProgramType = {
     {
       id: 'decor',
       role: 'decor',
-      question: '바닥에 산호와 해초 장식을 넣을까?',
+      question: '배경에 어울리는 장식을 넣을까?',
       options: [
-        { id: 'yes', label: '응, 예쁘게 넣어줘!', icon: '🪸', promptFragment: '수족관 바닥에 산호(🪸)와 해초를 SVG로 그려서 넣어.' },
-        { id: 'no', label: '깔끔하게', icon: '🫧', promptFragment: '바닥에 산호·해초 장식을 넣지 마.' },
+        { id: 'yes', label: '응, 예쁘게 넣어줘!', icon: '🪸', promptFragment: '고른 배경에 어울리는 장식을 그려줘. 바다는 산호와 해초, 연못은 돌과 연잎, 우주는 행성 실루엣, 사탕 나라는 사탕, 공룡 바다는 조개 화석처럼 표현해. 떠다니는 친구나 고른 특별 효과는 그대로 유지해.' },
+        { id: 'no', label: '깔끔하게', icon: '🫧', promptFragment: '추가 장식 없이 깔끔하게 보여줘. 배경과 학생이 고른 특별 효과, 떠다니는 친구는 그대로 표시해.' },
       ],
     },
 
@@ -100,10 +100,10 @@ export const aquarium: ProgramType = {
       role: 'flow',
       question: '얼마나 많이 떠다닐까?',
       options: [
-        { id: 'few', label: '조금 (5마리)', icon: '1️⃣', promptFragment: '5마리·개 정도로 조금 떠다니게 해.' },
-        { id: 'medium', label: '보통 (10마리)', icon: '5️⃣', promptFragment: '10마리·개 정도로 적당히 떠다니게 해.' },
-        { id: 'many', label: '많이 (20마리)', icon: '🔢', promptFragment: '20마리·개 이상 가득 떠다니게 해.' },
-        { id: 'huge', label: '엄청 많이 (30+)', icon: '🌊', promptFragment: '30마리·개 이상 화면 가득 떠다니게 해.' },
+        { id: 'few', label: '조금 (5마리)', icon: '1️⃣', promptFragment: '고른 종류를 모두 넣고, 수를 합쳐서 처음에 총 5마리·개를 보여줘.' },
+        { id: 'medium', label: '보통 (10마리)', icon: '5️⃣', promptFragment: '고른 종류를 모두 넣고, 수를 합쳐서 처음에 총 10마리·개를 보여줘.' },
+        { id: 'many', label: '많이 (20마리)', icon: '🔢', promptFragment: '고른 종류를 모두 넣고, 수를 합쳐서 처음에 총 20마리·개 이상 보여줘.' },
+        { id: 'huge', label: '엄청 많이 (30+)', icon: '🌊', promptFragment: '고른 종류를 모두 넣고, 수를 합쳐서 처음에 총 30마리·개 이상 보여줘.' },
       ],
     },
 
@@ -140,11 +140,11 @@ export const aquarium: ProgramType = {
       role: 'control',
       question: '화면을 클릭하면 어떤 일이 일어날까?',
       options: [
-        { id: 'feed', label: '먹이 주기', icon: '🍬', promptFragment: '화면을 클릭하면 그 자리에 먹이가 생기고 근처 생물이 다가오게 해.' },
+        { id: 'feed', label: '먹이 주기', icon: '🍬', promptFragment: '수조를 누른 곳에 먹이를 놓고, 선택한 생물 중 한 마리가 방향을 바꿔 다가와 닿으면 먹이가 사라지게 해. 생물이 없는 판타지 수조에서는 선택한 별이나 거품이 다가가 먹이를 흡수하는 모습으로 보여줘.' },
         { id: 'spawn', label: '한 마리 늘기', icon: '➕', promptFragment: '화면을 클릭하면 그 자리에서 새 생물 하나가 생겨나게 해.' },
         { id: 'flash', label: '반짝 빛나기', icon: '✨', promptFragment: '화면을 클릭하면 그 자리에서 반짝이는 빛 효과가 나게 해.' },
         { id: 'ripple', label: '물결 퍼지기', icon: '🌊', promptFragment: '화면을 클릭하면 그 자리에서 물결이 퍼지는 효과가 나게 해.' },
-        { id: 'nametag', label: '이름 붙이기', icon: '🏷️', promptFragment: '물고기를 클릭하면 이름을 입력할 수 있고, 정해진 이름표가 그 물고기 위에 따라다니게 해.' },
+        { id: 'nametag', label: '이름 붙이기', icon: '🏷️', promptFragment: '떠다니는 친구를 누르면 화면 안에서 이름을 입력하고, 이름표가 그 친구를 따라다니게 해.' },
       ],
     },
 
@@ -196,9 +196,9 @@ export const aquarium: ProgramType = {
         },
         {
           id: 'none',
-          label: '그대로예요',
+          label: '먹은 뒤 그대로예요',
           icon: '🫧',
-          promptFragment: '생물을 눌러도 특별한 반응이나 추가 효과를 넣지 마.',
+          promptFragment: '먹이 놓기·접근·섭취는 그대로 작동시켜. 먹은 뒤 생물의 크기, 색, 속도, 수는 그대로 유지해.',
         },
       ],
     },
