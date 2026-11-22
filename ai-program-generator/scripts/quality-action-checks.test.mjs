@@ -114,14 +114,15 @@ function roulette(again, broken = false) {
   return { type: 'roulette', answers: { use: 'snack', slots: 's4', again }, code: { html, css, javascript } };
 }
 
-function ledCalculator() {
+function ledCalculator(clippedForAssistiveTech = true) {
+  const resultStyle = clippedForAssistiveTech ? 'position:absolute;clip-path:inset(50%)' : 'display:inline-block';
   return {
     type: 'calc',
     answers: { mode: 'calc', ops: ['pct'], display: 'ledold' },
     code: {
       html: '<output id="calc-result"><span aria-hidden="true">.</span><span id="calc-result-value" aria-live="polite">0</span></output>'
         + '<button data-calc-key="8">8</button><button data-calc-key="pct">%</button>',
-      css: '#calc-result-value{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}',
+      css: '#calc-result-value{width:1px;height:1px;overflow:hidden;' + resultStyle + '}',
       javascript: "let number = 0; const value = document.querySelector('#calc-result-value'); "
         + "document.querySelector('[data-calc-key=\"8\"]').onclick = () => { number = 8; value.textContent = number; }; "
         + "document.querySelector('[data-calc-key=pct]').onclick = () => { value.textContent = number / 100; };",
@@ -141,6 +142,7 @@ test('offline inspector distinguishes working quiz, roulette and LED flows from 
       'roulette-delegated': { ...roulette('exclude'), answers: { again: 'aichoose' } },
       'roulette-wrong-winner': roulette('yes', true),
       'calc-led-text': ledCalculator(),
+      'calc-visible-clipped-result': ledCalculator(false),
     };
     for (const [name, fixture] of Object.entries(fixtures)) {
       writeFileSync(join(dir, name + '-after.json'), JSON.stringify(fixture));
@@ -165,6 +167,7 @@ test('offline inspector distinguishes working quiz, roulette and LED flows from 
     assert(outputs['roulette-wrong-winner'].errors.some(error => error.stage === 'roulette-result'));
     assert.deepEqual(outputs['calc-led-text'].errors, []);
     assert.deepEqual(outputs['calc-led-text'].coreAction.runs.map(run => run.status), ['passed', 'passed']);
+    assert(outputs['calc-visible-clipped-result'].errors.some(error => error.stage === 'calc-responsive'));
   } finally {
     const target = realpathSync(dir);
     assert.equal(dirname(target), root);
