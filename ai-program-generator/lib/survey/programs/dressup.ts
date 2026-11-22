@@ -50,6 +50,7 @@ export const dressup: ProgramType = {
       id: 'basecolor',
       role: 'appearance',
       question: '바탕 색은 어떤 게 좋아?',
+      showIf: (a) => a.base !== 'photo',
       options: [
         { id: 'pink', label: '분홍', icon: '🌸', promptFragment: '캐릭터 바탕 색을 분홍 계열로 해.' },
         { id: 'blue', label: '파랑', icon: '💙', promptFragment: '캐릭터 바탕 색을 파랑 계열로 해.' },
@@ -145,9 +146,9 @@ export const dressup: ProgramType = {
       role: 'rule',
       question: '"아무거나 꾸미기" 버튼을 넣을까?',
       options: [
-        { id: 'yes', label: '응, 랜덤으로!', icon: '🎲', promptFragment: '`id="dressup-random"`인 "아무거나 꾸미기" 버튼을 넣어. 누를 때마다 `base`, `eyes`, `mouth`, `head`, `accessories` 중 선택지가 2개 이상인 서로 다른 레이어 3개를 골라 각각 현재와 다른 값으로 바꾸고 선택 표시도 함께 갱신해. 배경과 효과는 3개에 포함하지 마.' },
+        { id: 'yes', label: '응, 랜덤으로!', icon: '🎲', promptFragment: '`id="dressup-random"`인 "아무거나 꾸미기" 버튼을 넣어. 누를 때마다 `base`, `eyes`, `mouth`, `head`, `accessories` 중 현재 꾸미는 대상과 사진 원본을 유지하며 변경 가능한 서로 다른 레이어를 최대 3개 골라 각각 현재와 다른 값으로 바꾸고 선택 표시도 함께 갱신해. 배경과 효과는 3개에 포함하지 마.' },
         { id: 'reset', label: '처음으로 되돌리기만', icon: '↩️', promptFragment: '`id="dressup-reset"`인 "처음부터" 버튼을 넣어. 최초 선택 상태의 깊은 복사본을 복원하고 모든 부품 레이어와 모든 `aria-pressed`, 현재 미리보기·이름을 한꺼번에 다시 그려. 초기화 중에는 반짝임처럼 `layer-effects`를 바꾸는 효과 함수를 호출하지 마.' },
-        { id: 'both', label: '둘 다', icon: '✨', promptFragment: '`id="dressup-random"`인 랜덤 버튼과 `id="dressup-reset"`인 초기화 버튼을 둘 다 넣어. 랜덤은 누를 때마다 `base`, `eyes`, `mouth`, `head`, `accessories` 중 선택지가 2개 이상인 서로 다른 레이어 3개를 골라 각각 현재와 다른 값으로 바꾸고 배경·효과는 제외해. 초기화는 최초 선택 상태의 깊은 복사본을 복원한 뒤 모든 부품 레이어와 모든 선택 표시·현재 미리보기·이름을 한꺼번에 다시 그리고, 초기화 중에는 `layer-effects`를 바꾸는 효과 함수를 호출하지 마.' },
+        { id: 'both', label: '둘 다', icon: '✨', promptFragment: '`id="dressup-random"`인 랜덤 버튼과 `id="dressup-reset"`인 초기화 버튼을 둘 다 넣어. 랜덤은 누를 때마다 `base`, `eyes`, `mouth`, `head`, `accessories` 중 현재 꾸미는 대상과 사진 원본을 유지하며 변경 가능한 서로 다른 레이어를 최대 3개 골라 각각 현재와 다른 값으로 바꾸고 배경·효과는 제외해. 초기화는 최초 선택 상태의 깊은 복사본을 복원한 뒤 모든 부품 레이어와 모든 선택 표시·현재 미리보기·이름을 한꺼번에 다시 그리고, 초기화 중에는 `layer-effects`를 바꾸는 효과 함수를 호출하지 마.' },
       ],
     },
     // 9-b — 다 꾸민 뒤(목표·종결). 꾸미기만 있고 '완성'이라는 종결이 없던 공백을 메운다.
@@ -190,7 +191,7 @@ export const dressup: ProgramType = {
       multi: true,
       options: [
         { id: 'sparkle', label: '반짝 효과', icon: '✨', promptFragment: '부품을 바꿀 때 반짝이는 효과를 넣어.' },
-        { id: 'confetti', label: '색종이 팡', icon: '🎊', promptFragment: '"완성!" 버튼을 누르면 색종이가 팡 터지는 효과를 넣어.' },
+        { id: 'confetti', label: '색종이 팡', icon: '🎊', promptFragment: '완성 버튼이 있다면 완성할 때, 계속 꾸미기를 골랐다면 부품을 선택할 때 색종이가 잠깐 팡 터지게 해.' },
         { id: 'sound', label: '귀여운 소리', icon: '🔔', promptFragment: '부품을 바꿀 때마다 Web Audio API로 만든 귀여운 소리가 나게 해.' },
         { id: 'pop', label: '통통 튀기', icon: '🏀', promptFragment: '부품이 바뀔 때 캐릭터가 살짝 통통 튀는 애니메이션을 넣어.' },
         { id: 'none', label: '효과 없이', icon: '👍', promptFragment: '반짝임·색종이·소리·통통 튀는 추가 효과를 넣지 마.', exclusive: true },

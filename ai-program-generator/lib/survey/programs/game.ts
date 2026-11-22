@@ -10,7 +10,7 @@ export const game: ProgramType = {
   icon: '🎮',
   basePrompt:
     '실제로 플레이되는 완성형 캐주얼 게임 웹 프로그램을 만들어줘. ' +
-    '시작 화면에서 시작 버튼을 누르면 바로 게임이 시작되고, 점수가 표시되며, 게임 오버 화면에서 다시하기를 할 수 있어야 해. ' +
+    '시작 버튼을 누르면 바로 게임을 할 수 있게 해. 고른 장르에 맞게 점수·진행을 보여주고, 승리·종료 조건이 있을 때는 결과와 다시하기를 보여줘. ' +
     '모든 게임 로직은 완전히 작동하게 만들어.',
   buildName: (a) => {
     if (a.genre === 'dodge') return '피하기 게임';
@@ -308,21 +308,21 @@ export const game: ProgramType = {
         },
         {
           id: 'count',
-          label: '잡을 때마다 점수',
+          label: '한 번 성공할 때마다 점수',
           icon: '🎯',
-          promptFragment: '아이템을 잡거나 두더지를 칠 때마다 점수가 올라가.',
+          promptFragment: '아이템을 모으거나 두더지를 잡거나 장애물을 피하는 등 이 장르의 기본 동작에 성공할 때마다 점수가 올라가.',
         },
         {
           id: 'combo',
-          label: '연속으로 잡으면 보너스',
+          label: '연속으로 성공하면 보너스',
           icon: '🔥',
-          promptFragment: '연속으로 잡을수록 콤보가 쌓이고 점수가 두 배·세 배로 올라가.',
+          promptFragment: '선택 장르의 기본 동작에 연속으로 성공할수록 콤보가 쌓이고 점수가 두 배·세 배로 올라가.',
         },
         {
           id: 'distance',
-          label: '멀리 갈수록 점수',
+          label: '새 구간마다 보너스',
           icon: '📏',
-          promptFragment: '이동한 거리가 늘어날수록 점수가 올라가.',
+          promptFragment: '달리기에서는 일정 거리를 지날 때, 다른 장르에서는 진행 단계가 하나 끝날 때 구간 보너스를 줘.',
         },
       ],
     },
@@ -381,7 +381,7 @@ export const game: ProgramType = {
           id: 'fast',
           label: '점점 빨라져요',
           icon: '🚀',
-          promptFragment: '점수가 쌓일수록 아이템·장애물이 점점 빠르게 떨어지게 해.',
+          promptFragment: '진행할수록 달리기가 빨라지거나 두더지가 더 짧게 나오거나 떨어지는 대상이 빨라지도록, 선택 장르에 맞게 속도를 점점 높여.',
         },
       ],
     },

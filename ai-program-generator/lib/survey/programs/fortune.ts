@@ -59,7 +59,7 @@ export const fortune: ProgramType = {
           label: '수수께끼',
           icon: '🤔',
           promptFragment:
-            '수수께끼 뽑기야. 초등 저학년이 이해할 수 있는 짧은 수수께끼와 정답을 12개 정도 채워줘. 버튼을 누르면 질문이 나오고, 다시 누르면 정답이 나오게 해줘.',
+            '수수께끼 뽑기야. 초등 저학년이 이해할 수 있는 짧은 수수께끼와 정답을 12개 정도 채워줘. 뽑기 버튼은 질문만 보여줘. 각 문제에 별도 \'정답 보기\' 버튼을 두고, 누르면 그 문제의 정답을 보여줘.',
         },
         {
           id: 'animalfriend',
@@ -101,7 +101,7 @@ export const fortune: ProgramType = {
       question: '행운의 동물을 어떻게 보여줄까?',
       showIf: (a) => {
         const v = a.luckyextras;
-        return Array.isArray(v) && v.includes('animal');
+        return a.kind === 'fortune' && Array.isArray(v) && v.includes('animal');
       },
       options: [
         { id: 'emoji', label: '이모지로 크게', icon: '🐾', promptFragment: '행운의 동물을 큰 이모지로 화면 가운데에 보여줘.' },
@@ -186,7 +186,7 @@ export const fortune: ProgramType = {
       question: '다시 뽑기 버튼을 넣을까?',
       options: [
         { id: 'yes', label: '응, 넣어줘', icon: '🔄', promptFragment: '메시지 아래에 다시 뽑기 버튼을 넣어.' },
-        { id: 'no', label: '아니, 한 번만', icon: '👆', promptFragment: '다시 뽑기 버튼을 넣지 마.' },
+        { id: 'no', label: '아니, 한 번만', icon: '👆', promptFragment: '첫 결과를 보여준 뒤에는 처음 뽑기 버튼을 비활성화하고 다시 뽑기 버튼도 넣지 마.' },
       ],
     },
 
@@ -196,9 +196,9 @@ export const fortune: ProgramType = {
       role: 'output',
       question: '뽑은 메시지를 어떻게 할까?',
       options: [
-        { id: 'show', label: '친구한테 크게 보여주기', icon: '📺', promptFragment: '뽑은 메시지를 화면에 크게 펼쳐 보여주는 버튼을 넣어.' },
-        { id: 'save', label: '이미지로 저장', icon: '💾', promptFragment: '뽑은 메시지를 이미지 파일로 저장할 수 있는 버튼을 넣어.' },
-        { id: 'copy', label: '크게 펼쳐 보기', icon: '📋', promptFragment: '복사 대신 뽑은 메시지를 화면 안에 크게 펼쳐 보여주는 버튼을 넣어.' },
+        { id: 'show', label: '친구한테 크게 보여주기', icon: '📺', promptFragment: '고른 메시지만 보여 주는 발표 화면과 결과 목록으로 돌아오는 버튼을 넣어.' },
+        { id: 'save', label: '메시지 이미지 만들기', icon: '💾', promptFragment: '고른 메시지의 PNG를 만들어 화면에 보여주는 버튼을 넣어. 내려받은 작품 HTML에서는 파일로도 저장할 수 있게 해.' },
+        { id: 'copy', label: '지금 화면에서 크게 읽기', icon: '📋', promptFragment: '고른 메시지를 현재 결과 목록 안에서 크게 읽거나 원래 크기로 접는 버튼을 넣어.' },
         { id: 'nothing', label: '그냥 보기만', icon: '👀', promptFragment: '복사·저장·공유 버튼 없이 뽑은 메시지만 화면에 보여줘.' },
       ],
     },
