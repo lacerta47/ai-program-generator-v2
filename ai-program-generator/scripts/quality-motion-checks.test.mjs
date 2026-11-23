@@ -15,7 +15,7 @@ test('maze routes exclude walls and use the only open turn to reach the key', ()
   assert.equal(planMazeRoute([start, gate, key], start, key, [gate]), null);
 });
 
-function mazeApp(blockGate, restartMode) {
+function mazeApp(gateBehavior, restartMode) {
   const board = document.getElementById('maze-board');
   const restart = document.getElementById('maze-restart');
   const victoryRestart = document.getElementById('victory-restart-btn');
@@ -49,13 +49,17 @@ function mazeApp(blockGate, restartMode) {
     if (frozen || !directions[key] || board.dataset.mazeState !== 'playing') return;
     const [dx, dy] = directions[key];
     const next = [x + dx, y + dy].join(',');
-    if (!available.has(next) || (next === '3,1' && blockGate && !hasKey)) return;
+    if (!available.has(next) || (next === '3,1' && gateBehavior === 'blocked' && !hasKey)) return;
     x += dx;
     y += dy;
     if (next === '3,2') hasKey = true;
     if (next === '3,1' && hasKey) {
       board.dataset.mazeState = 'won';
       victory.hidden = restart.hidden = false;
+    } else if (next === '3,1' && gateBehavior === 'early-victory') {
+      victory.hidden = false;
+    } else if (next === '3,1' && gateBehavior === 'early-key') {
+      hasKey = true;
     }
     render();
   }
@@ -68,7 +72,7 @@ function mazeApp(blockGate, restartMode) {
   reset();
 }
 
-function mazeFixture(blockGate, restartMode = 'page') {
+function mazeFixture(gateBehavior = 'open', restartMode = 'page') {
   const victoryButton = restartMode === 'modal' ? '<button id="victory-restart-btn">한 번 더 놀기</button>' : '';
   const overlay = ['modal', 'covered'].includes(restartMode)
     ? '#maze-victory:not([hidden]){position:fixed;inset:0;z-index:5;display:grid;place-content:center;background:white}'
@@ -81,7 +85,7 @@ function mazeFixture(blockGate, restartMode = 'page') {
         + '<button id="maze-restart" hidden>다시</button>',
       css: '#maze-board{display:grid;width:200px;grid-template-columns:repeat(5,40px)}'
         + '[data-maze-cell]{height:40px}[data-maze-player]{background:blue}[data-maze-cell="wall"]{background:#333}' + overlay,
-      javascript: '(' + mazeApp + ')(' + blockGate + ',' + JSON.stringify(restartMode) + ')',
+      javascript: '(' + mazeApp + ')(' + JSON.stringify(gateBehavior) + ',' + JSON.stringify(restartMode) + ')',
     },
   };
 }
@@ -142,10 +146,12 @@ test('offline inspector verifies maze goals, usable restart controls, and aquari
   const dir = mkdtempSync(join(root, 'lun-quality-motion-'));
   try {
     const results = {
-      'maze-key': mazeFixture(false), 'maze-block': mazeFixture(true),
-      'maze-modal-restart': mazeFixture(false, 'modal'),
-      'maze-covered-restart': mazeFixture(false, 'covered'),
-      'maze-frozen-restart': mazeFixture(false, 'frozen'),
+      'maze-key': mazeFixture(), 'maze-block': mazeFixture('blocked'),
+      'maze-early-victory': mazeFixture('early-victory'),
+      'maze-early-key': mazeFixture('early-key'),
+      'maze-modal-restart': mazeFixture('open', 'modal'),
+      'maze-covered-restart': mazeFixture('open', 'covered'),
+      'maze-frozen-restart': mazeFixture('open', 'frozen'),
       'aquarium-feed': aquariumFixture(false), 'aquarium-expiry': aquariumFixture(true),
       'aquarium-overflow': aquariumFixture(false, 'overflow'),
       'aquarium-mobile-fix': aquariumFixture(false, 'fixed'),
@@ -162,9 +168,13 @@ test('offline inspector verifies maze goals, usable restart controls, and aquari
     assert.deepEqual(maze.errors, [], JSON.stringify(maze));
     assert.equal(maze.mazeGoals.status, 'pass');
     assert.equal(maze.mazeGoals.gateChecked, true);
+    assert.equal(maze.mazeGoals.reachedExit, true);
+    assert.equal(maze.mazeGoals.victorySignaled, true);
     assert.equal(maze.mazeGoals.restarted, true);
     assert.equal(maze.mazeGoals.restartControl, 'page');
     assert.equal(output('maze-block').mazeGoals.reason, 'movement-blocked');
+    assert.equal(output('maze-early-victory').mazeGoals.reason, 'victory-before-collecting');
+    assert.equal(output('maze-early-key').mazeGoals.reason, 'goal-removed-at-locked-exit');
     const modal = output('maze-modal-restart');
     assert.deepEqual(modal.errors, [], JSON.stringify(modal));
     assert.equal(modal.mazeGoals.status, 'pass');

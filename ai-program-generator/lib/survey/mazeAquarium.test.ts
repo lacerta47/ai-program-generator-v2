@@ -24,6 +24,8 @@ describe('미로 선택과 실행 지침', () => {
     expect(prompt).toContain('스와이프하면 한 칸씩');
     expect(prompt).toContain('구덩이는 이번 도전에서 해제');
     const guide = getTypeGuide('maze');
+    expect(guide).toContain('중간 통로에 별도 문 장애물을 두지 마세요');
+    expect(guide).toContain('열쇠 유무나 문 상태를 이동 검사에 쓰지 마세요');
     expect(guide).toContain('승리만 보류');
     expect(guide).toContain('data-maze-goal');
     expect(guide).toContain('id="maze-victory"');
