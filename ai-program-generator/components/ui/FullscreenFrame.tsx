@@ -28,12 +28,15 @@ interface Props {
 // code 객체 + photo 값 기준 미리보기 id 캐시 — 탭 토글로 remount돼도 같은 (code, photo)면 재요청하지 않는다.
 // 바깥은 WeakMap(code)이라 code 객체가 GC되면 함께 정리됨(누수 없음). 안쪽은 photo값(없으면 '')별 Map.
 // (code 참조는 그대로인데 photo만 바뀌는 경우 옛 미리보기를 돌려주지 않도록 photo까지 키에 포함.)
-const previewIdCache = new WeakMap<GeneratedCode, Map<string, Promise<string>>>();
+// 서버의 10분 TTL보다 먼저 갱신해 오래된 작품을 다시 고를 때 만료된 ID를 쓰지 않는다.
+const PREVIEW_CACHE_MS = 8 * 60 * 1000;
+const previewIdCache = new WeakMap<GeneratedCode, Map<string, { id: Promise<string>; expiresAt: number }>>();
 
 function requestPreviewId(code: GeneratedCode, photo?: string): Promise<string> {
   const key = photo ?? '';
   const cached = previewIdCache.get(code)?.get(key);
-  if (cached) return cached;
+  const now = Date.now();
+  if (cached && cached.expiresAt > now) return cached.id;
   const p = (async () => {
     let r: Response;
     try {
@@ -50,14 +53,16 @@ function requestPreviewId(code: GeneratedCode, photo?: string): Promise<string> 
     const { id } = await r.json();
     return id as string;
   })();
-  // 실패한 약속은 캐시에서 빼서 다음 시도가 재요청하도록
-  p.catch(() => previewIdCache.get(code)?.delete(key));
   let byPhoto = previewIdCache.get(code);
   if (!byPhoto) {
     byPhoto = new Map();
     previewIdCache.set(code, byPhoto);
   }
-  byPhoto.set(key, p);
+  const entry = { id: p, expiresAt: now + PREVIEW_CACHE_MS };
+  byPhoto.set(key, entry);
+  p.catch(() => {
+    if (byPhoto.get(key) === entry) byPhoto.delete(key);
+  });
   return p;
 }
 

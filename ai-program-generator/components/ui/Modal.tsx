@@ -10,6 +10,8 @@ interface Props {
   label: string;
   /** 내용 카드 추가 클래스 (보통 max-w-* p-*) */
   className?: string;
+  /** 최근 알림이 팝업의 조작부를 가리지 않게 한다. */
+  aboveNotifications?: boolean;
   children: React.ReactNode;
 }
 
@@ -20,7 +22,7 @@ const FOCUSABLE =
  * 공용 모달: portal(document.body) + 백드롭 + Esc 닫기 + 포커스 트랩 + 배경 스크롤 잠금.
  * (portal인 이유: 헤더의 backdrop-blur가 fixed 기준점을 가로채는 함정 — CLAUDE.md 참조)
  */
-export default function Modal({ open, onClose, label, className = 'max-w-sm p-6', children }: Props) {
+export default function Modal({ open, onClose, label, className = 'max-w-sm p-6', aboveNotifications = false, children }: Props) {
   const cardRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -75,7 +77,7 @@ export default function Modal({ open, onClose, label, className = 'max-w-sm p-6'
 
   return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-[oklch(0.2_0.02_285/0.55)] p-4 backdrop-blur-sm"
+      className={`fixed inset-0 ${aboveNotifications ? 'z-[70]' : 'z-50'} flex items-center justify-center overflow-y-auto bg-[oklch(0.2_0.02_285/0.55)] p-4 backdrop-blur-sm`}
       onClick={onClose}
       role="dialog"
       aria-modal="true"

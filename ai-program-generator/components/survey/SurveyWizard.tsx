@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Check, HelpCircle, RotateCcw, Search, Sprout, Wand2, X } from 'lucide-react';
-import type { GeneratedCode, GenerationMeta } from '@/lib/ai/types';
+import type { GenerationMeta } from '@/lib/ai/types';
 import type { ProgramType, SurveyAnswers, SurveyStep } from '@/lib/survey/types';
 import { AI_PICK, MAX_MULTI_SELECTIONS } from '@/lib/survey/types';
 import { PROGRAM_TYPES } from '@/lib/survey/programs';
@@ -12,6 +12,8 @@ import { buildDebugRequest } from '@/lib/ai/fixRequest';
 import { requestGenerateStream } from '@/lib/client/generate';
 import { currentStage, STAGE_ORDER, STAGE_LABEL_EASY, type StreamStage } from '@/lib/ai/streamStages';
 import { buildModifyPrompt } from '@/components/creator/prompts';
+import WorkHistoryControls from '@/components/creator/WorkHistoryControls';
+import { useWorkSessionKey } from '@/components/creator/useWorkSessionKey';
 import PhotoUpload from '@/components/creator/PhotoUpload';
 import { TextInput } from '@/components/ui/Field';
 import { assertClean, isReservedNickname } from '@/lib/moderation';
@@ -31,15 +33,20 @@ import FixPanel from './FixPanel';
 import GuideModal from './GuideModal';
 import LogicCard from '@/components/common/LogicCard';
 import { stashEasyDraft } from '@/lib/creator/easyBridge';
+import { addWorkRevision, selectWorkVersion, startWork, type WorkHistory } from '@/lib/creator/workHistory';
 
 const GUIDE_SEEN_KEY = 'easy-guide-seen';
-
-const EMPTY_CODE: GeneratedCode = { html: '', css: '', javascript: '' };
 
 // 수정 후 복귀 지점을 '마지막 만들기 화면'으로 나타내는 센티넬(단계 id와 겹치지 않음)
 const FINISH = '__finish__';
 
 export default function SurveyWizard() {
+  const { user } = useAuth();
+  const sessionKey = useWorkSessionKey(user?.uid ?? null);
+  return <SurveySession key={sessionKey} />;
+}
+
+function SurveySession() {
   const [type, setType] = useState<ProgramType | null>(null);
   const [answers, setAnswers] = useState<SurveyAnswers>({});
   const [stepIdx, setStepIdx] = useState(0);
@@ -48,10 +55,9 @@ export default function SurveyWizard() {
   const [waiting, setWaiting] = useState(false);
   const [buildMsg, setBuildMsg] = useState('AI가 준비하고 있어요…');
   const [stage, setStage] = useState<StreamStage | null>(null);
-  const [code, setCode] = useState<GeneratedCode>(EMPTY_CODE);
-  const [meta, setMeta] = useState<GenerationMeta | null>(null); // 교육 메타 — 업로드 시 저장
-  // 저장/공유용 프롬프트 — 생성 시 조립 프롬프트로 시작, '고치기'마다 요청을 누적
-  const [genPrompt, setGenPrompt] = useState('');
+  const [history, setHistory] = useState<WorkHistory | null>(null);
+  const current = history?.current;
+  const meta = current?.meta;
   const [previewKey, setPreviewKey] = useState(0);
   const [uploadOpen, setUploadOpen] = useState(false);
   const [loginOpen, setLoginOpen] = useState(false);
@@ -76,17 +82,19 @@ export default function SurveyWizard() {
   const notifyGenerationSuccess = useGenerationSuccess();
   const router = useRouter();
 
-  useEffect(() => () => { abortRef.current?.abort(); }, [user?.uid]);
+  useEffect(() => () => {
+    abortRef.current?.abort();
+    abortRef.current = null;
+  }, []);
 
   // 만들기에서 더 키우기(easy→create 브릿지) — 인메모리 초안을 넘기고 /create로.
   function growInCreate() {
-    if (!type) return;
-    stashEasyDraft({
-      plan: planForShare(),
-      code,
-      genPrompt: genPrompt || assemblePrompt(type, answers),
-      photo: photo ?? null,
-    });
+    if (!current || !user) return;
+    const { plan, code, genPrompt, photo, meta } = current;
+    if (!stashEasyDraft({ uid: user.uid, plan, code, genPrompt, photo, meta })) {
+      toast('작품을 옮기지 못했어요. 여기에서 계속 볼 수 있어요.');
+      return;
+    }
     router.push('/create?from=easy');
   }
 
@@ -120,7 +128,6 @@ export default function SurveyWizard() {
     const name = userName.trim();
     return wantsName && name ? { ...p, etc: `${p.etc}\n이름 → ${name}` } : p;
   };
-  const hasCode = Boolean(code.html || code.css || code.javascript);
   const onLastDone = stepIdx >= steps.length;
 
   function enterType(t: ProgramType) {
@@ -128,9 +135,7 @@ export default function SurveyWizard() {
     setAnswers({});
     setStepIdx(0);
     setEditReturn(null);
-    setCode(EMPTY_CODE);
-    setMeta(null);
-    setGenPrompt('');
+    setHistory(null);
   }
   function pickType(t: ProgramType) {
     // 종류 선택(1번)에서 먼저 로그인 요청 — 끝까지 다 고른 뒤 막혀서 실망하지 않게.
@@ -260,9 +265,9 @@ export default function SurveyWizard() {
     setAnswers({});
     setStepIdx(0);
     setEditReturn(null);
-    setCode(EMPTY_CODE);
-    setMeta(null);
-    setGenPrompt('');
+    setHistory(null);
+    setPhoto(null);
+    setUserName('');
     setFixWant('');
     setFixActual('');
     setShowChangeHint(false);
@@ -301,6 +306,8 @@ export default function SurveyWizard() {
     setBuildMsg('AI가 준비하고 있어요…');
     const ctrl = new AbortController();
     abortRef.current = ctrl;
+    const plan = planForShare();
+    let nextMeta: GenerationMeta | null = null;
     try {
       if (wantsName && name) {
         let onAbort!: () => void;
@@ -315,16 +322,16 @@ export default function SurveyWizard() {
       const prompt =
         assemblePrompt(type, answers) +
         (wantsName && name ? ` 화면에 이름이 들어가는 곳(카드 이름·점수판 등)에는 '${name}' 이름을 처음부터 넣어줘.` : '');
-      setGenPrompt(prompt);
       const result = await requestGenerateStream(prompt, 'generate', 'survey', {
         signal: ctrl.signal,
-        onWaiting: setWaiting,
-        onDelta: onStageDelta,
-        onMeta: setMeta,
+        onWaiting: (value) => { if (abortRef.current === ctrl) setWaiting(value); },
+        onDelta: (partial) => { if (abortRef.current === ctrl) onStageDelta(partial); },
+        onMeta: (value) => { nextMeta = value; },
         photo: photo ?? undefined,
         programType: type.id, // 유형별 참고 예시·가이드·모델 정책용
       });
-      setCode(result);
+      if (abortRef.current !== ctrl || ctrl.signal.aborted) return;
+      setHistory(startWork({ code: result, plan, genPrompt: prompt, photo, meta: nextMeta }));
       setPreviewKey((k) => k + 1);
       playSuccess();
       notifyGenerationSuccess('easy', user.uid, '우와! 멋진 걸 만들었어요!');
@@ -334,15 +341,14 @@ export default function SurveyWizard() {
         toast(e instanceof Error ? e.message : '만들다가 문제가 생겼어요. 다시 해볼까요?');
       }
     } finally {
-      abortRef.current = null;
-      setBusy(false);
+      finishRequest(ctrl);
     }
   }
 
   // 결과 화면 '고치기'(디버깅 대화) — 기대/실제를 한 요청문으로 합쳐 한 번의 modify 생성으로 반영
   async function handleSurveyModify() {
     if (abortRef.current) return;
-    if (!type || !hasCode) return;
+    if (!type || !history) return;
     if (authLoading) return toast('잠깐만요, 준비 중이에요…');
     if (!user) {
       toast('로그인하면 고칠 수 있어요!');
@@ -351,26 +357,31 @@ export default function SurveyWizard() {
     }
     if (!fixWant.trim()) return toast('어떻게 되면 좋을지 먼저 적어 주세요!');
     const request = buildDebugRequest(fixWant, fixActual);
-
-    // 저장/공유 프롬프트에 고치기 요청을 누적(게시물 prompt 한도 대비 클램프)
-    setGenPrompt((prev) => `${prev}\n\n[고치기 요청]: ${request}`.slice(-40000));
-    setShowChangeHint(false);
+    const base = history.current;
     setBusy(true);
     setStage(null);
     setBuildMsg('AI가 준비하고 있어요…');
     const ctrl = new AbortController();
     abortRef.current = ctrl;
+    let nextMeta: GenerationMeta | null = null;
     try {
-      const prompt = buildModifyPrompt(planForShare(), code, request);
+      const prompt = buildModifyPrompt(base.plan, base.code, request);
       const result = await requestGenerateStream(prompt, 'modify', 'survey', {
         signal: ctrl.signal,
-        onWaiting: setWaiting,
-        onDelta: onStageDelta,
-        onMeta: setMeta,
-        photo: photo ?? undefined,
+        onWaiting: (value) => { if (abortRef.current === ctrl) setWaiting(value); },
+        onDelta: (partial) => { if (abortRef.current === ctrl) onStageDelta(partial); },
+        onMeta: (value) => { nextMeta = value; },
+        photo: base.photo ?? undefined,
         programType: type.id,
       });
-      setCode(result);
+      if (abortRef.current !== ctrl || ctrl.signal.aborted) return;
+      setHistory(addWorkRevision(history, {
+        code: result,
+        plan: base.plan,
+        genPrompt: `${base.genPrompt}\n\n[고치기 요청]: ${request}`.slice(-40000),
+        photo: base.photo,
+        meta: nextMeta,
+      }, fixWant.trim()));
       setPreviewKey((k) => k + 1);
       setFixWant('');
       setFixActual('');
@@ -382,9 +393,23 @@ export default function SurveyWizard() {
         toast(e instanceof Error ? e.message : '고치다가 문제가 생겼어요. 다시 해볼까요?');
       }
     } finally {
-      abortRef.current = null;
-      setBusy(false);
+      finishRequest(ctrl);
     }
+  }
+
+  function finishRequest(ctrl: AbortController) {
+    if (abortRef.current !== ctrl) return;
+    abortRef.current = null;
+    setWaiting(false);
+    setBusy(false);
+  }
+
+  function restoreVersion(id: number) {
+    if (!history || busy) return;
+    setHistory(selectWorkVersion(history, id));
+    setShowChangeHint(false);
+    setPreviewKey((key) => key + 1);
+    toast('이전 작품으로 돌아왔어요. 미리보기가 처음부터 시작돼요.', 'success');
   }
 
   // busy 화면에서 '그만 만들기' — 진행 중 생성 요청을 중단하고 설문으로 복귀
@@ -406,11 +431,11 @@ export default function SurveyWizard() {
   }
 
   // 결과 화면 — 단, 고치는 중(busy)이면 건너뛰고 아래 busy 화면을 보여준다.
-  // (modify는 hasCode가 이미 true라, !busy 가드 없으면 로딩 피드백이 안 떠 '안 눌린 것'처럼 보임)
-  if (hasCode && type && !busy) {
+  // 수정 중에도 기존 결과는 보관하되 로딩 화면을 먼저 보여 준다.
+  if (history && current && type && !busy) {
     return (
       <div className="mx-auto max-w-4xl">
-        <div className="mb-3 flex items-center justify-between gap-2">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <h2 className="anim-pop-tada text-[22px]">{type.icon} {type.label} 완성!</h2>
           <div className="flex flex-wrap gap-2">
             <Button variant="soft" onClick={reset}>
@@ -424,6 +449,9 @@ export default function SurveyWizard() {
             </Button>
           </div>
         </div>
+        <div className="mb-3">
+          <WorkHistoryControls history={history} onRestore={restoreVersion} />
+        </div>
         {showChangeHint && (
           <div
             role="status"
@@ -432,11 +460,11 @@ export default function SurveyWizard() {
             <Search size={18} aria-hidden /> 무엇이 바뀌었을까요? 미리보기에서 찾아보세요!
           </div>
         )}
-        <LogicCard logicSummary={meta?.logicSummary} conceptTags={meta?.conceptTags} code={code} className="mb-3" />
+        <LogicCard logicSummary={meta?.logicSummary} conceptTags={meta?.conceptTags} code={current.code} className="mb-3" />
         <FullscreenFrame
           frameKey={previewKey}
-          code={code}
-          photo={photo ?? undefined}
+          code={current.code}
+          photo={current.photo ?? undefined}
           title={type.label}
           className="h-[78vh] w-full overflow-hidden rounded-[var(--r-md)] border-2 border-line"
         />
@@ -451,11 +479,11 @@ export default function SurveyWizard() {
         <UploadDialog
           open={uploadOpen}
           onClose={() => setUploadOpen(false)}
-          code={code}
-          plan={planForShare()}
-          prompt={genPrompt || assemblePrompt(type, answers)}
+          code={current.code}
+          plan={current.plan}
+          prompt={current.genPrompt}
           defaultTitle={type.buildName(answers)}
-          photo={photo ?? undefined}
+          photo={current.photo ?? undefined}
           logicSummary={meta?.logicSummary}
           conceptTags={meta?.conceptTags}
         />
