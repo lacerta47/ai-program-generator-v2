@@ -16,6 +16,8 @@ import { useToast } from '@/components/ui/Toast';
 import { currentStage, STAGE_LABEL, STAGE_CONCEPT, STAGE_ORDER } from '@/lib/ai/streamStages';
 import { Tip } from './Tip';
 import LogicCard from '@/components/common/LogicCard';
+import WorkHistoryControls from './WorkHistoryControls';
+import type { WorkHistory } from '@/lib/creator/workHistory';
 
 type CodeTab = 'html' | 'css' | 'javascript';
 type ResultTab = 'preview' | 'code';
@@ -27,7 +29,9 @@ interface Props {
   onCancel: () => void;
   hasCode: boolean;
   code: GeneratedCode;
-  previewKey: number;
+  history: WorkHistory | null;
+  onRestoreVersion: (id: number) => void;
+  previewKey: string | number;
   resultTab: ResultTab;
   setResultTab: (t: ResultTab) => void;
   editing: { id: string; title: string; authorName: string } | null;
@@ -64,6 +68,8 @@ export default function ResultPanel({
   onCancel,
   hasCode,
   code,
+  history,
+  onRestoreVersion,
   previewKey,
   resultTab,
   setResultTab,
@@ -172,6 +178,13 @@ export default function ResultPanel({
         </div>
       ) : (
         <>
+          {history && !saving && (
+            <WorkHistoryControls
+              history={history}
+              onRestore={onRestoreVersion}
+              firstLabel={editing ? '게시판에 올린 작품' : undefined}
+            />
+          )}
           <div className="flex flex-wrap items-center justify-between gap-3">
             {/* 결과 탭 — 슬라이드 인디케이터 */}
             <div className="relative grid grid-cols-2 rounded-full border-2 border-line bg-surface-2 p-1">

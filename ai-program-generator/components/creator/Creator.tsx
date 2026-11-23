@@ -27,6 +27,8 @@ import { useCreatorSource } from './useCreatorSource';
 import { Tip } from './Tip';
 import ResultPanel from './ResultPanel';
 import PhotoUpload from './PhotoUpload';
+import { useWorkSessionKey } from './useWorkSessionKey';
+import { addWorkRevision, selectWorkVersion, startWork, type WorkHistory, type WorkSnapshot } from '@/lib/creator/workHistory';
 
 type ResultTab = 'preview' | 'code';
 
@@ -34,11 +36,17 @@ const EMPTY_CODE: GeneratedCode = { html: '', css: '', javascript: '' };
 const DRAFT_KEY = 'lun:create-draft';
 
 export default function Creator() {
+  const { user } = useAuth();
+  const sessionKey = useWorkSessionKey(user?.uid ?? null);
+  return <CreatorSession key={sessionKey} restoreDraft={sessionKey === 0} />;
+}
+
+function CreatorSession({ restoreDraft }: { restoreDraft: boolean }) {
   const [plan, setPlan] = useState<PlanFields>(EMPTY_PLAN);
+  const [draftAtRestore, setDraftAtRestore] = useState<PlanFields | null>(null);
   // 동작(how) 구조화 3칸(교육 Phase 1-b) — plan.how와 합성/역파싱으로 동기화(로컬 원본은 이 3칸)
   const [how3, setHow3] = useState<HowParts>(EMPTY_HOW);
-  const [code, setCode] = useState<GeneratedCode>(EMPTY_CODE);
-  const [meta, setMeta] = useState<GenerationMeta | null>(null); // 교육 메타(로직설명·개념태그) — 업로드 시 저장
+  const [history, setHistory] = useState<WorkHistory | null>(null);
   const [loading, setLoading] = useState<'idle' | 'generating' | 'modifying'>('idle');
   const [waiting, setWaiting] = useState(false);
   const [streamingPartial, setStreamingPartial] = useState<Partial<GeneratedCode>>({});
@@ -49,7 +57,6 @@ export default function Creator() {
   // 고치기 성공 후 '무엇이 바뀌었을까?' 성찰 힌트
   const [showChangeHint, setShowChangeHint] = useState(false);
   const [previewKey, setPreviewKey] = useState(0);
-  const [genPrompt, setGenPrompt] = useState('');
   const [uploadOpen, setUploadOpen] = useState(false);
   const [loginOpen, setLoginOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -62,18 +69,33 @@ export default function Creator() {
   const nameRef = useRef<HTMLInputElement>(null);
   const modifyRef = useRef<HTMLTextAreaElement>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const current = history?.current;
+  const code = current?.code ?? EMPTY_CODE;
+  const meta = current?.meta;
+  const usesRestoredPlan = Boolean(current && draftAtRestore === plan);
+  const editPlan = usesRestoredPlan && current ? current.plan : plan;
   const hasCode = Boolean(code.html || code.css || code.javascript);
   const busy = loading !== 'idle';
 
-  useEffect(() => () => { abortRef.current?.abort(); }, [user?.uid]);
+  useEffect(() => () => {
+    abortRef.current?.abort();
+    abortRef.current = null;
+  }, []);
 
   // ?edit= / ?fork= URL 소스 로딩은 훅으로 분리(불러온 값만 받아 생성 상태에 반영).
-  const applyLoaded = (d: { plan: PlanFields; code: GeneratedCode; genPrompt: string; photo: string | null }) => {
+  const applyLoaded = (d: WorkSnapshot) => {
+    abortRef.current?.abort();
+    abortRef.current = null;
+    setWaiting(false);
+    setLoading('idle');
+    setStreamingPartial({});
     setPlan(d.plan);
+    setDraftAtRestore(null);
     setHow3(parseHow(d.plan.how)); // 동작 3칸 복원(마커 있으면 분해, 없으면 ①칸 폴백)
-    setCode(d.code);
-    setMeta(null); // 불러온 글의 메타는 없음 — 재생성(고치기) 시 다시 채워짐
-    setGenPrompt(d.genPrompt);
+    setHistory(startWork(d));
+    setModifyWant('');
+    setModifyActual('');
+    setShowChangeHint(false);
     setPhoto(d.photo);
     setResultTab('preview');
     setPreviewKey((k) => k + 1);
@@ -91,7 +113,7 @@ export default function Creator() {
   useEffect(() => {
     if (draftRestored.current) return;
     draftRestored.current = true;
-    if (!draftMode()) return;
+    if (!restoreDraft || !draftMode()) return;
     try {
       const raw = localStorage.getItem(DRAFT_KEY);
       if (!raw) return;
@@ -118,15 +140,15 @@ export default function Creator() {
   }, [plan]);
 
   async function handleSaveEdit() {
-    if (!editing) return;
+    if (!editing || !current || busy || saving) return;
     setSaving(true);
     try {
       await updatePostContent(editing.id, {
         title: editing.title,
         authorName: editing.authorName || '익명',
-        plan,
-        code,
-        prompt: genPrompt,
+        plan: editPlan,
+        code: current.code,
+        prompt: current.genPrompt,
         updatedAt: Date.now(),
       });
       toast('작품을 고쳐서 저장했어요!', 'success');
@@ -160,7 +182,7 @@ export default function Creator() {
   }
 
   async function handleGenerate() {
-    if (abortRef.current) return;
+    if (abortRef.current || saving) return;
     if (authLoading) {
       toast('잠깐만요, 준비 중이에요…');
       return;
@@ -176,22 +198,26 @@ export default function Creator() {
       return;
     }
     const promptText = buildGeneratePrompt(plan);
-    setGenPrompt(promptText);
-    setShowChangeHint(false); // 처음부터 새로 만들 땐 '무엇이 바뀌었을까?' 성찰 배너(고치기 전용) 숨김
     setStreamingPartial({});
     setResultTab('code'); // 스트림 중 코드 탭에서 라이브 표시
     setLoading('generating');
     const ctrl = new AbortController();
     abortRef.current = ctrl;
+    let nextMeta: GenerationMeta | null = null;
     try {
       const result = await requestGenerateStream(promptText, 'generate', 'default', {
         signal: ctrl.signal,
-        onWaiting: setWaiting,
-        onDelta: setStreamingPartial,
-        onMeta: setMeta,
+        onWaiting: (value) => { if (abortRef.current === ctrl) setWaiting(value); },
+        onDelta: (partial) => { if (abortRef.current === ctrl) setStreamingPartial(partial); },
+        onMeta: (value) => { nextMeta = value; },
         photo: photo ?? undefined,
       });
-      setCode(result);
+      if (abortRef.current !== ctrl || ctrl.signal.aborted) return;
+      setHistory(startWork({ code: result, plan, genPrompt: promptText, photo, meta: nextMeta }));
+      setDraftAtRestore(null);
+      setShowChangeHint(false);
+      setModifyWant('');
+      setModifyActual('');
       setResultTab('preview');
       setPreviewKey((k) => k + 1);
       playSuccess();
@@ -201,16 +227,12 @@ export default function Creator() {
         toast(e instanceof Error ? e.message : '만들다가 문제가 생겼어요. 다시 해볼까요?');
       }
     } finally {
-      abortRef.current = null;
-      setStreamingPartial({});
-      setLoading('idle');
-      // 취소/실패로 코드 탭에 남지 않게 — 결과(미리보기)로 복귀(코드 없으면 빈 화면이 자연히 노출)
-      setResultTab('preview');
+      finishRequest(ctrl);
     }
   }
 
   async function handleModify() {
-    if (abortRef.current) return;
+    if (abortRef.current || saving || !history) return;
     if (authLoading) {
       toast('잠깐만요, 준비 중이에요…');
       return;
@@ -226,23 +248,31 @@ export default function Creator() {
       return;
     }
     const request = buildDebugRequest(modifyWant, modifyActual);
+    const base = history.current;
+    // 복원 뒤 그대로 고치면 복원본 기준, 계획서를 다시 편집했다면 새 입력 기준.
+    const modifyPlan = editPlan;
     setLoading('modifying');
-    // 수정 이력을 누적하되, 게시물 prompt 필드 한도(50,000자, firestore.rules)를 넘지 않게 클램프
-    setGenPrompt((prev) => `${prev}\n\n[수정 요청]: ${request}`.slice(-40000));
-    setShowChangeHint(false);
     setStreamingPartial({});
     setResultTab('code');
     const ctrl = new AbortController();
     abortRef.current = ctrl;
+    let nextMeta: GenerationMeta | null = null;
     try {
-      const result = await requestGenerateStream(buildModifyPrompt(plan, code, request), 'modify', 'default', {
+      const result = await requestGenerateStream(buildModifyPrompt(modifyPlan, base.code, request), 'modify', 'default', {
         signal: ctrl.signal,
-        onWaiting: setWaiting,
-        onDelta: setStreamingPartial,
-        onMeta: setMeta,
+        onWaiting: (value) => { if (abortRef.current === ctrl) setWaiting(value); },
+        onDelta: (partial) => { if (abortRef.current === ctrl) setStreamingPartial(partial); },
+        onMeta: (value) => { nextMeta = value; },
         photo: photo ?? undefined,
       });
-      setCode(result);
+      if (abortRef.current !== ctrl || ctrl.signal.aborted) return;
+      setHistory(addWorkRevision(history, {
+        code: result,
+        plan: modifyPlan,
+        genPrompt: `${base.genPrompt}\n\n[수정 요청]: ${request}`.slice(-40000),
+        photo,
+        meta: nextMeta,
+      }, modifyWant.trim()));
       setModifyWant('');
       setModifyActual('');
       setShowChangeHint(true);
@@ -255,12 +285,30 @@ export default function Creator() {
         toast(e instanceof Error ? e.message : '고치다가 문제가 생겼어요. 다시 해볼까요?');
       }
     } finally {
-      abortRef.current = null;
-      setStreamingPartial({});
-      setLoading('idle');
-      // 취소/실패 시 보던 미리보기로 복귀(수정 전 결과 보존)
-      setResultTab('preview');
+      finishRequest(ctrl);
     }
+  }
+
+  function finishRequest(ctrl: AbortController) {
+    if (abortRef.current !== ctrl) return;
+    abortRef.current = null;
+    setWaiting(false);
+    setStreamingPartial({});
+    setLoading('idle');
+    setResultTab('preview');
+  }
+
+  function restoreVersion(id: number) {
+    if (!history || busy || saving) return;
+    const restored = selectWorkVersion(history, id);
+    if (restored === history) return;
+    setHistory(restored);
+    setDraftAtRestore(plan);
+    setPhoto(restored.current.photo);
+    setShowChangeHint(false);
+    setResultTab('preview');
+    setPreviewKey((key) => key + 1);
+    toast('이전 작품으로 돌아왔어요. 미리보기가 처음부터 시작돼요.', 'success');
   }
 
   // 예시 이름(칩)을 누르면 바로 폼을 채운다(별도 '가져오기' 버튼 없이 1클릭).
@@ -271,18 +319,17 @@ export default function Creator() {
   }
 
   function handleDownload() {
-    downloadProgram(code, editing?.title || plan.name || '내작품', toast, photo ?? undefined);
+    if (current) downloadProgram(current.code, editing?.title || current.plan.name || '내작품', toast, photo ?? undefined);
   }
 
   function handleReset() {
     setPlan(EMPTY_PLAN);
+    setDraftAtRestore(null);
     setHow3(EMPTY_HOW);
-    setCode(EMPTY_CODE);
-    setMeta(null);
+    setHistory(null);
     setModifyWant('');
     setModifyActual('');
     setShowChangeHint(false);
-    setGenPrompt('');
     setPhoto(null); // '처음부터'라는 문구대로 사진도 초기화(안 지우면 다음 생성에 그대로 실림)
     setResultTab('preview');
     clearSource();
@@ -316,6 +363,11 @@ export default function Creator() {
           </span>
           <h2 className="break-keep text-[25px]">어떤 프로그램을 만들까요?</h2>
         </div>
+        {usesRestoredPlan && current?.plan !== plan && (
+          <p role="status" className="text-[17px] text-muted">
+            적어 둔 계획서는 그대로예요. 이 상태에서 고치거나 저장하면 되돌린 작품의 계획서를 써요.
+          </p>
+        )}
 
         <Label
           htmlFor="creator-name"
@@ -438,7 +490,7 @@ export default function Creator() {
           setPhoto(next);
         }} />}
 
-        <Button variant="primary" size="lg" onClick={handleGenerate} disabled={busy} className="w-full">
+        <Button variant="primary" size="lg" onClick={handleGenerate} disabled={busy || saving} className="w-full">
           <Wand2 size={21} aria-hidden />
           {waiting ? '잠시 기다려요…' : loading === 'generating' ? '만드는 중…' : '프로그램 만들기'}
         </Button>
@@ -452,7 +504,9 @@ export default function Creator() {
         onCancel={handleCancel}
         hasCode={hasCode}
         code={code}
-        previewKey={previewKey}
+        history={history}
+        onRestoreVersion={restoreVersion}
+        previewKey={`${previewKey}:${Boolean(user)}`}
         resultTab={resultTab}
         setResultTab={setResultTab}
         editing={editing}
@@ -482,9 +536,9 @@ export default function Creator() {
         open={uploadOpen}
         onClose={() => setUploadOpen(false)}
         code={code}
-        plan={plan}
-        prompt={genPrompt}
-        defaultTitle={plan.name}
+        plan={current?.plan ?? plan}
+        prompt={current?.genPrompt ?? ''}
+        defaultTitle={current?.plan.name ?? plan.name}
         forkedFrom={forkSource?.id}
         forkedFromAuthor={forkSource?.author}
         defaultCategoryId={forkSource?.categoryId}

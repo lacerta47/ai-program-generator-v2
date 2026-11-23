@@ -2,112 +2,104 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import type { GeneratedCode } from '@/lib/ai/types';
-import { type PlanFields, EMPTY_PLAN } from '@/lib/firebase/types';
+import { EMPTY_PLAN, type Post } from '@/lib/firebase/types';
 import { getPost } from '@/lib/firebase/posts';
 import { useAuth } from '@/components/auth/AuthProvider';
 import { useToast } from '@/components/ui/Toast';
-import { buildGeneratePrompt } from './prompts';
+import type { WorkSnapshot } from '@/lib/creator/workHistory';
 import { takeEasyDraft } from '@/lib/creator/easyBridge';
+import { buildGeneratePrompt } from './prompts';
 
-type Loaded = { plan: PlanFields; code: GeneratedCode; genPrompt: string; photo: string | null };
 type EditState = { id: string; title: string; authorName: string };
 type ForkState = { id: string; author: string; categoryId: string };
 
-/**
- * URL 기반 소스 로딩(?edit= / ?fork=)만 담당하는 훅.
- * 불러온 plan/code/genPrompt는 applyLoaded 콜백으로 넘겨 생성기 상태에 반영한다.
- * (생성 상태 자체는 Creator가 소유 — 이 훅은 "어디서 채울지"만 안다.)
- */
-export function useCreatorSource(applyLoaded: (d: Loaded) => void) {
+function readPostMeta(post: Post): WorkSnapshot['meta'] {
+  return { logicSummary: post.logicSummary, conceptTags: post.conceptTags, conceptNotes: post.conceptNotes };
+}
+
+/** URL의 작업 원본만 불러온다. 작업 기록과 생성 상태는 Creator에서 관리한다. */
+export function useCreatorSource(applyLoaded: (snapshot: WorkSnapshot) => void) {
   const [editing, setEditing] = useState<EditState | null>(null);
   const [forkSource, setForkSource] = useState<ForkState | null>(null);
-
   const { user, isAdmin, loading: authLoading } = useAuth();
   const { toast } = useToast();
   const router = useRouter();
   const params = useSearchParams();
-  const loadedEditId = useRef<string | null>(null);
-  const loadedForkId = useRef<string | null>(null);
+  const uid = user?.uid ?? null;
+  const editId = params.get('edit');
+  const editUid = editId ? uid : null;
+  const waitingForEditAuth = Boolean(editId && authLoading);
+  const canAdminEdit = Boolean(editId && isAdmin);
+  const forkId = params.get('fork');
+  const fromEasy = params.get('from') === 'easy';
   const loadedEasyBridge = useRef(false);
+  const cancelLoad = useRef<(() => void) | null>(null);
   const applyRef = useRef(applyLoaded);
   applyRef.current = applyLoaded;
 
-  // ?from=easy — 골라만들기에서 넘어온 인메모리 초안(sessionStorage)을 만들기 폼·결과에 채운다.
-  // 저장 안 된 상태를 넘기는 1회성 핸드오프(서버 조회 없음). 읽고 나면 URL·저장소를 정리한다.
   useEffect(() => {
-    if (params.get('from') !== 'easy' || loadedEasyBridge.current) return;
+    if (!fromEasy) {
+      loadedEasyBridge.current = false;
+      return;
+    }
+    if (authLoading || loadedEasyBridge.current) return;
     loadedEasyBridge.current = true;
-    const draft = takeEasyDraft();
+    const draft = takeEasyDraft(uid);
     if (draft) {
+      setEditing(null);
+      setForkSource(null);
       applyRef.current(draft);
       toast('골라만들기에서 이어서 키워볼까요?');
+    } else {
+      toast('작품을 가져오지 못했어요. 골라서 만들기에서 다시 시도해 주세요.');
     }
     router.replace('/create');
-  }, [params, router, toast]);
+  }, [fromEasy, authLoading, uid, router, toast]);
 
-  // ?edit=postId — 인증 확정 후 본인/관리자만 편집을 열고, 작품을 폼·결과에 복원.
   useEffect(() => {
-    const editId = params.get('edit');
-    if (!editId || authLoading) return; // 로그인 상태 확정 전엔 대기
-    if (loadedEditId.current === editId) return; // 같은 글 중복 로드 방지
-    loadedEditId.current = editId;
-    getPost(editId).then((p) => {
-      if (!p) {
-        toast('고칠 작품을 찾지 못했어요.');
+    const postId = editId ?? forkId;
+    if (!postId || waitingForEditAuth || fromEasy) return;
+    let active = true;
+    const cancel = () => { active = false; };
+    cancelLoad.current = cancel;
+
+    getPost(postId).then((post) => {
+      if (!active) return;
+      if (!post) {
+        toast(editId ? '고칠 작품을 찾지 못했어요.' : '이어 만들 작품을 찾지 못했어요.');
         router.replace('/create');
         return;
       }
-      if (!isAdmin && p.ownerUid !== user?.uid) {
+      if (editId && (!editUid || (!canAdminEdit && post.ownerUid !== editUid))) {
         toast('이 작품은 내 작품이 아니라서 고칠 수 없어요.');
         router.replace('/create');
         return;
       }
-      setEditing({ id: p.id, title: p.title, authorName: p.authorName || '' });
-      applyRef.current({ plan: p.plan ?? EMPTY_PLAN, code: p.code, genPrompt: p.prompt ?? '', photo: p.photo ?? null });
-    }).catch((e) => {
-      console.error('편집 작품 불러오기 실패:', e);
-      loadedEditId.current = null; // 재시도 허용
-      toast('작품을 불러오지 못했어요. 잠시 후 다시 해주세요.');
-      router.replace('/create');
-    });
-  }, [params, authLoading, user, isAdmin, toast, router]);
-
-  // ?fork=postId — 원본을 "새 작품"으로 시작(편집모드 아님). 불러오기는 비로그인도 허용.
-  useEffect(() => {
-    const forkId = params.get('fork');
-    if (!forkId) return;
-    if (loadedForkId.current === forkId) return;
-    loadedForkId.current = forkId;
-    getPost(forkId).then((p) => {
-      if (!p) {
-        toast('이어 만들 작품을 찾지 못했어요.');
-        router.replace('/create');
-        return;
-      }
-      const srcPlan = p.plan ?? EMPTY_PLAN;
+      const plan = post.plan ?? EMPTY_PLAN;
+      setEditing(editId ? { id: post.id, title: post.title, authorName: post.authorName || '' } : null);
+      setForkSource(editId ? null : { id: post.id, author: post.authorName || '익명', categoryId: post.categoryId });
       applyRef.current({
-        plan: srcPlan,
-        code: p.code,
-        genPrompt: p.plan ? buildGeneratePrompt(srcPlan) : p.prompt ?? '',
-        photo: p.photo ?? null,
+        plan,
+        code: post.code,
+        genPrompt: !editId && post.plan ? buildGeneratePrompt(plan) : post.prompt ?? '',
+        photo: post.photo ?? null,
+        meta: readPostMeta(post),
       });
-      setForkSource({ id: p.id, author: p.authorName || '익명', categoryId: p.categoryId });
-    }).catch((e) => {
-      console.error('이어만들기 작품 불러오기 실패:', e);
-      loadedForkId.current = null; // 재시도 허용
+    }).catch((error) => {
+      if (!active) return;
+      console.error('작품 불러오기 실패:', error);
       toast('작품을 불러오지 못했어요. 잠시 후 다시 해주세요.');
       router.replace('/create');
     });
-  }, [params, toast, router]);
 
-  // 새로 만들기 시 소스 모드 해제 — 상태·가드 초기화 + URL 정리.
+    return cancel;
+  }, [editId, forkId, fromEasy, waitingForEditAuth, editUid, canAdminEdit, toast, router]);
+
   function clearSource() {
-    if (editing || forkSource) router.replace('/create');
+    cancelLoad.current?.();
+    if (editId || forkId) router.replace('/create');
     setEditing(null);
-    loadedEditId.current = null;
     setForkSource(null);
-    loadedForkId.current = null;
   }
 
   return { editing, forkSource, clearSource };
