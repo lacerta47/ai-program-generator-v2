@@ -31,7 +31,7 @@ interface Props {
   code: GeneratedCode;
   history: WorkHistory | null;
   onRestoreVersion: (id: number) => void;
-  previewKey: number;
+  previewKey: string | number;
   resultTab: ResultTab;
   setResultTab: (t: ResultTab) => void;
   editing: { id: string; title: string; authorName: string } | null;

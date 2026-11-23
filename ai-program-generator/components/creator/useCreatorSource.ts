@@ -27,6 +27,9 @@ export function useCreatorSource(applyLoaded: (snapshot: WorkSnapshot) => void) 
   const params = useSearchParams();
   const uid = user?.uid ?? null;
   const editId = params.get('edit');
+  const editUid = editId ? uid : null;
+  const waitingForEditAuth = Boolean(editId && authLoading);
+  const canAdminEdit = Boolean(editId && isAdmin);
   const forkId = params.get('fork');
   const fromEasy = params.get('from') === 'easy';
   const loadedEasyBridge = useRef(false);
@@ -55,7 +58,7 @@ export function useCreatorSource(applyLoaded: (snapshot: WorkSnapshot) => void) 
 
   useEffect(() => {
     const postId = editId ?? forkId;
-    if (!postId || (editId && authLoading) || fromEasy) return;
+    if (!postId || waitingForEditAuth || fromEasy) return;
     let active = true;
     const cancel = () => { active = false; };
     cancelLoad.current = cancel;
@@ -67,7 +70,7 @@ export function useCreatorSource(applyLoaded: (snapshot: WorkSnapshot) => void) 
         router.replace('/create');
         return;
       }
-      if (editId && !isAdmin && post.ownerUid !== uid) {
+      if (editId && (!editUid || (!canAdminEdit && post.ownerUid !== editUid))) {
         toast('이 작품은 내 작품이 아니라서 고칠 수 없어요.');
         router.replace('/create');
         return;
@@ -90,7 +93,7 @@ export function useCreatorSource(applyLoaded: (snapshot: WorkSnapshot) => void) 
     });
 
     return cancel;
-  }, [editId, forkId, fromEasy, authLoading, uid, isAdmin, toast, router]);
+  }, [editId, forkId, fromEasy, waitingForEditAuth, editUid, canAdminEdit, toast, router]);
 
   function clearSource() {
     cancelLoad.current?.();

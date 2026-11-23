@@ -72,6 +72,8 @@ function CreatorSession({ restoreDraft }: { restoreDraft: boolean }) {
   const current = history?.current;
   const code = current?.code ?? EMPTY_CODE;
   const meta = current?.meta;
+  const usesRestoredPlan = Boolean(current && draftAtRestore === plan);
+  const editPlan = usesRestoredPlan && current ? current.plan : plan;
   const hasCode = Boolean(code.html || code.css || code.javascript);
   const busy = loading !== 'idle';
 
@@ -144,8 +146,7 @@ function CreatorSession({ restoreDraft }: { restoreDraft: boolean }) {
       await updatePostContent(editing.id, {
         title: editing.title,
         authorName: editing.authorName || '익명',
-        // 고친 기록이 없는 편집에서는 계획서만 바꿔 저장하는 기존 동작을 허용한다.
-        plan: history?.versions.length === 1 ? plan : current.plan,
+        plan: editPlan,
         code: current.code,
         prompt: current.genPrompt,
         updatedAt: Date.now(),
@@ -249,7 +250,7 @@ function CreatorSession({ restoreDraft }: { restoreDraft: boolean }) {
     const request = buildDebugRequest(modifyWant, modifyActual);
     const base = history.current;
     // 복원 뒤 그대로 고치면 복원본 기준, 계획서를 다시 편집했다면 새 입력 기준.
-    const modifyPlan = draftAtRestore === plan ? base.plan : plan;
+    const modifyPlan = editPlan;
     setLoading('modifying');
     setStreamingPartial({});
     setResultTab('code');
@@ -362,6 +363,11 @@ function CreatorSession({ restoreDraft }: { restoreDraft: boolean }) {
           </span>
           <h2 className="break-keep text-[25px]">어떤 프로그램을 만들까요?</h2>
         </div>
+        {usesRestoredPlan && current?.plan !== plan && (
+          <p role="status" className="text-[17px] text-muted">
+            적어 둔 계획서는 그대로예요. 이 상태에서 고치거나 저장하면 되돌린 작품의 계획서를 써요.
+          </p>
+        )}
 
         <Label
           htmlFor="creator-name"
@@ -500,7 +506,7 @@ function CreatorSession({ restoreDraft }: { restoreDraft: boolean }) {
         code={code}
         history={history}
         onRestoreVersion={restoreVersion}
-        previewKey={previewKey}
+        previewKey={`${previewKey}:${Boolean(user)}`}
         resultTab={resultTab}
         setResultTab={setResultTab}
         editing={editing}
