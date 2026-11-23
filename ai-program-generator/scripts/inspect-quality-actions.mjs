@@ -32,7 +32,7 @@ try {
       const file = files[next++];
       const id = file.slice(0, -5);
       const row = JSON.parse(readFileSync(resolve(dir, file), 'utf8'));
-      const inspectionVersion = ['maze', 'aquarium'].includes(row.type) ? 17
+      const inspectionVersion = row.type === 'maze' ? 18 : row.type === 'aquarium' ? 17
         : ['quiz', 'roulette'].includes(row.type) ? 15 : 12;
       const output = resolve(dir, `${id}.actions.json`);
       if (existsSync(output) && !hasCoreAction(row.type) && !requireCore) {

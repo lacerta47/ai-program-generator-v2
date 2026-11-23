@@ -72,6 +72,7 @@ export async function inspectMazeGoals(page, frame, answers) {
   let stalledSince = null;
   const stallBudget = answers.trap?.includes('ghost') ? 6500 : 1000;
   const earlyExit = goalCount > 0 && planMazeRoute(first.paths, first.position, first.exit, first.goals);
+  const victory = frame.locator('#maze-victory');
   const deadline = Date.now() + 26_000;
   while (report.inputs < 750 && Date.now() < deadline && current.state === 'playing') {
     const testingGate = earlyExit && !report.gateChecked && current.goals.length === goalCount;
@@ -98,7 +99,9 @@ export async function inspectMazeGoals(page, frame, answers) {
       if (!current.position) return end('fail', 'player-marker-lost');
       if (current.state === 'won' && current.goals.length) return end('fail', 'victory-before-collecting');
       if (testingGate && cellId(current.position) === cellId(current.exit)) {
-        report.gateChecked = true;
+        if (current.state === 'won' || await victory.isVisible()) return end('fail', 'victory-before-collecting');
+        if (current.goals.length !== goalCount) return end('fail', 'goal-removed-at-locked-exit');
+        report.gateChecked = current.state === 'playing';
         break;
       }
       if (current.state !== 'playing') break;
@@ -114,7 +117,6 @@ export async function inspectMazeGoals(page, frame, answers) {
   if (current.state === 'lost') return end('fail', 'lost-before-completion');
   if (current.state !== 'won') return end('unverified', 'playback-budget-exhausted');
   report.reachedExit = cellId(current.position) === cellId(current.exit);
-  const victory = frame.locator('#maze-victory');
   report.victorySignaled = await victory.isVisible();
   if (!report.reachedExit || !report.victorySignaled || current.goals.length) return end('fail', 'victory-incomplete');
   const markedInVictory = victory.locator('#maze-restart:visible');
