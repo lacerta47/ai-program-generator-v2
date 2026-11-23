@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { FieldPath } from 'firebase-admin/firestore';
-import { adminAuth, adminDb } from '@/lib/firebase/admin';
+import { adminDb } from '@/lib/firebase/admin';
+import { allUserCreationMs, countByCreatedAt } from '@/lib/server/operationsCounts';
 import { todayKeyKST, lastDayKeysKST } from '@/lib/usageDay';
 
 // 운영 통계 — CRON_SECRET 보호(cleanup cron과 동일 패턴). Claude 루틴이 GET해서 리포트로 포맷.
@@ -10,18 +11,6 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-
-/** 모든 Auth 사용자의 creationTime(ms) 배열 — 소규모 가정(페이지네이션). */
-async function allUserCreationMs(): Promise<number[]> {
-  const out: number[] = [];
-  let pageToken: string | undefined;
-  do {
-    const page = await adminAuth.listUsers(1000, pageToken);
-    for (const u of page.users) out.push(Date.parse(u.metadata.creationTime));
-    pageToken = page.pageToken;
-  } while (pageToken);
-  return out;
-}
 
 /** usage/{uid}_{day}.count 합산(day 문자열 범위). 총형 학생은 usage 미기록이라 근사. */
 async function sumUsage(fromKey: string, toKey: string): Promise<number> {
@@ -100,13 +89,6 @@ function cost(a: StatsAgg) {
     usd: round(usd),
     usdPerGen: a.genCount ? round(usd / a.genCount) : 0,
   };
-}
-
-/** createdAt(ms) 범위 count(). toMs 생략 시 fromMs 이상 전체. */
-async function countByCreatedAt(col: string, fromMs: number, toMs?: number): Promise<number> {
-  let q = adminDb.collection(col).where('createdAt', '>=', fromMs);
-  if (toMs !== undefined) q = q.where('createdAt', '<', toMs);
-  return (await q.count().get()).data().count;
 }
 
 async function dailyStats() {
